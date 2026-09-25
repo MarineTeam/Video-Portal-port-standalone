@@ -56,6 +56,7 @@ $tabs = $shell['tabs'];
     <?php endif ?>
   </nav>
   <main id="main" class="content">
+    <?= $v->raw($shell['pageTop'] ?? '') ?>
     <?= $v->raw($content) ?>
   </main>
 </div>

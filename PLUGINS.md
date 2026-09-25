@@ -116,6 +116,7 @@ value and returns it (changed or not). Lower priority runs first.
 | `nav.tabs` | filter | `array $tabs, ?array $user` | the suggested bottom bar |
 | `render.head` | action | `App` | echo into `<head>` (use `View::nonce()` for an inline script) |
 | `render.body_end` | action | `App` | echo before `</body>` |
+| `render.page_top` | action | `App` | echo at the top of a public page's main area (a site-wide banner) |
 | `admin.dashboard.cards` | filter | `array $cards` | HTML strings shown on the admin dashboard |
 | `user.resolved` | filter | `array $userRow` | the signed-in member, once per request |
 | `user.signed_in` | action | `string $userId, Identity` | after a successful sign-in |

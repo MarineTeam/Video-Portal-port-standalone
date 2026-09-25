@@ -427,6 +427,7 @@ final class App
                 : [],
             'head' => $this->capture('render.head'),
             'bodyEnd' => $this->capture('render.body_end'),
+            'pageTop' => $this->capture('render.page_top'),
         ];
     }
 

@@ -20,7 +20,7 @@ commit as the code it describes.
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
-| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations) |
+| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
@@ -38,7 +38,7 @@ commit as the code it describes.
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
-| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
+| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
@@ -82,7 +82,7 @@ commit as the code it describes.
 | `/admin` | partial | Dashboard with counts and setup warnings; library cards pending |
 | `/admin/access-attempts` | done | Filter by address, reason, date and unreviewed; mark reviewed; prune past 90 days |
 | `/admin/analytics` | todo | |
-| `/admin/announcements` | todo | |
+| `/admin/announcements` | done | plugins/announcements |
 | `/admin/api-keys` | todo | |
 | `/admin/audit` | done | Paged, filterable; CSV/JSON export streamed, cells that start with = + - @ are quoted |
 | `/admin/authorized-emails` | done | Allowlist with search and status filter; never suspends or removes the last active entry; organisation exemption per address; guest-login switch |
@@ -175,8 +175,8 @@ commit as the code it describes.
 |---|---|---|---|
 | `/api/admin/access-attempts` | GET POST | done | Filters as the page; POST {action: review|prune} |
 | `/api/admin/analytics/export` | GET | todo | |
-| `/api/admin/announcements/[id]` | PATCH DELETE | todo | |
-| `/api/admin/announcements` | GET POST | todo | |
+| `/api/admin/announcements/[id]` | PATCH DELETE | done | plugins/announcements |
+| `/api/admin/announcements` | GET POST | done | message, active, publishAt/expiresAt window, audience ALL/GUESTS/MEMBERS |
 | `/api/admin/api-keys/[id]` | DELETE | todo | |
 | `/api/admin/api-keys` | GET POST | todo | |
 | `/api/admin/assignments` | POST DELETE | todo | |
@@ -438,7 +438,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | PushSubscription | `push_subscriptions` | todo | |
 | DraftRevision | `draft_revisions` | done | Series drafts |
 | Webhook | `webhooks` | todo | |
-| Announcement | `announcements` | todo | |
+| Announcement | `announcements` | done | the banner through render.page_top; cached a minute per audience, forgotten on every write; dismissed per browser session |
 | LiveStream | `live_streams` | todo | |
 | HomeRow | `home_rows` | done | Library\HomeRows (seeded once, built-in order when empty or unreadable) |
 | Subscription | `subscriptions` | todo | |
