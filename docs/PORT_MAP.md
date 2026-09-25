@@ -91,7 +91,7 @@ commit as the code it describes.
 | `/admin/categories` | done | Tree to any depth, ↑↓ among siblings, trash; administrators only (admin-nav) |
 | `/admin/categories/[id]` | done | Every field incl. parent (cycle-guarded), cover upload, three-way downloads |
 | `/admin/comments` | todo | |
-| `/admin/downloads` | todo | |
+| `/admin/downloads` | done | Who (any member, or roles and people) and where (web, app, both), suggested space |
 | `/admin/events` | todo | |
 | `/admin/events/[id]` | todo | |
 | `/admin/files` | done | FilesAdmin: chunked upload stored with the Files slot, inline edit, replace, bulk (incl. podcast), kind filter |
@@ -143,7 +143,7 @@ commit as the code it describes.
 | `/present/[fileId]` | todo | |
 | `/profile` | done | Overview: unread count and plugin cards (profile.overview) |
 | `/profile/devices` | todo | |
-| `/profile/downloads` | todo | |
+| `/profile/downloads` | done | This device’s saved videos (self-healing), Wi-Fi-only choice, space used and the browser quota |
 | `/profile/events` | todo | |
 | `/profile/groups` | todo | |
 | `/profile/inbox` | done | Mark one/all read, open, delete one/all; push toggle slot for the notifications plugin |
@@ -195,7 +195,7 @@ commit as the code it describes.
 | `/api/admin/categories` | GET POST | done | Top-level creation for administrators only |
 | `/api/admin/comments/[id]` | PATCH | todo | |
 | `/api/admin/comments` | GET | todo | |
-| `/api/admin/downloads` | GET PATCH | todo | |
+| `/api/admin/downloads` | GET PATCH | done |  |
 | `/api/admin/editors/category/[id]` | DELETE | done |  |
 | `/api/admin/editors/category` | POST | done | By email |
 | `/api/admin/editors` | GET | done |  |
@@ -309,7 +309,7 @@ commit as the code it describes.
 | `/api/cron/sync-video-feeds` | GET | todo | |
 | `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min through /cron/run; abandoned upload placeholders marked FAILED after a day |
 | `/api/cron/transcribe` | GET | todo | |
-| `/api/downloads/[videoId]` | GET | todo | |
+| `/api/downloads/[videoId]` | GET | done | Four gates after canViewVideo; an MP4 link or the specific reason there isn’t one |
 | `/api/events/[slug]/register` | POST DELETE | todo | |
 | `/api/favorites` | POST | todo | |
 | `/api/files/[id]/content` | GET | done | ContentAccess per request; Range, ETag/304, private no-cache, ?download=1; X-Sendfile family via RangeStreamer |
@@ -457,9 +457,9 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | SlugAlias | `slug_aliases` | partial | Written on rename; redirects with 3.4 |
 | ShareLink | `share_links` | done | Library\Sharing |
 | ShareLinkRecipient | `share_link_recipients` | done | |
-| DownloadPolicy | `download_policies` | todo | |
-| DownloadPolicyGroup | `download_policy_groups` | todo | |
-| DownloadPolicyUser | `download_policy_users` | todo | |
+| DownloadPolicy | `download_policies` | done | |
+| DownloadPolicyGroup | `download_policy_groups` | done | |
+| DownloadPolicyUser | `download_policy_users` | done | |
 | AuthSettings | `auth_settings` | done | Guest-login switch (GuestLogin), read by /auth/guest and /access-denied |
 | AuthorizedEmail | `authorized_emails` | done | Checked on every request, bootstrap adoption, /admin/authorized-emails |
 | UnauthorizedAccessAttempt | `unauthorized_access_attempts` | done | Hourly alert dedupe, 90-day prune, /admin/access-attempts |
@@ -520,8 +520,8 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/data-export.test.ts` | done | tests/Unit/Profile/DataExportTest.php (+ a schema completeness check) and tests/Integration/DataExportTest.php |
 | `lib/device-settings.test.ts` | done | tests/js/device-settings.test.mjs |
 | `lib/directory.test.ts` | todo | |
-| `lib/download-source.test.ts` | todo | |
-| `lib/downloads.test.ts` | todo | |
+| `lib/download-source.test.ts` | done | tests/Unit/Video/DownloadSourceTest.php |
+| `lib/downloads.test.ts` | done | tests/Unit/DownloadsTest.php |
 | `lib/event-series.test.ts` | todo | |
 | `lib/events.test.ts` | todo | |
 | `lib/filename.test.ts` | done | tests/Unit/Support/SupportTest.php |

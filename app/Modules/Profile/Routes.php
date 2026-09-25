@@ -99,6 +99,7 @@ final class Routes
             ['href' => '/profile', 'label' => t('profile.overview')],
             ['href' => '/profile/inbox', 'label' => t('profile.inbox'), 'badge' => Inbox::unreadCount($this->db(), $this->userId())],
             ['href' => '/profile/shared-links', 'label' => t('share.mine')],
+            ['href' => '/profile/downloads', 'label' => t('downloads.title')],
         ];
         $extra = $this->app->hooks->apply('profile.sections', [], $this->user());
         foreach (is_array($extra) ? $extra : [] as $item) {

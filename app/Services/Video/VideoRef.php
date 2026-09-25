@@ -29,6 +29,11 @@ final class VideoRef
         if (($row['bunny_library_id'] ?? null) !== null) {
             $data['libraryId'] ??= (string) $row['bunny_library_id'];
         }
+        // What a sync learned about downloadable renditions lives in columns.
+        if (array_key_exists('has_mp4_fallback', $row) && $row['has_mp4_fallback'] !== null) {
+            $data['hasMp4Fallback'] = (bool) $row['has_mp4_fallback'];
+            $data['mp4Resolutions'] = $row['mp4_resolutions'] ?? null;
+        }
         return new self((string) ($row['external_id'] ?? ''), $data);
     }
 }

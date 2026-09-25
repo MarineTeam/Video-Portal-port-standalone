@@ -15,6 +15,7 @@
  * @var list<string> $scripture
  * @var bool $signedIn
  * @var ?array<string, mixed> $share
+ * @var bool $download
  */
 use App\Support\Timestamp;
 
@@ -54,6 +55,9 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
     <button type="button" class="button small" data-api="/api/watch-progress/mark-watched" data-method="POST"
       data-body="<?= e(\App\Core\View::json(['videoId' => $video['id'], 'completed' => !$video['watched']])) ?>"><?= e(t($video['watched'] ? 'library.markUnwatched' : 'library.markWatched')) ?></button>
   <?php endif ?>
+  <?php if ($download): ?>
+    <button type="button" class="button small" data-download-video="<?= e($video['id']) ?>" data-saved-label="<?= e(t('downloads.saved')) ?>">⬇ <?= e(t('downloads.button')) ?></button>
+  <?php endif ?>
   <?php if ($player !== null): ?>
     <form class="share-at small" data-share-at="<?= e(\App\Core\Url::absolute('/videos/' . $video['slug'])) ?>">
       <label for="share-t"><?= e(t('library.shareAt')) ?></label>
@@ -85,4 +89,6 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
     <?php if ($next !== null): ?><a class="button" rel="next" href="<?= e(url('/videos/' . $next['slug'])) ?>"><?= e(t('library.next')) ?>: <?= e($next['title']) ?> →</a><?php endif ?>
   </nav>
 <?php endif ?>
+<p class="small error" data-download-status hidden></p>
 <script type="module" src="<?= e(asset('js/player.js')) ?>"></script>
+<?php if ($download): ?><script type="module" src="<?= e(asset('js/downloads.js')) ?>"></script><?php endif ?>

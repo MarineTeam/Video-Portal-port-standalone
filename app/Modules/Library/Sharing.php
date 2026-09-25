@@ -174,6 +174,9 @@ final class Sharing
             throw ApiError::tooMany('You’ve made a lot of links in the last hour. Try again later.');
         }
         $content = $this->content($data['seriesId'] ?? null, $data['videoId'] ?? null);
+        if (!$asAdmin && !\App\Modules\Plugins\PluginStates::enabled($this->db(), 'share-links', $content['scope']['categoryId'])) {
+            throw ApiError::forbidden('Sharing links is turned off here.');
+        }
         $policy = ShareLinks::policy($content['restricted'], $this->mayOverride($content['scope']), (bool) ($data['grantsAccess'] ?? false));
         if (!$policy['allowed']) {
             throw ApiError::forbidden((string) $policy['reason']);
@@ -451,6 +454,10 @@ final class Sharing
         try {
             $content = $this->content($type === 'series' ? $id : null, $type === 'video' ? $id : null);
         } catch (ApiError) {
+            return null;
+        }
+        // Making links is the plugin's; revoking and the lists never are.
+        if (!\App\Modules\Plugins\PluginStates::enabled($this->db(), 'share-links', $content['scope']['categoryId'])) {
             return null;
         }
         return [

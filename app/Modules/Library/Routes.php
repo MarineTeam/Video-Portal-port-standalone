@@ -31,6 +31,7 @@ final class Routes
         Listings::register($r, $app);
         Feeds::register($r, $app);
         Sharing::register($r, $app);
+        Downloads::register($r, $app);
         $r->get('/api/videos/local/[name]', fn (Request $req, array $p) => self::local($app, $p['name'], $req));
         $r->get('/api/files/[id]/content', fn (Request $req, array $p) => self::fileContent($app, $p['id'], $req));
         $r->post('/api/view-events', fn (Request $req) => self::viewEvent($app, $req));

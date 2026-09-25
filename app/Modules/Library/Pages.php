@@ -210,6 +210,8 @@ final class Pages
             'scripture' => array_values(array_filter((array) json_decode((string) ($video['scripture_refs'] ?? '[]'), true), 'is_string')),
             'signedIn' => $access->viewer()->signedIn(),
             'share' => $locked ? null : (new Sharing($this->app))->panel('video', (string) $video['id']),
+            'download' => !$locked && !$premiere && $video['status'] === 'READY' && $access->viewer()->signedIn()
+                && (new Downloads($this->app))->decide($video, $series)['allowed'],
             'meta' => self::og((string) $video['title'], '/videos/' . $video['slug'], $decorated['thumbnail'], 'video.other'),
             'jsonLd' => [self::videoObject($video, $decorated['thumbnail']), self::breadcrumbs($crumbs)],
         ]);

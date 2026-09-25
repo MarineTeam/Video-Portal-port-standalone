@@ -191,7 +191,8 @@ final class BunnyStreamProvider extends BaseVideoProvider
         if ($has !== true) {
             return Mp4Result::reason('mp4_unavailable');
         }
-        $height = Bunny::selectMp4Height(Bunny::parseResolutions(is_string($resolutions) ? $resolutions : null), $maxHeight);
+        // The library's own "largest download" setting caps whatever the caller asks for.
+        $height = Bunny::selectMp4Height(Bunny::parseResolutions(is_string($resolutions) ? $resolutions : null), min($maxHeight, Bunny::downloadHeight($this->cfg('downloadHeight'))));
         if ($height === null) {
             return Mp4Result::reason('resolution_unavailable');
         }
