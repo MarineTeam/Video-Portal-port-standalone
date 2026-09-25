@@ -136,6 +136,7 @@ final class Pages
             'files' => $browse->files((string) $series['id']),
             'tags' => array_values(array_filter((array) json_decode((string) ($series['tags'] ?? '[]'), true), 'is_string')),
             'signedIn' => $browse->access()->viewer()->signedIn(),
+            'share' => (new Sharing($this->app))->panel('series', (string) $series['id']),
             'meta' => self::og((string) $series['title'], '/series/' . $series['slug'], $series['cover_image_url'] ?? ($videos[0]['thumbnail'] ?? null)),
             'jsonLd' => [self::breadcrumbs($crumbs)],
         ]);
@@ -208,6 +209,7 @@ final class Pages
             'speaker' => $speaker,
             'scripture' => array_values(array_filter((array) json_decode((string) ($video['scripture_refs'] ?? '[]'), true), 'is_string')),
             'signedIn' => $access->viewer()->signedIn(),
+            'share' => $locked ? null : (new Sharing($this->app))->panel('video', (string) $video['id']),
             'meta' => self::og((string) $video['title'], '/videos/' . $video['slug'], $decorated['thumbnail'], 'video.other'),
             'jsonLd' => [self::videoObject($video, $decorated['thumbnail']), self::breadcrumbs($crumbs)],
         ]);

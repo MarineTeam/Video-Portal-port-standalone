@@ -14,6 +14,7 @@
  * @var ?array<string, mixed> $speaker
  * @var list<string> $scripture
  * @var bool $signedIn
+ * @var ?array<string, mixed> $share
  */
 use App\Support\Timestamp;
 
@@ -77,6 +78,7 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
   <details class="card"><summary><?= e(t('library.notes')) ?></summary><div class="prose"><?= $v->raw(nl2br(e((string) $video['note_outline']))) ?></div></details>
 <?php endif ?>
 
+<?php if ($share !== null): ?><?= $v->partial('partials/share-panel', ['share' => $share]) ?><?php endif ?>
 <?php if ($previous !== null || $next !== null): ?>
   <nav class="row prev-next" aria-label="<?= e($series['title'] ?? '') ?>">
     <?php if ($previous !== null): ?><a class="button" rel="prev" href="<?= e(url('/videos/' . $previous['slug'])) ?>">← <?= e(t('library.previous')) ?>: <?= e($previous['title']) ?></a><?php endif ?>

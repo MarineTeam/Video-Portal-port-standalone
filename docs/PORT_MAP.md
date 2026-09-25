@@ -113,7 +113,7 @@ commit as the code it describes.
 | `/admin/series/[id]` | done | Publish now / Save as draft / Load draft, tags, slug rename leaves an alias, restricted viewing |
 | `/admin/services` | todo | |
 | `/admin/services/report` | todo | |
-| `/admin/share-links` | todo | |
+| `/admin/share-links` | done | Filter active/revoked, revoke (audited), create for any series or video |
 | `/admin/speakers` | done |  |
 | `/admin/teams` | todo | |
 | `/admin/trash` | done | Restore; delete for good removes the provider asset first |
@@ -149,7 +149,7 @@ commit as the code it describes.
 | `/profile/inbox` | done | Mark one/all read, open, delete one/all; push toggle slot for the notifications plugin |
 | `/profile/rota` | todo | |
 | `/profile/settings` | done | This device (theme, language, autoplay, speed, reading, bottom bar), account fields by plugin, password and sign-out-elsewhere, download my data, delete account |
-| `/profile/shared-links` | todo | |
+| `/profile/shared-links` | done | The member’s own links |
 | `/read/[fileId]` | todo | |
 | `/recently-added` | done | Newest series and videos |
 | `/recently-played` | todo | |
@@ -159,8 +159,8 @@ commit as the code it describes.
 | `/series/[slug]` | done | Slug aliases 301; sequential unlock (series or its category); tags; files; BreadcrumbList |
 | `/services` | todo | |
 | `/services/[id]` | todo | |
-| `/share/unavailable` | todo | |
-| `/share/unlock/[token]` | todo | |
+| `/share/unavailable` | done | Says revoked, expired or another account |
+| `/share/unlock/[token]` | done | Password first; nothing granted or counted until it’s right |
 | `/speakers` | done | With counts of videos the reader may open |
 | `/speakers/[slug]` | done | Person JSON-LD |
 | `/subscriptions` | todo | |
@@ -264,8 +264,8 @@ commit as the code it describes.
 | `/api/admin/services/[id]` | PATCH DELETE | todo | |
 | `/api/admin/services/report` | GET | todo | |
 | `/api/admin/services` | GET POST | todo | |
-| `/api/admin/share-links/[id]` | PATCH DELETE | todo | |
-| `/api/admin/share-links` | GET POST | todo | |
+| `/api/admin/share-links/[id]` | PATCH DELETE | done | DELETE revokes (keeps the row) |
+| `/api/admin/share-links` | GET POST | done | GET ?state=active|revoked |
 | `/api/admin/sheets/tabs` | GET | todo | |
 | `/api/admin/speakers/[id]` | PATCH DELETE | done | Videos keep playing without a speaker |
 | `/api/admin/speakers` | GET POST | done |  |
@@ -357,9 +357,9 @@ commit as the code it describes.
 | `/api/rota` | POST DELETE | todo | |
 | `/api/schedules/[id]/events` | GET | todo | |
 | `/api/schedules` | GET | todo | |
-| `/api/share-links/[id]` | PATCH DELETE | todo | |
-| `/api/share-links` | GET POST | todo | |
-| `/api/share-links/unlock` | POST | todo | |
+| `/api/share-links/[id]` | PATCH DELETE | done | PATCH note or revoked; DELETE revokes |
+| `/api/share-links` | GET POST | done | 20 new links an hour; private links email and inbox their recipients |
+| `/api/share-links/unlock` | POST | done | 10 wrong guesses in 15 minutes lock the link; also 30 tries per address per 15 minutes |
 | `/api/subscriptions` | POST PATCH | todo | |
 | `/api/sync/snapshot` | GET | todo | |
 | `/api/tv/approve` | POST | todo | |
@@ -455,8 +455,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | SermonOutlineAnswer | `sermon_outline_answers` | todo | |
 | SermonNote | `sermon_notes` | todo | |
 | SlugAlias | `slug_aliases` | partial | Written on rename; redirects with 3.4 |
-| ShareLink | `share_links` | todo | |
-| ShareLinkRecipient | `share_link_recipients` | todo | |
+| ShareLink | `share_links` | done | Library\Sharing |
+| ShareLinkRecipient | `share_link_recipients` | done | |
 | DownloadPolicy | `download_policies` | todo | |
 | DownloadPolicyGroup | `download_policy_groups` | todo | |
 | DownloadPolicyUser | `download_policy_users` | todo | |
@@ -556,7 +556,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/schedules/visibility.test.ts` | todo | |
 | `lib/services.test.ts` | todo | |
 | `lib/share-links.test.ts` | done | tests/Unit/Library/ShareLinksTest.php |
-| `lib/share-password.test.ts` | todo | |
+| `lib/share-password.test.ts` | done | tests/Unit/SharePasswordTest.php, plus a hash made by Node |
 | `lib/sheets/dates.test.ts` | todo | |
 | `lib/sheets/parse.test.ts` | todo | |
 | `lib/slug.test.ts` | done | tests/Unit/Support/SupportTest.php |
@@ -615,6 +615,7 @@ met, with the reason.
 - **Vendored browser code for video:** `public/vendor-js/tus/` (tus-js-client 4.3.1) and `public/vendor-js/hls/` (hls.js light 1.6.15), each with its LICENSE and VERSION.
 - **The player speaks each embed's postMessage protocol itself** (YouTube's widget messages, Vimeo's player API messages, Player.js for Bunny) instead of loading the YouTube IFrame API, the Vimeo Player SDK or player.js into the page: no third-party script runs in the site's origin, and the CSP needs only frame-src for them. The heartbeat is accurate wherever a protocol or a native `<video>` reports position, elapsed-time elsewhere (Google Drive preview).
 - **Host-disk video is the one exception to "video bytes never pass through PHP"**: its upload is chunked through the site (there is nowhere else for it to go) and a video not everybody may watch streams through `/api/videos/local/[name]`, offloaded by X-Sendfile / X-Accel-Redirect / X-LiteSpeed-Location where detected. Videos anybody may watch sit in `public/media/videos/` for the web server; a `local-videos` job (every five minutes) and every change above a video (category, series, viewer restriction, restore — the `library.changed` hook the library's audit fires) move files between the two, so a take-down time or a category going members-only never leaves a public copy.
+- **Share passwords**: new ones use `password_hash()`; imported `scrypt$salt$key` hashes are checked by a vendored pure-PHP scrypt (`app/Support/Scrypt.php`, RFC 7914 vectors and a Node-made hash in the tests, about 2.5 s and 22 MB at Node's defaults) and rehashed on the first right guess. Because that check is slow, unlocking is also limited to 30 tries per address per 15 minutes, beside the per-link lockout.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.

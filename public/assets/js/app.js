@@ -82,3 +82,18 @@ if (viewed) {
     MT.api('/api/view-events', { method: 'POST', body: JSON.parse(viewed.dataset.viewEvent) }).catch(() => {});
   } catch { /* malformed attribute */ }
 }
+
+// <button data-copy="text">: copy it, say so for a moment.
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest?.('[data-copy]');
+  if (!button) return;
+  event.preventDefault();
+  try {
+    await navigator.clipboard.writeText(button.dataset.copy);
+    const label = button.textContent;
+    button.textContent = '✓';
+    setTimeout(() => { button.textContent = label; }, 1500);
+  } catch {
+    window.prompt('', button.dataset.copy);
+  }
+});

@@ -357,3 +357,5 @@ fieldset[disabled] { opacity: 0.6; }
 .avatar-cover { width: min(160px, 100%); border-radius: 50%; }
 .chips.plain { list-style: none; padding: 0; }
 .search-form input[type=search] { flex: 1 1 14rem; }
+.share-panel { margin-block: 1rem; }
+.share-panel summary { cursor: pointer; font-weight: 600; }

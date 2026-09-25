@@ -93,11 +93,12 @@ final class Routes
      *
      * @return list<array{href: string, label: string, badge?: int}>
      */
-    private function sections(): array
+    public function sections(): array
     {
         $sections = [
             ['href' => '/profile', 'label' => t('profile.overview')],
             ['href' => '/profile/inbox', 'label' => t('profile.inbox'), 'badge' => Inbox::unreadCount($this->db(), $this->userId())],
+            ['href' => '/profile/shared-links', 'label' => t('share.mine')],
         ];
         $extra = $this->app->hooks->apply('profile.sections', [], $this->user());
         foreach (is_array($extra) ? $extra : [] as $item) {

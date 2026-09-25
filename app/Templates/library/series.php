@@ -9,6 +9,7 @@
  * @var list<array<string, mixed>> $files
  * @var list<string> $tags
  * @var bool $signedIn
+ * @var ?array<string, mixed> $share
  */
 ?>
 <div hidden data-view-event="<?= e(\App\Core\View::json(['seriesId' => $series['id']])) ?>"></div>
@@ -32,6 +33,7 @@
 <?php if ($videos !== []): ?>
   <?= $v->partial('partials/library-videos', ['videos' => $videos, 'locked' => $locked]) ?>
 <?php endif ?>
+<?php if ($share !== null): ?><?= $v->partial('partials/share-panel', ['share' => $share]) ?><?php endif ?>
 <?php if ($files !== []): ?>
   <h2><?= e(t('library.downloads')) ?></h2>
   <?= $v->partial('partials/library-files', ['files' => $files]) ?>

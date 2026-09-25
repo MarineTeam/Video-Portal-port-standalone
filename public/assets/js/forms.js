@@ -123,7 +123,10 @@ async function send(element, body) {
       scope?.querySelector('[data-error]')?.setAttribute('hidden', '');
       if (element instanceof HTMLFormElement) element.reset();
     }
-    if (element.dataset.redirect) {
+    if ('follow' in element.dataset && result && typeof result.redirect === 'string') {
+      // The server names where to go next (a share link's content, once unlocked).
+      window.location.href = result.redirect;
+    } else if (element.dataset.redirect) {
       window.location.href = MT.url(element.dataset.redirect.replace('{id}', result && result.id ? result.id : ''));
     } else if (!('noReload' in element.dataset)) {
       window.location.reload();
