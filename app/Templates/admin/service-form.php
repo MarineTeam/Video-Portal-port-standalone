@@ -58,7 +58,7 @@
         </select>
       </label>
     <?php elseif (!empty($field['secret'])): ?>
-      <label><?= e($field['label']) ?> <?= !empty($value) ? '<span class="badge">set</span>' : '' ?>
+      <label><?= e($field['label']) ?> <?= $v->raw(!empty($value) ? '<span class="badge">set</span>' : '') ?>
         <input type="password" name="<?= e($key) ?>" value="" autocomplete="new-password" placeholder="<?= !empty($value) ? 'Leave blank to keep the saved value' : '' ?>">
       </label>
     <?php elseif ($type === 'textarea'): ?>

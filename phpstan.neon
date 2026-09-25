@@ -1,0 +1,18 @@
+parameters:
+    level: 6
+    phpVersion: 80200
+    paths:
+        - app
+        - install
+        - bin
+    excludePaths:
+        # Templates are included into the View's scope, which PHPStan can't
+        # see; tools/ci/check-templates.php checks their output instead.
+        - app/Templates
+    bootstrapFiles:
+        - app/autoload.php
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # Templates and plugin files are included into a scope PHPStan can't see.
+        - identifier: missingType.iterableValue

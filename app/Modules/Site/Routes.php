@@ -23,7 +23,7 @@ final class Routes
             $response->header('Cache-Control', 'public, max-age=300');
             return $response;
         });
-        $r->post('/api/locale', function (Request $req) use ($app): Response {
+        $r->post('/api/locale', function (Request $req): Response {
             $locale = $req->input()['locale'] ?? null;
             if (!is_string($locale) || !isset(I18n::LOCALES[$locale])) {
                 return Response::error('Unknown language', 400, 'invalid');

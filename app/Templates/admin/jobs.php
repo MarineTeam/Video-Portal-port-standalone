@@ -4,7 +4,7 @@
 <h1>Scheduled jobs</h1>
 <?php if ($flash): ?><p class="notice" role="status"><?= e($flash) ?></p><?php endif ?>
 <p>
-  Real cron: <?= $lastReal > 0 ? 'last seen ' . e(gmdate('Y-m-d H:i', $lastReal)) . ' UTC' : '<strong>never seen</strong>' ?>.
+  Real cron: <?= $v->raw($lastReal > 0 ? 'last seen ' . e(gmdate('Y-m-d H:i', $lastReal)) . ' UTC' : '<strong>never seen</strong>') ?>.
   Without one, jobs run when somebody visits the site (at most once a minute), which is fine for a quiet site and slow for a busy schedule.
 </p>
 <?php if ($cronUrl !== null): ?>

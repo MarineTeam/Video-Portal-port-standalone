@@ -1,0 +1,16 @@
+{
+  "name": "Marine Team",
+  "short_name": "Marine Team",
+  "description": "Watch sermons, series, and downloads.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0C4A6E",
+  "theme_color": "#0C4A6E",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

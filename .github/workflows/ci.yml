@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint on PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, zip, intl, curl
+          coverage: none
+      - name: php -l across the tree
+        run: find app install bin public plugins themes tests tools -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+      - name: No process functions in shipped code
+        run: php tools/ci/check-banned.php
+      - name: Every template output escaped
+        run: php tools/ci/check-templates.php
+
+  unit:
+    name: Unit tests and static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, zip, intl, curl
+          tools: composer
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: composer audit
+      - run: vendor/bin/phpunit --testsuite unit
+      - run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Browser modules
+        run: node --test tests/js/*.test.mjs
+
+  integration:
+    name: Integration on ${{ matrix.db.label }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db:
+          - { label: 'MySQL 8.0', image: 'mysql:8.0' }
+          - { label: 'MariaDB 10.6', image: 'mariadb:10.6' }
+    services:
+      db:
+        image: ${{ matrix.db.image }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MARIADB_ROOT_PASSWORD: root
+          MYSQL_DATABASE: marine_test
+          MARIADB_DATABASE: marine_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot || healthcheck.sh --connect"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      MT_TEST_DB_HOST: 127.0.0.1
+      MT_TEST_DB_PORT: 3306
+      MT_TEST_DB_NAME: marine_test
+      MT_TEST_DB_USER: root
+      MT_TEST_DB_PASS: root
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, zip, intl, curl, pcntl, posix
+          tools: composer
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: vendor/bin/phpunit --testsuite integration

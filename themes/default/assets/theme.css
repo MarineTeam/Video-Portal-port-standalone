@@ -1,0 +1,10 @@
+/*
+ * The default theme. The core stylesheet (public/assets/css/app.css) already
+ * draws the interface; this file exists so a child theme has a parent to
+ * inherit from and a place to see how overrides are written.
+ *
+ * To make your own theme: copy this folder to themes/<your-slug>/, change the
+ * slug in theme.json (and set "parent": "default" to inherit everything you
+ * don't override), then override any template by putting a file at the same
+ * path under templates/ as it has under app/Templates/.
+ */

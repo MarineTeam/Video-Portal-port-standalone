@@ -10,7 +10,7 @@ use App\Modules\Site\Shell;
   <h2><?= e($group['label']) ?></h2>
   <?php foreach ($group['links'] as $link): ?>
     <?php $active = Shell::isActivePath($link['href'], $shell['path'], $link['href'] === '/admin'); ?>
-    <a href="<?= e(url($link['href'])) ?>" class="<?= $active ? 'active' : '' ?>"<?= $active ? ' aria-current="page"' : '' ?>><?= e($link['label']) ?></a>
+    <a href="<?= e(url($link['href'])) ?>" class="<?= $active ? 'active' : '' ?>"<?= $v->raw($active ? ' aria-current="page"' : '') ?>><?= e($link['label']) ?></a>
   <?php endforeach ?>
 <?php endforeach ?>
 </nav>

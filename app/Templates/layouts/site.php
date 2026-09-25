@@ -44,7 +44,7 @@ $tabs = $shell['tabs'];
 <div class="frame">
   <nav class="sidebar" aria-label="<?= e(t('nav.primary')) ?>">
     <?php foreach ($shell['nav'] as $item): ?>
-      <a href="<?= e(url($item['href'])) ?>" class="<?= Shell::isActivePath($item['href'], $shell['path']) ? 'active' : '' ?>"<?= Shell::isActivePath($item['href'], $shell['path']) ? ' aria-current="page"' : '' ?>>
+      <a href="<?= e(url($item['href'])) ?>" class="<?= Shell::isActivePath($item['href'], $shell['path']) ? 'active' : '' ?>"<?= $v->raw(Shell::isActivePath($item['href'], $shell['path']) ? ' aria-current="page"' : '') ?>>
         <?= $v->raw(Icons::svg($item['icon'] ?? 'folder')) ?><span><?= e($item['label']) ?></span>
       </a>
     <?php endforeach ?>

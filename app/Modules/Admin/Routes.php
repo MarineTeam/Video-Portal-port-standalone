@@ -439,7 +439,7 @@ final class Routes
         $input = $req->input();
         $payload = Crypto::verify('service-switch', (string) ($input['token'] ?? ''));
         $pending = $this->app->session()->get('pending_service');
-        $refuse = function (string $why) use ($slot) {
+        $refuse = function (string $why): Response {
             $this->flash($why);
             return Response::redirect(Url::to('/admin/providers'));
         };

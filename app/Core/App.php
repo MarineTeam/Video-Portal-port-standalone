@@ -34,7 +34,7 @@ final class App
     /** @var array<string, object> services registered by modules and plugins */
     private array $services = [];
 
-    /** @var list<string> extra CSP sources contributed by active providers and plugins */
+    /** @var array<string, list<string>> extra CSP sources contributed by active providers and plugins, by directive */
     private array $cspSources = ['script' => [], 'frame' => [], 'connect' => [], 'img' => [], 'media' => []];
 
     public function __construct(public readonly Paths $paths)

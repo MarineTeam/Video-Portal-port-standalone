@@ -34,9 +34,6 @@ final class Url
     public static function to(string $path, array $query = []): string
     {
         $url = self::$basePath . '/' . ltrim($path, '/');
-        if ($url === '') {
-            $url = '/';
-        }
         return $query === [] ? $url : $url . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
     }
 

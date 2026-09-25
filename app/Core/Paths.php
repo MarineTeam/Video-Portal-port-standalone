@@ -24,6 +24,11 @@ final class Paths
         $root = rtrim($root, '/');
         $storage = "$root/storage";
         $pointer = "$root/storage-path.php";
+        // The test suite installs into a throwaway directory; no host sets this.
+        $override = getenv('MT_STORAGE_DIR');
+        if (is_string($override) && $override !== '' && is_dir($override)) {
+            return new self($root, rtrim($override, '/'), "$root/plugins", "$root/themes");
+        }
         if (is_file($pointer)) {
             $candidate = require $pointer;
             if (is_string($candidate) && is_dir($candidate)) {

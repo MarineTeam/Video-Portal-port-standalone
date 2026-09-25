@@ -30,6 +30,10 @@ interface FilesProvider extends ServiceProvider
      */
     public function serve(string $object, Request $request, array $headers): Response;
 
-    /** Opens the object for reading (a copy, an export, a probe). @return resource|null */
-    public function open(string $object);
+    /**
+     * Opens the object for reading (a copy, an export, a probe).
+     *
+     * @return resource|null
+     */
+    public function open(string $object): mixed;
 }

@@ -29,6 +29,7 @@ final class RateLimiter
     /** Counts one request; false once $limit is exceeded within $window seconds. */
     public function hit(string $bucket, int $limit, int $window): bool
     {
+        $this->ensure($bucket);
         return $this->db->transaction(function (Db $db) use ($bucket, $limit, $window) {
             $row = $this->lock($db, $bucket);
             $now = time();
@@ -60,6 +61,7 @@ final class RateLimiter
      */
     public function fail(string $bucket, int $free = 5, int $base = 30, int $max = 3600): int
     {
+        $this->ensure($bucket);
         return $this->db->transaction(function (Db $db) use ($bucket, $free, $base, $max) {
             $row = $this->lock($db, $bucket);
             // Failures forget themselves after a quiet day.
@@ -78,11 +80,30 @@ final class RateLimiter
         $this->db->delete('rate_limits', ['bucket' => $bucket]);
     }
 
+    /**
+     * Creates the bucket's row outside the locking transaction. Inserting it
+     * inside one lets two first-comers each take a shared lock on the new
+     * key and then deadlock upgrading it; created here, in autocommit, the
+     * transaction below only ever waits on the row lock.
+     */
+    private function ensure(string $bucket): void
+    {
+        if ($this->db->inTransaction()) {
+            return;
+        }
+        $this->db->run('INSERT IGNORE INTO {{rate_limits}} (bucket, window_started_at, hits, failures) VALUES (?, ?, 0, 0)', [$bucket, Db::now()]);
+    }
+
     /** @return array<string, mixed> */
     private function lock(Db $db, string $bucket): array
     {
-        $db->run('INSERT IGNORE INTO {{rate_limits}} (bucket, window_started_at, hits, failures) VALUES (?, ?, 0, 0)', [$bucket, Db::now()]);
-        return $db->one('SELECT * FROM {{rate_limits}} WHERE bucket = ? FOR UPDATE', [$bucket]) ?? throw new \RuntimeException('Rate limit row missing.');
+        $row = $db->one('SELECT * FROM {{rate_limits}} WHERE bucket = ? FOR UPDATE', [$bucket]);
+        if ($row === null) {
+            // Pruned between ensure() and here; create it under the lock we're in.
+            $db->run('INSERT IGNORE INTO {{rate_limits}} (bucket, window_started_at, hits, failures) VALUES (?, ?, 0, 0)', [$bucket, Db::now()]);
+            $row = $db->one('SELECT * FROM {{rate_limits}} WHERE bucket = ? FOR UPDATE', [$bucket]);
+        }
+        return $row ?? throw new \RuntimeException('Rate limit row missing.');
     }
 
     public static function prune(Db $db): int

@@ -1,0 +1,1643 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Offline — Marine Team</title>
+<link rel="icon" href="/icon.svg" />
+<script>
+// Same key/logic as src/lib/device-settings.ts THEME_INIT_SCRIPT, kept in
+// sync by hand since this file can't import from the app bundle — it has to
+// stand alone so the service worker can serve it with zero network.
+(function () {
+  try {
+    var raw = localStorage.getItem("marine-device-settings");
+    var theme = raw ? (JSON.parse(raw) || {}).theme : "system";
+    if (theme !== "light" && theme !== "dark") theme = "system";
+    var dark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.add(dark ? "dark" : "light");
+  } catch (e) {}
+})();
+</script>
+<style>
+  :root { color-scheme: light dark; --sep: #e4e4e7; --sec: #71717a; --panel: #fff; --ink: #18181b; --chip: #f4f4f5; --accent: #0369a1; }
+  html.dark { --sep: #27272a; --sec: #a1a1aa; --panel: #09090b; --ink: #fafafa; --chip: #18181b; --accent: #38bdf8; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px calc(96px + env(safe-area-inset-bottom)); }
+  .banner {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid #fde68a; background: #fffbeb; color: #92400e;
+    border-radius: 8px; padding: 10px 14px; font-size: 14px; margin-bottom: 20px;
+  }
+  html.dark .banner { border-color: #78350f; background: rgba(120,53,15,0.25); color: #fbbf24; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 24px 0 8px; }
+  .sub { color: var(--sec); font-size: 14px; margin: 0 0 16px; }
+  ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--sep); border-radius: 10px; overflow: hidden; }
+  li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--sep); }
+  li:last-child { border-bottom: none; }
+  .meta { min-width: 0; }
+  .title { font-weight: 500; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .detail { font-size: 12px; color: var(--sec); margin-top: 2px; }
+  .actions { display: flex; gap: 6px; flex-shrink: 0; }
+  button, .btn {
+    font: inherit; font-size: 13px; cursor: pointer; border-radius: 6px; text-decoration: none;
+    border: 1px solid var(--sep); background: var(--panel); color: inherit; padding: 6px 10px; display: inline-block;
+  }
+  button:hover, .btn:hover { background: var(--chip); }
+  button.primary { border-color: var(--accent); color: var(--accent); }
+  button.remove { color: #b91c1c; border-color: #fecaca; }
+  html.dark button.remove { color: #f87171; border-color: #7f1d1d; }
+  button[disabled] { opacity: 0.4; cursor: default; }
+  .empty { font-size: 14px; color: var(--sec); padding: 20px 4px; }
+  .rowlink { display: flex; width: 100%; gap: 10px; align-items: center; text-align: left; border: none; background: none; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+  .pagenum { width: 34px; flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--sec); font-size: 13px; }
+  #player { display: none; margin-bottom: 20px; }
+  #player video { width: 100%; border-radius: 10px; background: #000; display: block; }
+  #player .now-playing { font-size: 14px; margin: 8px 0 0; color: var(--sec); }
+
+  /* Reader */
+  .reader-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
+  .reader-bar .spacer { flex: 1; }
+  #canvas-wrap { background: var(--chip); border-radius: 10px; padding: 10px; overflow: auto; touch-action: pan-y; }
+  #canvas-wrap canvas { display: block; margin: 0 auto; max-width: 100%; box-shadow: 0 2px 12px rgba(0,0,0,0.18); }
+  .hint { font-size: 12px; color: var(--sec); margin-top: 8px; }
+  #epub-view { height: 70vh; background: #fff; border: 1px solid var(--sep); border-radius: 10px; overflow: hidden; }
+  .lyrics { white-space: pre-wrap; line-height: 1.6; font-size: 15px; border: 1px solid var(--sep); border-radius: 10px; padding: 16px; }
+  .hymn-nav { display: flex; gap: 10px; align-items: center; margin-top: 14px; font-size: 13px; }
+  .size-controls { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 8px; }
+  .size-controls button { padding: 4px 10px; font-size: 13px; }
+  .hymn-nav .spacer { flex: 1; }
+  .group { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sec); padding: 8px 14px; background: var(--chip); border-bottom: 1px solid var(--sep); }
+
+  /* The same tab bar the app draws, from the snapshot it left behind. */
+  #tabbar {
+    position: fixed; inset: auto 0 0 0; display: flex; z-index: 30;
+    border-top: 1px solid var(--sep); background: var(--panel);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Past five icons the row scrolls sideways rather than squeezing — the
+     same rule the app's own bar follows (see src/lib/nav-tabs.ts). */
+  #tabbar.scrolls { overflow-x: auto; scrollbar-width: none; }
+  #tabbar.scrolls::-webkit-scrollbar { display: none; }
+  #tabbar a {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 2px; font-size: 11px; color: var(--sec); text-decoration: none; min-width: 0;
+  }
+  #tabbar.scrolls a { flex: 0 0 4.75rem; }
+  #tabbar a.active { color: var(--accent); font-weight: 500; }
+  #tabbar a.saved { color: var(--ink); }
+  #tabbar span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #tabbar svg { width: 24px; height: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">You're offline. Here's what's saved on this device.</div>
+  <div id="view"></div>
+  <div id="reconnect" style="margin-top:28px">
+    <button id="retry">Try Marine Team again</button>
+    <span id="retry-status" class="detail"></span>
+  </div>
+</div>
+<nav id="tabbar" aria-label="Primary"></nav>
+
+<script>
+/*
+ * The offline shell.
+ *
+ * A static page the service worker serves whenever a navigation can't reach
+ * the network — including the installed app's own cold start. It has no
+ * bundle, no server and no session, so everything here is read out of the
+ * same localStorage indexes and Cache Storage entries the app writes:
+ *
+ *   marine-nav-tabs        the bottom bar the app last drew (lib/nav-tabs.ts)
+ *   marine-offline-books   books saved to this device (lib/offline-books.ts)
+ *   marine-downloads-index videos saved to this device (lib/offline-downloads.ts)
+ *   marine-offline-services service orders saved here (lib/offline-services.ts)
+ *   marine-offline-calendar the rota calendar (lib/offline-calendar.ts)
+ *   marine-device-settings this device's settings (lib/device-settings.ts)
+ *   marine-toc-v1:<id>     a book's contents list (lib/reader-cache.ts)
+ *
+ * Those constants are literals rather than imports for the same reason the
+ * theme script above is a copy: this file has to work standing completely
+ * alone. Keep them in step with the modules named beside them.
+ *
+ * It is served at whatever URL was asked for, so location.pathname is the
+ * icon that was tapped — which is how tapping Hymnals with no connection
+ * opens the hymnals rather than a generic list.
+ *
+ * Port note: BASE is the path the site is installed under, read from the
+ * service worker that is serving this page (it lives at BASE + "/sw.js").
+ * At a domain root it is "", and every path below is exactly the original's.
+ */
+const BASE = (function () {
+  try {
+    var controller = navigator.serviceWorker && navigator.serviceWorker.controller;
+    return controller ? new URL(controller.scriptURL).pathname.replace(/\/sw\.js$/, "") : "";
+  } catch (e) {
+    return "";
+  }
+})();
+const VIDEO_INDEX_KEY = "marine-downloads-index";
+const DOWNLOAD_CACHE = "marine-team-downloads-v1";
+const BOOK_INDEX_KEY = "marine-offline-books";
+const BOOK_CACHE = "marine-team-books-v1";
+const SERVICE_INDEX_KEY = "marine-offline-services";
+const SERVICE_CACHE = "marine-team-services-v1";
+const CALENDAR_INDEX_KEY = "marine-offline-calendar";
+const CALENDAR_CACHE = "marine-team-calendar-v1";
+const TABS_KEY = "marine-nav-tabs";
+const SETTINGS_KEY = "marine-device-settings";
+// The same bounds as MIN_READING_SCALE / MAX_READING_SCALE in
+// lib/device-settings.ts. Clamped here too, because this page writes the
+// setting as well as reading it, and a value it stored outside the range
+// would come back to the app as one nobody chose.
+const MIN_READING_SCALE = 0.75;
+const MAX_READING_SCALE = 2;
+const READING_SCALE_STEP = 0.1;
+const TOC_PREFIX = "marine-toc-v1:";
+const PDFJS_URL = BASE + "/pdfjs/pdf.min.mjs";
+const PDFJS_WORKER_URL = BASE + "/pdfjs/pdf.worker.min.mjs";
+// epub.js's dist build is UMD and expects JSZip as a global, so the two load
+// in this order or neither works.
+const JSZIP_URL = BASE + "/epubjs/jszip.min.js";
+const EPUBJS_URL = BASE + "/epubjs/epub.min.js";
+
+// Copied from src/components/icons.tsx — same 24-unit box, same 1.75 stroke —
+// so the bar offline is the bar the app draws. Keep in sync by hand.
+const ICONS = {
+  home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V19a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1V9.5"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.9-3.9"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  star: '<path d="M12 4.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8L12 4.5z"/>',
+  sparkle: '<path d="M11 4l1.2 3.8L16 9l-3.8 1.2L11 14l-1.2-3.8L6 9l3.8-1.2L11 4z"/><path d="M17.5 14.5l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1z"/>',
+  bell: '<path d="M18 8.5a6 6 0 1 0-12 0c0 6-2.5 8-2.5 8h17s-2.5-2-2.5-8"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/>',
+  folder: '<path d="M3.5 7.5a2 2 0 0 1 2-2h3.2a2 2 0 0 1 1.5.7l1 1.3h7.3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  playlist: '<path d="M4 7h11M4 12h11M4 17h7"/><path d="m17 12.5 4 2.5-4 2.5z"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 3.5H20v17H6.5A2.5 2.5 0 0 1 4 18V6a2.5 2.5 0 0 1 2.5-2.5z"/>',
+  live: '<circle cx="12" cy="12" r="2.5"/><path d="M8.2 15.8a5.4 5.4 0 0 1 0-7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6"/><path d="M5.5 18.5a9.2 9.2 0 0 1 0-13M18.5 5.5a9.2 9.2 0 0 1 0 13"/>',
+  person: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/>',
+  calendar: '<rect x="3.5" y="5.5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3.5v4M16 3.5v4"/>',
+  ticket: '<path d="M3.5 8.5V6.5a1 1 0 0 1 1-1h15a1 1 0 0 1 1 1v2a2.5 2.5 0 0 0 0 7v2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-2a2.5 2.5 0 0 0 0-7z"/><path d="M14 5.5v13"/>',
+  card: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M7.5 10h5M7.5 14h9"/>',
+  hands: '<path d="M12 20.5c-3 0-5.5-2-6.5-4.5L4 12a1.5 1.5 0 0 1 2.6-1.4L8 12V5a1.5 1.5 0 0 1 3 0v5"/><path d="M12 20.5c3 0 5.5-2 6.5-4.5L20 12a1.5 1.5 0 0 0-2.6-1.4L16 12V5a1.5 1.5 0 0 0-3 0v5"/>',
+  people: '<circle cx="9" cy="8" r="3.25"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3.25 3.25 0 0 1 0 6.5M17 14.5a6.5 6.5 0 0 1 4.5 5.5"/>',
+  tv: '<rect x="2.5" y="4.5" width="19" height="13" rx="2"/><path d="M8 20.5h8"/>',
+  download: '<path d="M12 4v10"/><path d="m8 10.5 4 4 4-4"/><path d="M4.5 18.5h15"/>',
+  shield: '<path d="M12 3.5 5 6v5.5c0 4.3 2.9 7.6 7 9 4.1-1.4 7-4.7 7-9V6z"/>',
+};
+
+function readJson(key, fallback) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "null");
+    return parsed === null ? fallback : parsed;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function readBooks() {
+  const items = readJson(BOOK_INDEX_KEY, []);
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((item) => item && item.id && item.cacheUrl)
+    // Anything that isn't a hymnal is a document, whatever an older version
+    // of the app called it, and a document with no format recorded is a PDF.
+    .map((item) =>
+      Object.assign({}, item, {
+        kind: item.kind === "hymnal" ? "hymnal" : "file",
+        format: item.format === "epub" ? "epub" : "pdf",
+      }),
+    );
+}
+
+function readVideos() {
+  const items = readJson(VIDEO_INDEX_KEY, []);
+  return Array.isArray(items) ? items.filter((item) => item && item.videoId && item.cacheUrl) : [];
+}
+
+function writeVideos(items) {
+  try {
+    localStorage.setItem(VIDEO_INDEX_KEY, JSON.stringify(items));
+  } catch (e) {}
+}
+
+function writeBooks(items) {
+  try {
+    localStorage.setItem(BOOK_INDEX_KEY, JSON.stringify(items));
+  } catch (e) {}
+}
+
+function readServices() {
+  const items = readJson(SERVICE_INDEX_KEY, []);
+  return Array.isArray(items) ? items.filter((item) => item && item.id && item.cacheUrl) : [];
+}
+
+function writeServices(items) {
+  try {
+    localStorage.setItem(SERVICE_INDEX_KEY, JSON.stringify(items));
+  } catch (e) {}
+}
+
+/** There is one calendar, so its index is one entry rather than a list. */
+function readCalendar() {
+  const entry = readJson(CALENDAR_INDEX_KEY, null);
+  return entry && entry.cacheUrl ? entry : null;
+}
+
+function writeCalendar(entry) {
+  try {
+    if (entry) localStorage.setItem(CALENDAR_INDEX_KEY, JSON.stringify(entry));
+    else localStorage.removeItem(CALENDAR_INDEX_KEY);
+  } catch (e) {}
+}
+
+/**
+ * Whose calendar this device shows, shared with the app.
+ *
+ * The same setting under the same key as CalendarView writes
+ * (lib/device-settings.ts), so a name picked here with no signal is the name
+ * the app agrees on the moment there is one — and the other way round.
+ */
+function calendarPerson() {
+  const raw = readJson(SETTINGS_KEY, null);
+  return raw && typeof raw.calendarPersonId === "string" ? raw.calendarPersonId : null;
+}
+
+function setCalendarPerson(id) {
+  try {
+    // Merged, like the reading size: this page must never be the reason
+    // somebody's theme or tab bar goes back to the default.
+    const current = readJson(SETTINGS_KEY, {}) || {};
+    current.calendarPersonId = id;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(current));
+  } catch (e) {}
+}
+
+/**
+ * The reading text size this device chose, shared with the app.
+ *
+ * Offline is where the size matters most — a pew, a dim hall, no connection
+ * to go and change a setting from — so this both reads it and writes it,
+ * rather than only honouring what the app was last told.
+ */
+function readingScale() {
+  var raw = readJson(SETTINGS_KEY, null);
+  var value = raw && typeof raw.readingTextScale === "number" ? raw.readingTextScale : 1;
+  if (!isFinite(value)) return 1;
+  return Math.min(MAX_READING_SCALE, Math.max(MIN_READING_SCALE, value));
+}
+
+function setReadingScale(next) {
+  var clamped = Math.min(MAX_READING_SCALE, Math.max(MIN_READING_SCALE, next));
+  var rounded = Math.round(clamped * 100) / 100;
+  try {
+    // Merged into whatever else is stored: this page must never be the reason
+    // somebody's theme or tab bar goes back to the default.
+    var current = readJson(SETTINGS_KEY, {}) || {};
+    current.readingTextScale = rounded;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(current));
+  } catch (e) {}
+  return rounded;
+}
+
+/** The day a service is for, as a person reads it. */
+function formatServiceDate(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+/** Today, as the app's own todayIso() sees it: this device's local day. */
+function todayIso() {
+  const now = new Date();
+  return (
+    now.getFullYear() +
+    "-" +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(now.getDate()).padStart(2, "0")
+  );
+}
+
+/**
+ * "Today", "Tomorrow", "Sunday", or a date — the same wording as
+ * relativeDayLabel in src/lib/dates.ts, so a rota reads the same whether the
+ * app drew it or this page did. Self-contained on purpose: it is lifted out
+ * whole and run against the app's version in the drift test.
+ */
+function relativeDay(value, today) {
+  const day = new Date(value + "T00:00:00Z");
+  const now = new Date(today + "T00:00:00Z");
+  if (isNaN(day.getTime()) || isNaN(now.getTime())) return "";
+  const difference = Math.round((day.getTime() - now.getTime()) / 86400000);
+  if (difference === 0) return "Today";
+  if (difference === 1) return "Tomorrow";
+  if (difference === -1) return "Yesterday";
+  const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  if (difference > 1 && difference < 7) return weekdays[day.getUTCDay()];
+  const label =
+    weekdays[day.getUTCDay()].slice(0, 3) + ", " + months[day.getUTCMonth()] + " " + day.getUTCDate();
+  return value.slice(0, 4) !== today.slice(0, 4) ? label + " " + day.getUTCFullYear() : label;
+}
+
+/** How long ago the calendar last caught up with the server. */
+function formatSyncedAt(iso) {
+  const at = new Date(iso);
+  if (isNaN(at.getTime())) return "";
+  const days = Math.floor((Date.now() - at.getTime()) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return days + " days ago";
+  return "on " + at.toLocaleDateString(undefined, { day: "numeric", month: "long" });
+}
+
+/**
+ * A book's contents, as the app resolved them when the book was saved. The
+ * tag check is the same one lib/reader-cache.ts makes: a list read from a
+ * different version of the file describes a different book.
+ */
+function readToc(book) {
+  const stored = readJson(TOC_PREFIX + book.id, null);
+  if (!stored || stored.tag !== String(book.sizeBytes == null ? 0 : book.sizeBytes)) return null;
+  return Array.isArray(stored.entries) ? stored.entries : null;
+}
+
+/**
+ * The hymn number a contents entry announces — the number on the board, not
+ * the page it is on. Same rule as hymnNumberOf in src/lib/toc-nav.ts: only a
+ * number at the start counts, with the words a hymnal's bookmarks put in
+ * front of one. Kept in step by hand, like everything else in this file.
+ */
+function hymnNumberOf(label) {
+  const match = /^\s*(?:hymn|hymn\s+no\.?|no\.?|#)?\s*(\d{1,4})(?![\d])/i.exec(label || "");
+  if (!match) return null;
+  const number = Number(match[1]);
+  return number >= 1 ? number : null;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + " KB";
+  if (bytes < 1024 * 1024 * 1024) return Math.round(bytes / (1024 * 1024)) + " MB";
+  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
+}
+
+function formatDuration(seconds) {
+  if (!seconds) return "";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return m + ":" + (s < 10 ? "0" : "") + s;
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function icon(name) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.75");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = ICONS[name] || ICONS.folder;
+  return svg;
+}
+
+const view = document.getElementById("view");
+const scopePath = location.pathname === BASE + "/offline.html" ? null : location.pathname;
+
+/**
+ * The books a tap on this icon should show: the ones saved from that exact
+ * place, and the ones saved from a series inside it — a hymnal filed under a
+ * series still belongs to the Hymnals icon.
+ */
+function booksIn(path) {
+  if (!path || path === BASE + "/") return [];
+  return readBooks().filter((book) => book.homeHref === path || book.categoryHref === path);
+}
+
+function labelFor(book, path) {
+  return book.homeHref === path ? book.homeLabel : book.categoryLabel || book.homeLabel;
+}
+
+// ---------------------------------------------------------------- the bar --
+function renderTabs() {
+  const bar = document.getElementById("tabbar");
+  const tabs = readJson(TABS_KEY, []);
+  bar.innerHTML = "";
+  if (!Array.isArray(tabs) || tabs.length === 0) {
+    bar.style.display = "none";
+    return;
+  }
+  // TABS_ACROSS in src/lib/nav-tabs.ts.
+  bar.className = tabs.length > 5 ? "scrolls" : "";
+  tabs.forEach((tab) => {
+    if (!tab || typeof tab.href !== "string") return;
+    const link = el("a");
+    link.href = tab.href;
+    // Plain links on purpose: with no connection the service worker answers
+    // with this same page (which then reads the new path), and the moment the
+    // connection is back the very same tap lands in the real app.
+    const saved = booksIn(tab.href).length > 0;
+    link.className = (tab.href === scopePath ? "active" : "") + (saved ? " saved" : "");
+    if (saved) link.title = "Saved on this device";
+    link.appendChild(icon(tab.icon));
+    link.appendChild(el("span", null, tab.label || ""));
+    bar.appendChild(link);
+  });
+  const active = bar.querySelector("a.active");
+  if (active) active.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+// ------------------------------------------------------------ the library --
+function renderLibrary() {
+  teardownReader();
+  view.innerHTML = "";
+  const scoped = booksIn(scopePath);
+  const books = scoped.length > 0 ? scoped : readBooks();
+  const videos = readVideos();
+  const plans = readServices();
+  const calendar = readCalendar();
+  const scopeLabel = scoped.length > 0 ? labelFor(scoped[0], scopePath) : null;
+
+  view.appendChild(el("h1", null, scopeLabel || "Saved on this device"));
+  view.appendChild(
+    el(
+      "p",
+      "sub",
+      books.length > 0 || videos.length > 0 || plans.length > 0 || calendar
+        ? "These open with no connection at all."
+        : "Nothing is saved here yet.",
+    ),
+  );
+
+  if (books.length > 0) {
+    view.appendChild(el("h2", null, books.length === 1 ? "Book" : "Books"));
+    const list = el("ul");
+    books.forEach((book) => list.appendChild(bookRow(book)));
+    view.appendChild(list);
+  }
+
+  if (plans.length > 0) {
+    view.appendChild(el("h2", null, plans.length === 1 ? "Service" : "Services"));
+    const list = el("ul");
+    plans.forEach((plan) => list.appendChild(serviceRow(plan)));
+    view.appendChild(list);
+  }
+
+  if (calendar) {
+    view.appendChild(el("h2", null, "Calendar"));
+    const list = el("ul");
+    list.appendChild(calendarRow(calendar));
+    view.appendChild(list);
+  }
+
+  if (videos.length > 0) {
+    view.appendChild(el("h2", null, "Videos"));
+    view.appendChild(playerNode());
+    const list = el("ul");
+    videos.forEach((video) => list.appendChild(videoRow(video)));
+    view.appendChild(list);
+  }
+
+  if (books.length === 0 && videos.length === 0 && plans.length === 0 && !calendar) {
+    view.appendChild(
+      el(
+        "p",
+        "empty",
+        "Connect, then use “Save for offline” on a book, “Keep this order offline” on a service, “Keep the calendar on this device” on the calendar, or the download button on a video, to keep it here.",
+      ),
+    );
+  } else if (scoped.length > 0 && readBooks().length > scoped.length) {
+    const all = el("button", null, "Show everything saved");
+    all.addEventListener("click", () => {
+      window.location.href = BASE + "/offline.html";
+    });
+    const row = el("p");
+    row.appendChild(all);
+    view.appendChild(row);
+  }
+}
+
+function bookRow(book) {
+  const li = el("li");
+  const open = el("button", "rowlink");
+  const meta = el("div", "meta");
+  meta.appendChild(el("div", "title", book.title || "Untitled book"));
+  const bits = [];
+  if (book.kind === "hymnal") {
+    if (book.hymnCount) bits.push(book.hymnCount + (book.hymnCount === 1 ? " hymn" : " hymns"));
+  } else {
+    const toc = readToc(book);
+    if (toc) bits.push(toc.length + (toc.length === 1 ? " entry" : " entries"));
+  }
+  if (book.bytes) bits.push(formatBytes(book.bytes));
+  meta.appendChild(el("div", "detail", bits.join(" · ")));
+  open.appendChild(meta);
+  open.addEventListener("click", () => {
+    if (book.kind === "hymnal") renderHymnal(book);
+    else renderBook(book);
+  });
+
+  const remove = el("button", "remove", "Remove");
+  remove.addEventListener("click", async () => {
+    if (!window.confirm('Remove "' + (book.title || "this book") + '" from this device?')) return;
+    try {
+      const cache = await caches.open(BOOK_CACHE);
+      await cache.delete(book.cacheUrl);
+    } catch (e) {}
+    writeBooks(readBooks().filter((item) => item.id !== book.id));
+    renderTabs();
+    renderLibrary();
+  });
+
+  li.appendChild(open);
+  const actions = el("div", "actions");
+  actions.appendChild(remove);
+  li.appendChild(actions);
+  return li;
+}
+
+// -------------------------------------------------------- one service --
+function serviceRow(plan) {
+  const li = el("li");
+  const open = el("button", "rowlink");
+  const meta = el("div", "meta");
+  meta.appendChild(el("div", "title", plan.title || "Service"));
+  const bits = [];
+  const day = formatServiceDate(plan.serviceDate);
+  if (day) bits.push(day);
+  if (plan.itemCount) bits.push(plan.itemCount + (plan.itemCount === 1 ? " hymn" : " hymns"));
+  meta.appendChild(el("div", "detail", bits.join(" · ")));
+  open.appendChild(meta);
+  open.addEventListener("click", () => renderService(plan));
+
+  const remove = el("button", "remove", "Remove");
+  remove.addEventListener("click", async () => {
+    if (!window.confirm('Remove "' + (plan.title || "this service") + '" from this device?')) return;
+    try {
+      const cache = await caches.open(SERVICE_CACHE);
+      await cache.delete(plan.cacheUrl);
+    } catch (e) {}
+    writeServices(readServices().filter((item) => item.id !== plan.id));
+    renderLibrary();
+  });
+
+  li.appendChild(open);
+  const actions = el("div", "actions");
+  actions.appendChild(remove);
+  li.appendChild(actions);
+  return li;
+}
+
+/**
+ * The running order, and as much of each hymn as this device actually holds.
+ *
+ * The plan is two kilobytes and the books are forty megabytes, so the common
+ * case is a device that has the order but not everything in it. Each row says
+ * which it is rather than offering a button that would do nothing.
+ */
+async function renderService(plan) {
+  teardownReader();
+  view.innerHTML = "";
+  const back = el("button", null, "← Back");
+  back.addEventListener("click", renderLibrary);
+  view.appendChild(back);
+
+  view.appendChild(el("h1", null, plan.title || "Service"));
+  const day = formatServiceDate(plan.serviceDate);
+  if (day) view.appendChild(el("p", "sub", day));
+
+  let saved;
+  try {
+    saved = await (await fetch(plan.cacheUrl)).json();
+  } catch (e) {
+    // The browser evicted it under storage pressure; the index still lists it.
+    view.appendChild(el("p", "empty", "This service's order is no longer on this device."));
+    return;
+  }
+
+  if (saved.notes) view.appendChild(el("p", "sub", saved.notes));
+
+  const items = Array.isArray(saved.items) ? saved.items : [];
+  if (items.length === 0) {
+    view.appendChild(el("p", "empty", "No hymns were listed for this service."));
+    return;
+  }
+
+  const books = readBooks();
+  const list = el("ul");
+  list.style.marginTop = "12px";
+
+  items.forEach((item) => {
+    const li = el("li");
+    const row = el("button", "rowlink");
+    const meta = el("div", "meta");
+    const heading = el("div", "title");
+    // The number on the board leads the row, the way it does on the sheet.
+    heading.textContent = (item.number ? item.number + ". " : "") + (item.title || "Hymn");
+    meta.appendChild(heading);
+
+    // A hymn inside a whole book: the book has to be on the device, and its
+    // contents have to have been saved with it, or there is no page to open.
+    const book = item.hymnNumber !== null && item.hymnNumber !== undefined
+      ? books.find((candidate) => candidate.id === item.fileId && candidate.kind === "file")
+      : null;
+    const toc = book ? readToc(book) : null;
+    const entry =
+      toc && item.hymnNumber
+        ? toc.find((candidate) => hymnNumberOf(candidate.label) === item.hymnNumber && candidate.location !== null)
+        : null;
+
+    const bits = [];
+    if (item.note) bits.push(item.note);
+    if (item.hymnNumber !== null && item.hymnNumber !== undefined) {
+      if (!book) bits.push("Book not on this device");
+      else if (!entry) bits.push("Saved, but its contents weren't");
+    }
+    if (bits.length > 0) meta.appendChild(el("div", "detail", bits.join(" · ")));
+    row.appendChild(meta);
+
+    if (entry && book) {
+      row.addEventListener("click", () => openBook(book, entry.location, toc));
+    } else {
+      // Nothing to open: a hymn of its own is a lyrics page this shell has no
+      // copy of, and a book that isn't here can't be opened by wanting it.
+      row.disabled = true;
+    }
+
+    li.appendChild(row);
+    list.appendChild(li);
+  });
+
+  view.appendChild(list);
+}
+
+// ------------------------------------------------------- the calendar --
+function calendarRow(entry) {
+  const li = el("li");
+  const open = el("button", "rowlink");
+  const meta = el("div", "meta");
+  meta.appendChild(el("div", "title", "Calendar"));
+  const bits = [];
+  if (entry.eventCount) bits.push(entry.eventCount + (entry.eventCount === 1 ? " date" : " dates"));
+  const when = formatSyncedAt(entry.syncedAt);
+  if (when) bits.push("updated " + when);
+  meta.appendChild(el("div", "detail", bits.join(" · ")));
+  open.appendChild(meta);
+  open.addEventListener("click", () => renderCalendar(entry));
+
+  const remove = el("button", "remove", "Remove");
+  remove.addEventListener("click", async () => {
+    if (!window.confirm("Remove the calendar from this device?")) return;
+    try {
+      const cache = await caches.open(CALENDAR_CACHE);
+      await cache.delete(entry.cacheUrl);
+    } catch (e) {}
+    writeCalendar(null);
+    renderLibrary();
+  });
+
+  li.appendChild(open);
+  const actions = el("div", "actions");
+  actions.appendChild(remove);
+  li.appendChild(actions);
+  return li;
+}
+
+/**
+ * What you are on for, with no connection.
+ *
+ * The calendar is the one saved thing that is a few kilobytes of text, so
+ * unlike a book there is never a question of whether enough of it is here —
+ * the whole year is. The only question is whose it is, and that is answered
+ * the same way the app answers it: pick a name once, stored against this
+ * device, changeable right here because standing in a hall with no signal is
+ * exactly when somebody first wants to.
+ */
+async function renderCalendar(entry) {
+  teardownReader();
+  view.innerHTML = "";
+  const back = el("button", null, "← Back");
+  back.addEventListener("click", renderLibrary);
+  view.appendChild(back);
+  view.appendChild(el("h1", null, "Calendar"));
+
+  let saved;
+  try {
+    saved = await (await fetch(entry.cacheUrl)).json();
+  } catch (e) {
+    // The browser evicted it under storage pressure; the index still lists it.
+    view.appendChild(el("p", "empty", "The calendar is no longer on this device."));
+    return;
+  }
+
+  const people = Array.isArray(saved.people) ? saved.people : [];
+  const events = Array.isArray(saved.events) ? saved.events : [];
+  const scheduleNames = {};
+  (Array.isArray(saved.schedules) ? saved.schedules : []).forEach((schedule) => {
+    scheduleNames[schedule.id] = schedule.name;
+  });
+
+  const chooser = el("p", "sub");
+  chooser.appendChild(el("span", null, "You are "));
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", "Your name");
+  select.style.cssText = "font:inherit;padding:2px 4px";
+  const everyone = el("option", null, "Everyone");
+  everyone.value = "";
+  select.appendChild(everyone);
+  people.forEach((person) => {
+    const option = el("option", null, person.displayName);
+    option.value = person.id;
+    select.appendChild(option);
+  });
+  select.value = calendarPerson() || "";
+  select.addEventListener("change", () => {
+    setCalendarPerson(select.value || null);
+    draw();
+  });
+  chooser.appendChild(select);
+  view.appendChild(chooser);
+
+  const list = el("ul");
+  view.appendChild(list);
+
+  function draw() {
+    list.innerHTML = "";
+    const today = todayIso();
+    const personId = select.value || null;
+    const mine = events
+      .filter((item) => {
+        if (item.status === "CANCELLED") return false;
+        if (personId && !(item.people || []).some((who) => who.personId === personId)) return false;
+        // A multi-day event is still on while it runs.
+        return (item.endDate || item.date) >= today;
+      })
+      .sort((a, b) =>
+        a.date === b.date
+          ? (a.startTime || "") < (b.startTime || "")
+            ? -1
+            : 1
+          : a.date < b.date
+            ? -1
+            : 1,
+      )
+      .slice(0, 40);
+
+    if (mine.length === 0) {
+      const name = people.find((person) => person.id === personId);
+      list.appendChild(
+        el("p", "empty", name ? "Nothing coming up for " + name.displayName + "." : "Nothing coming up."),
+      );
+      return;
+    }
+
+    mine.forEach((item) => {
+      const li = el("li");
+      // Plain rows rather than the buttons the other lists use: a date is a
+      // date, there is nothing behind it to open, and a list of buttons that
+      // all refuse to be pressed reads as a list of things gone wrong.
+      const meta = el("div", "meta");
+      const names = (item.people || []).map((who) => who.displayName).join(", ");
+      meta.appendChild(
+        el("div", "title", names || item.title || scheduleNames[item.scheduleId] || "Scheduled"),
+      );
+      const bits = [scheduleNames[item.scheduleId], relativeDay(item.date, today)];
+      if (item.startTime) bits.push(item.startTime);
+      if (item.location) bits.push(item.location);
+      if (item.notes) bits.push(item.notes);
+      meta.appendChild(el("div", "detail", bits.filter(Boolean).join(" · ")));
+      li.appendChild(meta);
+      list.appendChild(li);
+    });
+  }
+
+  draw();
+}
+
+// ----------------------------------------------------------- one book --
+function renderBook(book) {
+  teardownReader();
+  view.innerHTML = "";
+  const back = el("button", null, "← Back");
+  back.addEventListener("click", renderLibrary);
+  view.appendChild(back);
+
+  view.appendChild(el("h1", null, book.title || "Untitled book"));
+  const toc = readToc(book);
+  view.appendChild(
+    el(
+      "p",
+      "sub",
+      toc && toc.length > 0
+        ? "Tap an entry to open the book there."
+        : "This book's contents weren't saved with it — it opens at the first page.",
+    ),
+  );
+
+  const openFirst = el("button", "primary", "Open the book");
+  openFirst.addEventListener("click", () => openBook(book, null, toc));
+  view.appendChild(openFirst);
+
+  // Typing the number on the board is the fastest way into a hymnal, and
+  // never more so than with no connection to fall back on.
+  const numbered = (toc || []).filter((entry) => hymnNumberOf(entry.label) !== null && entry.location !== null);
+  if (numbered.length > 1) {
+    const form = document.createElement("form");
+    form.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px";
+    const label = el("label", null, "Go to hymn");
+    label.setAttribute("for", "offline-hymn-number");
+    const input = document.createElement("input");
+    input.id = "offline-hymn-number";
+    input.inputMode = "numeric";
+    input.pattern = "[0-9]*";
+    input.setAttribute("aria-label", "Hymn number");
+    input.style.cssText =
+      "width:5rem;padding:6px 8px;border:1px solid var(--sep);border-radius:6px;background:var(--panel);color:inherit;font:inherit;text-align:center";
+    const go = el("button", null, "Open");
+    go.type = "submit";
+    const miss = el("span", "detail");
+    form.appendChild(label);
+    form.appendChild(input);
+    form.appendChild(go);
+    form.appendChild(miss);
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const wanted = Number(input.value.trim());
+      const entry = numbered.find((item) => hymnNumberOf(item.label) === wanted);
+      if (!entry) {
+        miss.textContent = wanted ? "No hymn " + wanted + " in this book." : "";
+        return;
+      }
+      openBook(book, entry.location, toc);
+    });
+    input.addEventListener("input", () => {
+      miss.textContent = "";
+    });
+    view.appendChild(form);
+  }
+
+  if (toc && toc.length > 0) {
+    const list = el("ul");
+    list.style.marginTop = "12px";
+    toc.forEach((entry) => {
+      const li = el("li");
+      const row = el("button", "rowlink");
+      // A PDF's contents entry is a page, and the number shown is the one
+      // printed in the book — the same sum lib/page-offset.ts does, with
+      // front matter showing none. An EPUB's is a chapter href, which is not
+      // a number and has no column of its own.
+      const printed =
+        book.format === "epub" || entry.location === null
+          ? null
+          : Number(entry.location) - (book.pageOffset || 0);
+      row.appendChild(el("span", "pagenum", printed !== null && printed >= 1 ? String(printed) : ""));
+      row.appendChild(el("span", "title", entry.label || ""));
+      if (entry.location === null) {
+        row.disabled = true;
+      } else {
+        row.addEventListener("click", () => openBook(book, entry.location, toc));
+      }
+      li.appendChild(row);
+      list.appendChild(li);
+    });
+    view.appendChild(list);
+  }
+}
+
+// ------------------------------------------------- a hymn-per-file book --
+/**
+ * A book whose hymns are its files is saved as its list of hymns rather than
+ * as a document (see lib/offline-books.ts), so reading it offline is reading
+ * that list: the hymns in printed-page order, then one hymn's lyrics, with
+ * the next and previous ones a tap away — the same stepping the app offers.
+ */
+async function loadHymnal(book) {
+  const cache = await caches.open(BOOK_CACHE);
+  const response = await cache.match(book.cacheUrl);
+  if (!response) throw new Error("This hymnal is no longer stored on this device.");
+  const data = await response.json();
+  return Array.isArray(data.hymns) ? data.hymns : [];
+}
+
+async function renderHymnal(book) {
+  teardownReader();
+  view.innerHTML = "";
+  view.appendChild(el("p", "sub", "Opening…"));
+
+  let hymns;
+  try {
+    hymns = await loadHymnal(book);
+  } catch (error) {
+    writeBooks(readBooks().filter((item) => item.id !== book.id));
+    view.innerHTML = "";
+    view.appendChild(el("h1", null, book.title || "Untitled hymnal"));
+    view.appendChild(
+      el("p", "sub", "This hymnal is no longer stored on this device. Connect and save it again."),
+    );
+    const back = el("button", null, "← Back");
+    back.addEventListener("click", renderLibrary);
+    view.appendChild(back);
+    renderTabs();
+    return;
+  }
+
+  view.innerHTML = "";
+  const back = el("button", null, "← Back");
+  back.addEventListener("click", renderLibrary);
+  view.appendChild(back);
+  view.appendChild(el("h1", null, book.title || "Untitled hymnal"));
+  view.appendChild(
+    el("p", "sub", hymns.length + (hymns.length === 1 ? " hymn saved here." : " hymns saved here.")),
+  );
+
+  const search = document.createElement("input");
+  search.type = "search";
+  search.placeholder = "Find a hymn";
+  search.setAttribute("aria-label", "Find a hymn");
+  search.style.cssText =
+    "width:100%;padding:8px 10px;border:1px solid var(--sep);border-radius:8px;background:var(--panel);color:inherit;font:inherit;font-size:14px;margin-bottom:10px";
+  view.appendChild(search);
+
+  const list = el("ul");
+  view.appendChild(list);
+
+  // By number and by title, because that is how someone looks for a hymn —
+  // "412" from the board at the front, or a line of the first verse.
+  function draw(query) {
+    const needle = (query || "").trim().toLowerCase();
+    const shown = !needle
+      ? hymns
+      : hymns.filter(
+          (hymn) =>
+            String(hymn.pageNumber || "").startsWith(needle) ||
+            (hymn.title || "").toLowerCase().includes(needle) ||
+            (hymn.lyricsText || "").toLowerCase().includes(needle),
+        );
+    list.innerHTML = "";
+    if (shown.length === 0) {
+      list.appendChild(el("li", null, "No hymn here matches that."));
+      return;
+    }
+    let group = null;
+    shown.forEach((hymn) => {
+      if (!needle && hymn.groupLabel && hymn.groupLabel !== group) {
+        group = hymn.groupLabel;
+        const heading = el("li", "group", group);
+        heading.style.display = "block";
+        list.appendChild(heading);
+      }
+      const li = el("li");
+      const row = el("button", "rowlink");
+      row.appendChild(el("span", "pagenum", hymn.pageNumber == null ? "" : String(hymn.pageNumber)));
+      row.appendChild(el("span", "title", hymn.title || ""));
+      row.addEventListener("click", () => renderHymn(book, hymns, hymns.indexOf(hymn)));
+      li.appendChild(row);
+      list.appendChild(li);
+    });
+  }
+
+  search.addEventListener("input", () => draw(search.value));
+  draw("");
+}
+
+function renderHymn(book, hymns, index) {
+  const hymn = hymns[index];
+  if (!hymn) return;
+  view.innerHTML = "";
+
+  const back = el("button", null, "‹ " + (book.title || "Back"));
+  back.addEventListener("click", () => renderHymnal(book));
+  view.appendChild(back);
+
+  const heading = el("h1", null, hymn.title || "");
+  view.appendChild(heading);
+  if (hymn.pageNumber != null) view.appendChild(el("p", "sub", "Page " + hymn.pageNumber));
+
+  const words = el("div", "lyrics", hymn.lyricsText || "");
+  // The same 15px base the app's lyrics use, times whatever this device set.
+  const applySize = (scale) => {
+    words.style.fontSize = 15 * scale + "px";
+  };
+  applySize(readingScale());
+
+  const sizing = el("div", "size-controls");
+  const smaller = el("button", null, "A−");
+  const larger = el("button", null, "A+");
+  smaller.setAttribute("aria-label", "Smaller text");
+  larger.setAttribute("aria-label", "Larger text");
+  const nudge = (by) => {
+    applySize(setReadingScale(readingScale() + by));
+  };
+  smaller.addEventListener("click", () => nudge(-READING_SCALE_STEP));
+  larger.addEventListener("click", () => nudge(READING_SCALE_STEP));
+  sizing.appendChild(smaller);
+  sizing.appendChild(larger);
+  view.appendChild(sizing);
+
+  view.appendChild(words);
+
+  const nav = el("div", "hymn-nav");
+  const previous = hymns[index - 1];
+  const next = hymns[index + 1];
+  const back1 = el("button", null, "‹ Back");
+  back1.disabled = !previous;
+  back1.title = previous ? previous.title : "";
+  back1.addEventListener("click", () => renderHymn(book, hymns, index - 1));
+  const forward = el("button", null, "Next ›");
+  forward.disabled = !next;
+  forward.title = next ? next.title : "";
+  forward.addEventListener("click", () => renderHymn(book, hymns, index + 1));
+  nav.appendChild(back1);
+  nav.appendChild(el("span", "spacer"));
+  nav.appendChild(forward);
+  view.appendChild(nav);
+  window.scrollTo({ top: 0 });
+}
+
+// --------------------------------------------------------------- reading --
+let pdfjsPromise = null;
+let epubjsPromise = null;
+let activeReader = null;
+// epub.js renders into an iframe it owns and holds an unzipped archive; both
+// have to be let go of when the reader closes, or a few books in a session
+// add up to real memory.
+let activeEpub = null;
+
+function teardownReader() {
+  activeReader = null;
+  if (activeEpub) {
+    try {
+      activeEpub.rendition.destroy();
+      activeEpub.book.destroy();
+    } catch (error) {
+      // Already torn down.
+    }
+    activeEpub = null;
+  }
+}
+
+window.addEventListener("keydown", (event) => {
+  if (!activeReader || event.metaKey || event.ctrlKey || event.altKey) return;
+  if (event.key === "ArrowRight") activeReader.go(1);
+  else if (event.key === "ArrowLeft") activeReader.go(-1);
+});
+window.addEventListener("resize", () => {
+  if (activeReader) activeReader.draw();
+});
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const tag = document.createElement("script");
+    tag.src = src;
+    tag.onload = () => resolve();
+    tag.onerror = () => reject(new Error("Couldn't load " + src));
+    document.head.appendChild(tag);
+  });
+}
+
+function loadEpubjs() {
+  if (!epubjsPromise) {
+    // Saved into the book cache with the first EPUB (lib/offline-books.ts),
+    // so the service worker can answer for both with no network.
+    epubjsPromise = loadScript(JSZIP_URL)
+      .then(() => loadScript(EPUBJS_URL))
+      .then(() => {
+        if (!window.ePub) throw new Error("epub.js didn't load");
+        return window.ePub;
+      });
+  }
+  return epubjsPromise;
+}
+
+function loadPdfjs() {
+  if (!pdfjsPromise) {
+    // Saved into the book cache with the first book (lib/offline-books.ts),
+    // so the service worker can answer for it with no network.
+    pdfjsPromise = import(PDFJS_URL).then((mod) => {
+      const lib = mod && mod.getDocument ? mod : mod.default;
+      lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+      return lib;
+    });
+  }
+  return pdfjsPromise;
+}
+
+async function bookBytes(book) {
+  const cache = await caches.open(BOOK_CACHE);
+  const response = await cache.match(book.cacheUrl);
+  if (!response) throw new Error("This book isn't on this device any more.");
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * `target` is whatever that book's contents entries hold — a PDF page number
+ * or an EPUB chapter href — or null to open at the beginning.
+ */
+async function openBook(book, target, toc) {
+  view.innerHTML = "";
+  view.appendChild(el("p", "sub", "Opening…"));
+
+  let data;
+  try {
+    data = await bookBytes(book);
+  } catch (error) {
+    // The browser evicted it under storage pressure. Saying so beats offering
+    // a book that won't open, and the index is corrected so the list agrees.
+    writeBooks(readBooks().filter((item) => item.id !== book.id));
+    view.innerHTML = "";
+    view.appendChild(el("h1", null, book.title || "Untitled book"));
+    view.appendChild(
+      el("p", "sub", "This book is no longer stored on this device. Connect and save it again."),
+    );
+    const back = el("button", null, "← Back");
+    back.addEventListener("click", renderLibrary);
+    view.appendChild(back);
+    renderTabs();
+    return;
+  }
+
+  if (book.format === "epub") {
+    await openEpub(book, data, target, toc);
+    return;
+  }
+
+  let doc;
+  try {
+    const pdfjs = await loadPdfjs();
+    doc = await pdfjs.getDocument({ data: data }).promise;
+  } catch (error) {
+    // No viewer on the device (the book was saved before pdf.js was deployed,
+    // or that copy was evicted). The browser has a PDF viewer of its own, and
+    // the service worker serves the file as a PDF precisely so it can be used.
+    renderViewerFallback(book, Number(target) || 1, error);
+    return;
+  }
+  renderReader(book, doc, Number(target) || 1, toc);
+}
+
+/**
+ * An EPUB reflows, so there are no pages to draw and nothing for a browser to
+ * fall back to — no browser renders an EPUB of its own. epub.js does the
+ * rendering, into an iframe it owns, which is why the keys and the swipe are
+ * registered inside that document rather than on this one.
+ */
+async function openEpub(book, data, target, toc) {
+  let ePub;
+  try {
+    ePub = await loadEpubjs();
+  } catch (error) {
+    renderEpubFallback(book, error);
+    return;
+  }
+
+  view.innerHTML = "";
+  const bar = el("div", "reader-bar");
+  const back = el("button", null, "‹ Contents");
+  back.addEventListener("click", () => {
+    teardownReader();
+    renderBook(book);
+  });
+  const label = el("span", "detail");
+  const previous = el("button", null, "‹");
+  previous.setAttribute("aria-label", "Previous");
+  const next = el("button", null, "›");
+  next.setAttribute("aria-label", "Next");
+  bar.appendChild(back);
+  bar.appendChild(el("span", "spacer"));
+  bar.appendChild(previous);
+  bar.appendChild(label);
+  bar.appendChild(next);
+  view.appendChild(bar);
+
+  const container = el("div");
+  container.id = "epub-view";
+  view.appendChild(container);
+  view.appendChild(el("p", "hint", "Swipe left and right, or use the arrow keys, to move through the book."));
+
+  // A copy of the bytes, not a view onto them: epub.js hands the buffer
+  // straight to JSZip.
+  const epubBook = ePub(data.slice().buffer);
+  const rendition = epubBook.renderTo(container, {
+    width: "100%",
+    height: "100%",
+    // Scrolled rather than paginated, matching the in-app reader: it behaves
+    // far better on a phone.
+    flow: "scrolled-doc",
+    spread: "none",
+  });
+  activeEpub = { book: epubBook, rendition: rendition };
+  activeReader = { go: (by) => (by > 0 ? rendition.next() : rendition.prev()), draw: () => {} };
+
+  previous.addEventListener("click", () => rendition.prev());
+  next.addEventListener("click", () => rendition.next());
+
+  // Which chapter is on screen, by the same loose href match the in-app
+  // reader's search results use — a navigation href can carry a fragment the
+  // spine item's doesn't.
+  rendition.on("relocated", (location) => {
+    const href = location && location.start && location.start.href;
+    if (!href || !toc) return;
+    const tail = String(href).split("/").pop();
+    const entry = toc.find((item) => item.location && String(item.location).includes(tail));
+    label.textContent = entry ? entry.label : "";
+  });
+
+  // Inside the iframe, because that is where the reading happens and where
+  // the events land.
+  rendition.hooks.content.register((contents) => {
+    const doc = contents.document;
+    doc.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight") rendition.next();
+      else if (event.key === "ArrowLeft") rendition.prev();
+    });
+    let gesture = null;
+    doc.addEventListener(
+      "touchstart",
+      (event) => {
+        gesture = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY, dx: 0, turning: false } : null;
+      },
+      { passive: true },
+    );
+    doc.addEventListener(
+      "touchmove",
+      (event) => {
+        if (!gesture || event.touches.length !== 1) { gesture = null; return; }
+        const dx = event.touches[0].clientX - gesture.x;
+        const dy = event.touches[0].clientY - gesture.y;
+        if (!gesture.turning) {
+          if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
+          if (Math.abs(dy) >= Math.abs(dx)) { gesture = null; return; }
+          gesture.turning = true;
+        }
+        gesture.dx = dx;
+      },
+      { passive: true },
+    );
+    doc.addEventListener("touchend", () => {
+      if (gesture && gesture.turning && Math.abs(gesture.dx) >= 60) {
+        if (gesture.dx < 0) rendition.next();
+        else rendition.prev();
+      }
+      gesture = null;
+    });
+  });
+
+  try {
+    await rendition.display(target || undefined);
+  } catch (error) {
+    // A contents entry pointing at a section this copy doesn't have; the
+    // book still opens at its beginning.
+    try {
+      await rendition.display();
+    } catch (ignored) {
+      renderEpubFallback(book, error);
+    }
+  }
+}
+
+/**
+ * No browser renders an EPUB on its own, so unlike a PDF there is nothing to
+ * hand it to — the honest offer is the file itself, for whatever reading app
+ * the device has.
+ */
+function renderEpubFallback(book, error) {
+  teardownReader();
+  view.innerHTML = "";
+  const back = el("button", null, "← Back");
+  back.addEventListener("click", () => renderBook(book));
+  view.appendChild(back);
+  view.appendChild(el("h1", null, book.title || "Untitled book"));
+  view.appendChild(
+    el(
+      "p",
+      "sub",
+      "The reader for this book isn't saved on this device, and a browser can't show an EPUB on its own. The file itself is here — open it in a reading app.",
+    ),
+  );
+  const open = el("a", "btn", "Save the file");
+  open.href = book.cacheUrl;
+  open.setAttribute("download", (book.title || "book") + ".epub");
+  view.appendChild(open);
+  if (error && error.message) view.appendChild(el("p", "hint", error.message));
+}
+
+function renderViewerFallback(book, page, error) {
+  view.innerHTML = "";
+  const back = el("button", null, "← Back");
+  back.addEventListener("click", () => renderBook(book));
+  view.appendChild(back);
+  view.appendChild(el("h1", null, book.title || "Untitled book"));
+  view.appendChild(
+    el(
+      "p",
+      "sub",
+      "This browser can't draw the pages here, so the book opens in its own PDF viewer instead — it's the same file, saved on this device.",
+    ),
+  );
+  const open = el("a", "btn", "Open the book");
+  open.href = book.cacheUrl + "#page=" + page;
+  view.appendChild(open);
+  if (error && error.message) view.appendChild(el("p", "hint", error.message));
+}
+
+function renderReader(book, doc, startPage, toc) {
+  let page = Math.min(Math.max(1, startPage || 1), doc.numPages);
+  // A multiplier on top of fitting the width, which is what a phone wants
+  // before anything else.
+  let zoom = 1;
+  let renderTask = null;
+
+  view.innerHTML = "";
+  const bar = el("div", "reader-bar");
+  const back = el("button", null, "‹ Contents");
+  back.addEventListener("click", () => {
+    if (renderTask) renderTask.cancel();
+    teardownReader();
+    renderBook(book);
+  });
+  const prev = el("button", null, "‹");
+  prev.setAttribute("aria-label", "Previous page");
+  const label = el("span", "detail");
+  const next = el("button", null, "›");
+  next.setAttribute("aria-label", "Next page");
+  const zoomOut = el("button", null, "−");
+  zoomOut.setAttribute("aria-label", "Zoom out");
+  const zoomIn = el("button", null, "+");
+  zoomIn.setAttribute("aria-label", "Zoom in");
+
+  bar.appendChild(back);
+  bar.appendChild(el("span", "spacer"));
+  bar.appendChild(prev);
+  bar.appendChild(label);
+  bar.appendChild(next);
+  bar.appendChild(zoomOut);
+  bar.appendChild(zoomIn);
+  view.appendChild(bar);
+
+  const wrap = el("div");
+  wrap.id = "canvas-wrap";
+  const canvas = el("canvas");
+  wrap.appendChild(canvas);
+  view.appendChild(wrap);
+  view.appendChild(el("p", "hint", "Swipe left and right, or use the arrow keys, to turn the page."));
+
+  // Which contents entry the page falls in, so the bar can say which hymn is
+  // on screen — the same rule as lib/toc-nav.ts, in miniature.
+  function entryLabel() {
+    if (!toc) return "";
+    let best = null;
+    let bestPage = -Infinity;
+    toc.forEach((entry) => {
+      if (entry.location === null) return;
+      const at = Number(entry.location);
+      if (at <= page && at >= bestPage) {
+        bestPage = at;
+        best = entry;
+      }
+    });
+    return best ? best.label : "";
+  }
+
+  /** The bar says where you are before the page is drawn, not after. */
+  function updateBar() {
+    // The number printed in the book, not the PDF's own — the same sum
+    // lib/page-offset.ts does.
+    const printed = page - (book.pageOffset || 0);
+    const shown = printed >= 1 ? "Page " + printed : "Page " + page + " (front matter)";
+    const hymn = entryLabel();
+    label.textContent = hymn ? shown + " · " + hymn : shown;
+    prev.disabled = page <= 1;
+    next.disabled = page >= doc.numPages;
+  }
+
+  async function draw() {
+    updateBar();
+    try {
+      const pdfPage = await doc.getPage(page);
+      const natural = pdfPage.getViewport({ scale: 1 });
+      const ratio = window.devicePixelRatio || 1;
+      const available = Math.max(240, wrap.clientWidth - 20);
+      const scale = (available / natural.width) * zoom;
+      const viewport = pdfPage.getViewport({ scale: scale * ratio });
+      const context = canvas.getContext("2d");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = viewport.width / ratio + "px";
+      canvas.style.height = viewport.height / ratio + "px";
+
+      if (renderTask) renderTask.cancel();
+      renderTask = pdfPage.render({ canvas: canvas, canvasContext: context, viewport: viewport });
+      await renderTask.promise;
+    } catch (error) {
+      // A cancelled render is what flipping pages quickly looks like, and is
+      // nobody's problem. Anything else means this browser can't draw the
+      // page — an old engine the library needs more of, a worker that won't
+      // start — and a blank canvas is the worst possible answer when the book
+      // is right there on the device. Hand it to the browser's own viewer.
+      if (error && error.name === "RenderingCancelledException") return;
+      activeReader = null;
+      renderViewerFallback(book, page, error);
+    }
+  }
+
+  /** Moves `by` pages, clamped to the book — the one way the page changes. */
+  function go(by) {
+    const bounded = Math.min(Math.max(1, page + by), doc.numPages);
+    if (bounded === page) return;
+    page = bounded;
+    draw();
+  }
+
+  prev.addEventListener("click", () => go(-1));
+  next.addEventListener("click", () => go(1));
+  zoomOut.addEventListener("click", () => {
+    zoom = Math.max(0.5, Math.round((zoom - 0.25) * 100) / 100);
+    draw();
+  });
+  zoomIn.addEventListener("click", () => {
+    zoom = Math.min(3, Math.round((zoom + 0.25) * 100) / 100);
+    draw();
+  });
+
+  // Swipe, on the same terms as the in-app reader: a gesture has to commit to
+  // the horizontal before it counts, a second finger is a pinch, and a page
+  // drawn wider than the screen is being panned rather than turned.
+  let gesture = null;
+  wrap.addEventListener("touchstart", (event) => {
+    gesture = null;
+    if (event.touches.length !== 1 || wrap.scrollWidth > wrap.clientWidth + 1) return;
+    gesture = { x: event.touches[0].clientX, y: event.touches[0].clientY, dx: 0, turning: false };
+  }, { passive: true });
+  wrap.addEventListener("touchmove", (event) => {
+    if (!gesture || event.touches.length !== 1) { gesture = null; return; }
+    const dx = event.touches[0].clientX - gesture.x;
+    const dy = event.touches[0].clientY - gesture.y;
+    if (!gesture.turning) {
+      if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
+      if (Math.abs(dy) >= Math.abs(dx)) { gesture = null; return; }
+      gesture.turning = true;
+    }
+    gesture.dx = dx;
+  }, { passive: true });
+  wrap.addEventListener("touchend", () => {
+    if (!gesture || !gesture.turning || Math.abs(gesture.dx) < 60) { gesture = null; return; }
+    go(gesture.dx < 0 ? 1 : -1);
+    gesture = null;
+  });
+
+  // Registered once for the page (below) and pointed at whichever reader is
+  // open, so opening a second book doesn't leave the first one listening.
+  activeReader = { go: go, draw: draw };
+  draw();
+}
+
+// ------------------------------------------------------------- the videos --
+function playerNode() {
+  const player = el("div");
+  player.id = "player";
+  const video = document.createElement("video");
+  video.id = "video";
+  video.controls = true;
+  video.playsInline = true;
+  player.appendChild(video);
+  player.appendChild(el("p", "now-playing"));
+  return player;
+}
+
+function videoRow(item) {
+  const li = el("li");
+  const meta = el("div", "meta");
+  meta.appendChild(el("div", "title", item.title || "Untitled video"));
+  const bits = [];
+  if (item.seriesTitle) bits.push(item.seriesTitle);
+  const dur = formatDuration(item.durationSeconds);
+  if (dur) bits.push(dur);
+  const size = formatBytes(item.bytes);
+  if (size) bits.push(size);
+  meta.appendChild(el("div", "detail", bits.join(" · ")));
+
+  const actions = el("div", "actions");
+  const playBtn = el("button", "primary", "▶ Play");
+  playBtn.addEventListener("click", () => play(item));
+  const removeBtn = el("button", "remove", "Remove");
+  removeBtn.addEventListener("click", () => removeVideo(item));
+  actions.appendChild(playBtn);
+  actions.appendChild(removeBtn);
+
+  li.appendChild(meta);
+  li.appendChild(actions);
+  return li;
+}
+
+function play(item) {
+  const player = document.getElementById("player");
+  const video = document.getElementById("video");
+  if (!player || !video) return;
+  // The service worker answers this path straight from Cache Storage
+  // (including range requests), so this works with no network at all —
+  // see the DOWNLOAD_PATH_PREFIX handler in public/sw.js.
+  video.src = item.cacheUrl;
+  player.querySelector(".now-playing").textContent = item.title || "";
+  player.style.display = "block";
+  player.scrollIntoView({ behavior: "smooth", block: "start" });
+  video.play().catch(() => {});
+}
+
+async function removeVideo(item) {
+  if (!window.confirm('Remove "' + (item.title || "this video") + '" from this device?')) return;
+  try {
+    const cache = await caches.open(DOWNLOAD_CACHE);
+    await cache.delete(item.cacheUrl);
+  } catch (e) {}
+  writeVideos(readVideos().filter((i) => i.videoId !== item.videoId));
+  renderLibrary();
+}
+
+document.getElementById("retry").addEventListener("click", () => {
+  const status = document.getElementById("retry-status");
+  status.textContent = " Checking…";
+  fetch(BASE + "/", { method: "HEAD", cache: "no-store" })
+    .then(() => { window.location.href = scopePath || BASE + "/"; })
+    .catch(() => { status.textContent = " Still offline."; });
+});
+
+/**
+ * The part of the path after BASE, so the routes below match whatever
+ * directory the site is installed in.
+ */
+function sitePath(path) {
+  return path && BASE && path.indexOf(BASE + "/") === 0 ? path.slice(BASE.length) : path;
+}
+
+/**
+ * A tap that was heading for a specific book — /books/<id> or /read/<id>,
+ * from a link, a bookmark, or the app's own reader before the connection
+ * went — opens that book rather than the list, when it's one of the saved
+ * ones.
+ */
+function bookFromPath() {
+  const match = /^\/(?:books|read)\/([^/]+)/.exec(sitePath(scopePath) || "");
+  if (match) return readBooks().find((book) => book.id === match[1]) || null;
+  // A hymn-per-file book *is* its series, so its own page is the series page.
+  const saved = readBooks().filter((book) => book.homeHref === scopePath);
+  return saved.length === 1 && saved[0].kind === "hymnal" ? saved[0] : null;
+}
+
+/**
+ * The same for a single hymn — /hymns/<id> — which needs the saved hymnals
+ * opened to know which one holds it, so it can only be answered
+ * asynchronously.
+ */
+async function openHymnFromPath() {
+  const match = /^\/hymns\/([^/]+)/.exec(sitePath(scopePath) || "");
+  if (!match) return false;
+  for (const book of readBooks().filter((item) => item.kind === "hymnal")) {
+    try {
+      const hymns = await loadHymnal(book);
+      const at = hymns.findIndex((hymn) => hymn.id === match[1]);
+      if (at !== -1) {
+        renderHymn(book, hymns, at);
+        return true;
+      }
+    } catch (error) {
+      // Evicted, or never finished saving; try the next hymnal.
+    }
+  }
+  return false;
+}
+
+renderTabs();
+const requested = bookFromPath();
+if (requested) {
+  if (requested.kind === "hymnal") renderHymnal(requested);
+  else renderBook(requested);
+} else {
+  renderLibrary();
+  // Replaces the list it just drew, if this turns out to be a hymn we hold.
+  openHymnFromPath();
+}
+</script>
+</body>
+</html>

@@ -91,7 +91,7 @@ final class LocalDiskProvider extends BaseProvider implements FilesProvider
         return RangeStreamer::serve($this->path($object), $request, $headers, dirname($this->root()));
     }
 
-    public function open(string $object)
+    public function open(string $object): mixed
     {
         $handle = @fopen($this->path($object), 'rb');
         return $handle === false ? null : $handle;

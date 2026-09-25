@@ -15,7 +15,7 @@ $labels = ['auth' => 'Sign-in', 'video' => 'Video', 'email' => 'Email', 'files' 
 <h1>Services</h1>
 <?php if ($flash): ?><p class="notice" role="status"><?= e($flash) ?></p><?php endif ?>
 <p class="muted">
-  Outbound HTTPS from this host: <?= $outbound['ok'] ? '<strong>works</strong>' : '<strong>blocked</strong>' ?>.
+  Outbound HTTPS from this host: <?= $v->raw($outbound['ok'] ? '<strong>works</strong>' : '<strong>blocked</strong>') ?>.
   If your host blocks outbound HTTPS, SMTP is usually the email service that works; if it blocks the SMTP ports (25, 465, 587) instead, the HTTPS API ones are.
 </p>
 <?php foreach ($slots as $slot => $info): ?>
@@ -26,7 +26,7 @@ $labels = ['auth' => 'Sign-in', 'video' => 'Video', 'email' => 'Email', 'files' 
     <?php $activeClass = $info['activeId'] !== null ? ($info['providers'][$info['activeId']] ?? null) : null; ?>
     <strong><?= e($activeClass !== null ? $activeClass::label() : 'none') ?></strong>
     <?php if ($info['active'] !== null): ?>
-      <span class="small muted">— set <?= e($info['active']['updated_at']) ?><?= $info['active']['updated_by'] ? ' by ' . e($info['active']['updated_by']) : '' ?></span>
+      <span class="small muted">— set <?= e($info['active']['updated_at']) ?><?= $v->raw($info['active']['updated_by'] ? ' by ' . e($info['active']['updated_by']) : '') ?></span>
     <?php endif ?>
   </p>
   <ul class="providers">

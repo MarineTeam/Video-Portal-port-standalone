@@ -21,7 +21,7 @@ final class Passwords
         'godisgood123', 'blessedbeyond', 'praisethelord', 'hallelujah12', 'churchchurch', '1q2w3e4r5t6y',
     ];
 
-    public static function algorithm(): string|int
+    public static function algorithm(): string
     {
         return defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT;
     }

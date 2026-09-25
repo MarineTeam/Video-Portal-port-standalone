@@ -37,9 +37,6 @@ final class SmtpProvider extends BaseProvider implements EmailProvider
     /** @var resource|null */
     private $socket = null;
 
-    /** @var list<string> */
-    private array $transcript = [];
-
     public static function slot(): string
     {
         return 'email';

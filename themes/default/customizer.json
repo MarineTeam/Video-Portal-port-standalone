@@ -1,0 +1,3 @@
+[
+  { "key": "rounded", "type": "toggle", "label": "Rounded corners", "default": true }
+]
