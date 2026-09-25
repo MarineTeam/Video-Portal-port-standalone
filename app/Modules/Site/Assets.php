@@ -26,7 +26,7 @@ final class Assets
         'css' => 'text/css; charset=utf-8', 'json' => 'application/json; charset=utf-8',
         'png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif',
         'webp' => 'image/webp', 'ico' => 'image/x-icon', 'woff' => 'font/woff', 'woff2' => 'font/woff2',
-        'txt' => 'text/plain; charset=utf-8', 'map' => 'application/json; charset=utf-8',
+        'txt' => 'text/plain; charset=utf-8', 'vtt' => 'text/vtt; charset=utf-8', 'map' => 'application/json; charset=utf-8',
     ];
 
     public static function register(Router $r, App $app): void
@@ -36,10 +36,10 @@ final class Assets
         $r->get('/media/[...path]', fn (Request $req, array $p) => self::media($app->paths->storage('media'), $p['path'], $req));
     }
 
-    /** A stored image, or null. Only images; only names this site generated. */
+    /** A stored image or captions file, or null. Only names this site generated. */
     public static function resolveMedia(string $root, string $path): ?string
     {
-        if (!preg_match('~^[a-z0-9-]{1,40}/[a-f0-9]{16,64}\.(png|jpg|gif|webp)$~', $path)) {
+        if (!preg_match('~^(?:[a-z0-9-]{1,40}/[a-f0-9]{16,64}\.(?:png|jpg|gif|webp)|captions/[a-f0-9]{16,64}\.vtt)$~', $path)) {
             return null;
         }
         $file = realpath("$root/$path");

@@ -56,16 +56,16 @@ commit as the code it describes.
 | auth | Clerk (native) | todo | |
 | auth | Supabase Auth | todo | |
 | auth | Firebase Authentication | todo | |
-| video | bunny.net Stream | todo | |
-| video | YouTube | todo | |
-| video | Vimeo | todo | |
-| video | Dropbox | todo | |
-| video | Google Drive | todo | |
-| video | OneDrive / SharePoint | todo | |
-| video | Internet Archive | todo | |
-| video | S3-compatible | todo | |
-| video | Direct link | todo | |
-| video | Host disk | todo | |
+| video | bunny.net Stream | done | tus upload, signed embeds, CDN token, MP4 renditions, captions, library import |
+| video | YouTube | done | Links (oEmbed or Data API); upload through a resumable session the server opens with OAuth |
+| video | Vimeo | done | Links; with a token: tus upload, captions, MP4 files |
+| video | Dropbox | partial | Links (direct raw URLs); upload not yet |
+| video | Google Drive | partial | Links, preview or API mode; upload not yet |
+| video | OneDrive / SharePoint | partial | Links (personal and Business via Graph); upload not yet |
+| video | Internet Archive | done | Links; picks the best MP4 |
+| video | S3-compatible | done | Presigned PUT, multipart over 100 MB, SigV4 (AWS test vectors), CORS rule shown |
+| video | Direct link | done | HEAD through the untrusted-URL fetcher |
+| video | Host disk | done | Chunked upload; private files stream via /api/videos/local/[name], public ones move to public/media/videos |
 | email | SMTP (PHPMailer, presets) | todo | |
 | email | PHP mail() | todo | |
 | email | Resend, Mailgun, SendGrid, Postmark, Amazon SES, Brevo, Microsoft Graph | todo | |
@@ -119,7 +119,7 @@ commit as the code it describes.
 | `/admin/trash` | done | Restore; delete for good removes the provider asset first |
 | `/admin/users` | done | Roles (ADMIN only, never the last admin), pre-authorise by email, revoke; changing a role signs the person out |
 | `/admin/video-feeds` | todo | |
-| `/admin/videos` | todo | |
+| `/admin/videos` | done | VideosAdmin: add by link or upload (tus, presigned PUT/multipart, resumable, chunked), Bunny import, bulk; edit page at /admin/videos/[id] (the port's) with thumbnail, captions, restricted viewing |
 | `/admin/webhooks` | todo | |
 | `/books/[fileId]` | todo | |
 | `/calendar` | todo | |
@@ -278,19 +278,19 @@ commit as the code it describes.
 | `/api/admin/video-feeds/[id]` | PATCH DELETE | todo | |
 | `/api/admin/video-feeds/[id]/sync` | POST | todo | |
 | `/api/admin/video-feeds` | GET POST | todo | |
-| `/api/admin/videos/[id]/captions` | GET POST DELETE | todo | |
+| `/api/admin/videos/[id]/captions` | GET POST DELETE | done | Provider captions (Bunny, Vimeo) or a WebVTT sidecar in storage/media/captions; SRT converted |
 | `/api/admin/videos/[id]/chapters` | GET POST | todo | |
-| `/api/admin/videos/[id]` | PATCH DELETE | todo | |
-| `/api/admin/videos/[id]/sync-status` | POST | todo | |
-| `/api/admin/videos/[id]/thumbnail` | POST | todo | |
+| `/api/admin/videos/[id]` | PATCH DELETE | done | PATCH also takes `move` |
+| `/api/admin/videos/[id]/sync-status` | POST | done | Takes the browser's upload report (upload id, ETags, the service's id) |
+| `/api/admin/videos/[id]/thumbnail` | POST | done | Bunny is told to fetch it; host disk, S3, links keep it as the poster |
 | `/api/admin/videos/[id]/transcribe` | POST | todo | |
 | `/api/admin/videos/[id]/viewer-groups` | GET POST | done |  |
 | `/api/admin/videos/[id]/viewers` | GET POST | done | Same module as series |
-| `/api/admin/videos/bulk` | POST | todo | |
-| `/api/admin/videos/bunny-library` | GET | todo | |
+| `/api/admin/videos/bulk` | POST | done | publish, unpublish, delete, move, schedule, expire |
+| `/api/admin/videos/bunny-library` | GET | done | Only videos not already here |
 | `/api/admin/videos/chapters/[id]` | PATCH DELETE | todo | |
-| `/api/admin/videos/import` | POST | todo | |
-| `/api/admin/videos` | GET POST | todo | |
+| `/api/admin/videos/import` | POST | done |  |
+| `/api/admin/videos` | GET POST | done | POST `mode`: link or upload; upload answers the ticket |
 | `/api/admin/videos/viewer-groups/[id]` | DELETE | done |  |
 | `/api/admin/videos/viewers/[id]` | DELETE | done |  |
 | `/api/admin/webhooks/[id]` | PATCH DELETE | todo | |
@@ -608,6 +608,11 @@ met, with the reason.
 - **Members-only is inherited down the tree**: a series, video or file is members-only when it, its series, or any category above it says so (the original read the item's own flag, and its series' for files). A category marked members-only now means everything in it, which is what an admin ticking it expects. Viewer restrictions and share grants decide as before.
 - **Member-only content stays out of the sitemap too**, following "a guest browsing the site never sees that the content exists" rather than the older README line that listed member-only categories and series there.
 - **`POST /api/admin/media`** (the port's) stores a cover, speaker photo or thumbnail uploaded through the chunked uploader as a redrawn image under storage/media and answers its address; the original put these in Bunny Storage.
+- **The video provider interface takes a `VideoRef` (id + the row's `provider_data`)** rather than a bare id, and adds `completeUpload()` (what the browser reports after an upload: part ETags, the service's id) and `owns()`. Ten providers each keep different bookkeeping; the brief's interface assumed one id suffices.
+- **Videos on the host's disk that anybody may watch live in `public/media/videos/`**, the one place outside storage/ the port writes, so the web server streams them without PHP. Every save re-decides (a guest's access decision): anything else is moved back into `storage/videos/` and streams through `/api/videos/local/[name]` after the page's own access check. Releases never ship or remove `public/media/`, and the uploads backup includes both folders.
+- **The admin video editor is a page, `/admin/videos/[id]`** (the port's), like the series editor, rather than a dialog on the list.
+- **Captions for providers without caption APIs are WebVTT sidecars** in `storage/media/captions/<random>.vtt`, listed in `provider_data.tracks`; like every /media file their names are random, so members-only captions are as private as an unguessable address.
+- **Vendored browser code for video:** `public/vendor-js/tus/` (tus-js-client 4.3.1) and `public/vendor-js/hls/` (hls.js light 1.6.15), each with its LICENSE and VERSION.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log
@@ -627,3 +632,9 @@ met, with the reason.
   JSON API from Appendix C through one `data-api` form handler; `Json::row`
   presents rows with the original's field names and types, read from the
   schema. 195 unit, 11 integration, 15 browser-module tests.
+- 2026-09-25 — the ten video providers (Bunny, YouTube, Vimeo, Dropbox,
+  Google Drive, OneDrive, Internet Archive, S3-compatible, direct link, host
+  disk) and /admin/videos: add by link or by upload through each service's
+  own protocol (tus, presigned PUT/multipart, resumable session, chunked),
+  status sync, thumbnails, captions, bulk actions, Bunny import. Verified in
+  Chromium against the host-disk provider and a YouTube link.

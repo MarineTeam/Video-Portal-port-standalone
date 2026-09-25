@@ -7,7 +7,8 @@ namespace App\Modules\Tools;
 use App\Core\App;
 
 /**
- * storage/uploads (and storage/media, the uploaded logo and artwork) as zip
+ * storage/uploads (and storage/media, the uploaded logo and artwork, and
+ * the videos kept on the host's own disk, private or public) as zip
  * files of about 100 MB each, built one per request and deleted once
  * downloaded, so a site with gigabytes of files never needs one huge
  * archive or one long request. Files are stored, not compressed: they are
@@ -16,10 +17,26 @@ use App\Core\App;
 final class UploadsArchive
 {
     public const PART_BYTES = 100 * 1024 * 1024;
-    public const ROOTS = ['uploads', 'media'];
+    public const ROOTS = ['uploads', 'media', 'videos'];
+
+    /** @var array<string, string> path inside the zip => the file on disk */
+    private array $sources = [];
 
     public function __construct(private readonly App $app)
     {
+    }
+
+    /** @return list<array{0: string, 1: string}> zip prefix, directory */
+    private function roots(): array
+    {
+        $out = [];
+        foreach (self::ROOTS as $root) {
+            $out[] = [$root, $this->app->paths->storage($root)];
+        }
+        // Videos anyone may watch sit where the web server serves them; in
+        // the archive they join the private ones (a save moves them back).
+        $out[] = ['videos', $this->app->paths->public() . '/media/videos'];
+        return $out;
     }
 
     /**
@@ -30,8 +47,7 @@ final class UploadsArchive
     public function files(): array
     {
         $out = [];
-        foreach (self::ROOTS as $root) {
-            $dir = $this->app->paths->storage($root);
+        foreach ($this->roots() as [$root, $dir]) {
             if (!is_dir($dir)) {
                 continue;
             }
@@ -40,11 +56,12 @@ final class UploadsArchive
                 /** @var \SplFileInfo $file */
                 // Skip links, hidden files and the guard files that keep a
                 // web server from listing or running anything in here.
-                if ($file->isLink() || !$file->isFile() || str_starts_with($file->getFilename(), '.') || $file->getFilename() === 'index.php') {
+                if ($file->isLink() || !$file->isFile() || str_starts_with($file->getFilename(), '.') || in_array($file->getFilename(), ['index.php', 'index.html'], true)) {
                     continue;
                 }
                 $rel = $root . '/' . str_replace('\\', '/', substr($file->getPathname(), strlen($dir) + 1));
                 $out[$rel] = (int) $file->getSize();
+                $this->sources[$rel] = $file->getPathname();
             }
         }
         ksort($out, SORT_STRING);
@@ -102,7 +119,7 @@ final class UploadsArchive
             throw new \RuntimeException('The archive could not be created in storage/tmp.');
         }
         foreach ($parts[$index]['files'] as $rel) {
-            $zip->addFile($this->app->paths->storage($rel), $rel);
+            $zip->addFile($this->sources[$rel] ?? $this->app->paths->storage($rel), $rel);
             $zip->setCompressionName($rel, \ZipArchive::CM_STORE);
         }
         if (!$zip->close()) {

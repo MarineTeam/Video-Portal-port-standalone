@@ -221,6 +221,7 @@ final class App
         CsrfToken::resolveWith(fn () => Csrf::token($this->session()));
         \App\Services\Files\LocalDiskProvider::configureRoot($this->paths->storage('uploads'));
         \App\Services\Files\RangeStreamer::$offload = $this->config['file_offload'] ?? null;
+        \App\Services\Video\LocalVideoProvider::configure($this->paths->storage('videos'), $this->paths->public() . '/media/videos');
 
         $this->plugins()->recoverFromCrashedLoad();
 
@@ -242,6 +243,15 @@ final class App
             if (is_array($extra) && $extra !== []) {
                 \App\Modules\I18n\I18n::extend($locale, array_filter($extra, 'is_string'));
             }
+        }
+        try {
+            foreach ($this->services()->cspSources() as $directive => $origins) {
+                foreach ($origins as $origin) {
+                    $this->addCspSource($directive, $origin);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Provider CSP sources skipped: ' . $e->getMessage());
         }
         $this->hooks->do('routes.register', $this->router, $this);
         $this->hooks->do('app.request', $request, $this);

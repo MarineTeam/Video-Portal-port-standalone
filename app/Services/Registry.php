@@ -45,6 +45,16 @@ final class Registry
             Email\ResendProvider::class,
             Files\LocalDiskProvider::class,
             Auth\LocalProvider::class,
+            Video\BunnyStreamProvider::class,
+            Video\YouTubeProvider::class,
+            Video\VimeoProvider::class,
+            Video\DropboxProvider::class,
+            Video\GoogleDriveProvider::class,
+            Video\OneDriveProvider::class,
+            Video\ArchiveProvider::class,
+            Video\S3Provider::class,
+            Video\DirectProvider::class,
+            Video\LocalVideoProvider::class,
         ] as $class) {
             $this->register($class);
         }
@@ -167,6 +177,41 @@ final class Registry
         });
         Cache::forget('services');
         unset($this->instances["$slot/$id"]);
+    }
+
+    /**
+     * The origins the page must allow: every video provider's (a library can
+     * hold videos on all of them at once) and each other slot's active one.
+     *
+     * @return array<string, list<string>> directive => origins
+     */
+    public function cspSources(): array
+    {
+        $out = [];
+        $classes = array_values($this->providers('video'));
+        foreach ($this->slots() as $slot) {
+            if ($slot === 'video') {
+                continue;
+            }
+            $id = $this->activeId($slot);
+            if ($id !== null && ($class = $this->providerClass($slot, $id)) !== null) {
+                $classes[] = $class;
+            }
+        }
+        foreach ($classes as $class) {
+            foreach ($class::cspSources() as $directive => $origins) {
+                foreach ($origins as $origin) {
+                    $out[$directive][] = $origin;
+                }
+            }
+        }
+        // A bucket's own address, which only its settings know.
+        $s3 = $this->savedConfig('video', 's3');
+        if (is_string($s3['endpoint'] ?? null) && preg_match('#^(https://[a-z0-9.-]+(:\d+)?)#i', (string) $s3['endpoint'], $m)) {
+            $out['connect'][] = $m[1];
+            $out['media'][] = $m[1];
+        }
+        return $out;
     }
 
     /** Unsets a slot (texting "off"): nothing is active. */

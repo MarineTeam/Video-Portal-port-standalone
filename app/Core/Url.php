@@ -38,6 +38,16 @@ final class Url
     }
 
     /** An absolute URL, for feeds, emails, redirect URIs and Open Graph. */
+    /** scheme://host[:port] of the site, for an Origin header or a CORS rule. */
+    public static function origin(): string
+    {
+        $p = parse_url(self::baseUrl());
+        if (!is_array($p) || !isset($p['host'])) {
+            return '';
+        }
+        return ($p['scheme'] ?? 'https') . '://' . $p['host'] . (isset($p['port']) ? ':' . $p['port'] : '');
+    }
+
     public static function absolute(string $path, array $query = []): string
     {
         $origin = preg_replace('#^(https?://[^/]+).*$#', '$1', self::$baseUrl);

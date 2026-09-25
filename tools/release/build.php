@@ -30,7 +30,7 @@ $out = is_string($opts['out'] ?? null) ? $opts['out'] : "$root/build/marine-team
 /** Paths (relative, forward slashes) never shipped. */
 function excluded(string $path): bool
 {
-    static $prefixes = ['.git/', '.github/', 'tests/', 'tools/', 'build/', 'node_modules/', '.phpunit.cache/', 'docs/'];
+    static $prefixes = ['.git/', '.github/', 'tests/', 'tools/', 'build/', 'node_modules/', '.phpunit.cache/', 'docs/', 'public/media/'];
     static $files = ['.gitignore', '.gitattributes', 'phpunit.xml', 'phpstan.neon', 'composer.lock', 'package.json', 'package-lock.json', 'PORT_PROMPT.md', 'MANIFEST.json', 'MANIFEST.sig', '.editorconfig'];
     foreach ($prefixes as $prefix) {
         if (str_starts_with($path, $prefix)) {

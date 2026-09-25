@@ -21,6 +21,7 @@ final class Routes
     {
         CategoriesAdmin::register($r, $app);
         SeriesAdmin::register($r, $app);
+        VideosAdmin::register($r, $app);
         ViewersAdmin::register($r, $app);
         SpeakersAdmin::register($r, $app);
         TrashAdmin::register($r, $app);

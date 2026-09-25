@@ -52,6 +52,20 @@ final class Fields
         'categoryId' => ['category_id', ['id', 'nullable']],
     ];
 
+    public const VIDEO = self::PUBLISHING + [
+        'title' => ['title', ['string', 'required', 'max' => 255]],
+        'slug' => ['slug', ['string', 'max' => 80, 'pattern' => '/^[a-z0-9]+(?:-[a-z0-9]+)*$/']],
+        'description' => ['description', ['text', 'nullable', 'max' => 20_000]],
+        'language' => ['language', ['string', 'nullable', 'max' => 35, 'pattern' => '/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/']],
+        'seriesId' => ['series_id', ['id', 'nullable']],
+        'categoryId' => ['category_id', ['id', 'nullable']],
+        'speakerId' => ['speaker_id', ['id', 'nullable']],
+        'scriptureRefs' => ['scripture_refs', ['array', 'max' => 20, 'of' => 'string', 'each' => ['max' => 100]]],
+        'isPremiere' => ['is_premiere', ['bool']],
+        'noteOutline' => ['note_outline', ['text', 'nullable', 'max' => 50_000]],
+        'transcript' => ['transcript', ['text', 'nullable', 'max' => 2_000_000]],
+    ];
+
     /**
      * @param array<string, array{0: string, 1: array<int|string, mixed>}> $spec
      * @param array<string, mixed> $input

@@ -26,10 +26,19 @@ final class Http
     /** @var (callable(string, string, array<string, string>, ?string): HttpResponse)|null test double */
     private static $fake = null;
 
+    /** @var (callable(string): list<string>)|null test double for DNS */
+    private static $fakeResolver = null;
+
     /** @param callable(string, string, array<string, string>, ?string): HttpResponse|null $fake */
     public static function fake(?callable $fake): void
     {
         self::$fake = $fake;
+    }
+
+    /** @param (callable(string): list<string>)|null $resolver host => addresses, for tests */
+    public static function fakeResolver(?callable $resolver): void
+    {
+        self::$fakeResolver = $resolver;
     }
 
     /**
@@ -215,6 +224,9 @@ final class Http
     /** @return list<string> */
     private static function resolve(string $host): array
     {
+        if (self::$fakeResolver !== null) {
+            return (self::$fakeResolver)($host);
+        }
         $ips = [];
         $records = @dns_get_record($host, DNS_A | DNS_AAAA) ?: [];
         foreach ($records as $record) {

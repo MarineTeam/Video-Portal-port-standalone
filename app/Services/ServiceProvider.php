@@ -21,7 +21,7 @@ interface ServiceProvider
     /**
      * The fields of the provider's settings form.
      *
-     * @return list<array{key: string, label: string, type: string, secret?: bool, help?: string, required?: bool, options?: array<string, string>, default?: mixed}>
+     * @return list<array{key: string, label: string, type: string, secret?: bool, help?: string, required?: bool, options?: array<int|string, string>, default?: mixed}>
      */
     public static function configSchema(): array;
 

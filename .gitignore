@@ -5,3 +5,6 @@
 /.phpunit.cache/
 /build/
 /tools/*.phar
+
+# Anyone-may-watch videos on the host's disk (the local video provider).
+/public/media/
