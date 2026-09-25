@@ -27,6 +27,7 @@ final class Routes
         SpeakersAdmin::register($r, $app);
         HomeRowsAdmin::register($r, $app);
         ChaptersAdmin::register($r, $app);
+        MediaCheckAdmin::register($r, $app);
         TrashAdmin::register($r, $app);
 
         // A cover, a speaker's photo: stored as an image this site redrew,
