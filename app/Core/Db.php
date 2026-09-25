@@ -51,6 +51,7 @@ final class Db
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
             PDO::ATTR_STRINGIFY_FETCHES => false,
+            PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
         ]);
         // Every DATETIME in this schema is UTC; the session zone makes
         // CURRENT_TIMESTAMP agree with what PHP writes.

@@ -12,7 +12,13 @@ spl_autoload_register(static function (string $class): void {
     if (!str_starts_with($class, 'App\\')) {
         return;
     }
-    $file = __DIR__ . '/' . str_replace('\\', '/', substr($class, 4)) . '.php';
+    // The installer lives beside app/, in install/, so it can be deleted
+    // after installation on hosts that like to.
+    if (str_starts_with($class, 'App\\Install\\')) {
+        $file = dirname(__DIR__) . '/install/' . str_replace('\\', '/', substr($class, 12)) . '.php';
+    } else {
+        $file = __DIR__ . '/' . str_replace('\\', '/', substr($class, 4)) . '.php';
+    }
     if (is_file($file)) {
         require $file;
     }

@@ -136,6 +136,13 @@ final class Router
         $regex = '';
         $score = '';
         foreach (explode('/', trim($pattern, '/')) as $segment) {
+            if (preg_match('/^\[\.\.\.([a-zA-Z_][a-zA-Z0-9_]*)\]$/', $segment, $m)) {
+                // A catch-all: the rest of the path, slashes included.
+                $params[] = $m[1];
+                $regex .= '/(.+)';
+                $score .= '0';
+                continue;
+            }
             if (preg_match('/^\[([a-zA-Z_][a-zA-Z0-9_]*)\](.*)$/', $segment, $m)) {
                 $params[] = $m[1];
                 $regex .= '/([^/]+)' . preg_quote($m[2], '#');

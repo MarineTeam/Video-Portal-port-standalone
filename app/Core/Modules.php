@@ -13,9 +13,11 @@ final class Modules
     /** @var list<class-string> */
     public const CORE = [
         \App\Modules\Site\Routes::class,
+        \App\Modules\Site\Assets::class,
         \App\Modules\Access\Routes::class,
         \App\Modules\Admin\Routes::class,
         \App\Modules\Jobs\Routes::class,
+        \App\Modules\Uploads\Uploads::class,
     ];
 
     public static function register(App $app): void

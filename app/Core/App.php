@@ -209,6 +209,12 @@ final class App
             return $request->wantsJson() ? Response::error('Down for maintenance', 503, 'maintenance') : ErrorPage::render(503);
         }
 
+        \App\Modules\I18n\I18n::configure($this->paths->app() . '/Lang');
+        \App\Modules\I18n\I18n::setLocale(\App\Modules\I18n\I18n::fromRequest($request->cookie(\App\Modules\I18n\I18n::COOKIE), $request->header('accept-language')));
+        CsrfToken::resolveWith(fn () => Csrf::token($this->session()));
+        \App\Services\Files\LocalDiskProvider::configureRoot($this->paths->storage('uploads'));
+        \App\Services\Files\RangeStreamer::$offload = $this->config['file_offload'] ?? null;
+
         $this->plugins()->recoverFromCrashedLoad();
 
         // Modules register their routes; a page that must always be
@@ -310,9 +316,66 @@ final class App
         ]);
     }
 
-    /** Renders a page inside the site layout. */
+    /** Renders a page inside a layout, with the shell every layout needs. */
     public function page(string $template, array $vars = [], int $status = 200, string $layout = 'layouts/site'): Response
     {
+        $this->view()->share('shell', $this->shell());
         return Response::html($this->view()->page($template, $vars, $layout), $status);
+    }
+
+    /** @return array<string, mixed> */
+    private function shell(): array
+    {
+        $current = $this->currentUser();
+        $user = $current->user();
+        $branding = \App\Modules\Branding\Branding::load($this->db());
+        $isAdmin = $current->isAdmin();
+        $nav = [
+            ['href' => '/', 'label' => t('nav.home'), 'icon' => 'home'],
+            ['href' => '/search', 'label' => t('nav.search'), 'icon' => 'search'],
+        ];
+        $nav = (array) $this->hooks->apply('nav.sections', $nav, $user);
+        $tabs = (array) $this->hooks->apply('nav.tabs', array_slice($nav, 0, 4), $user);
+        if ($user !== null) {
+            $tabs[] = ['href' => '/profile', 'label' => t('nav.profile'), 'icon' => 'person'];
+        }
+        return [
+            'branding' => $branding,
+            'brandingCss' => \App\Modules\Branding\Branding::brandingCss($branding),
+            'user' => $user === null ? null : [
+                'id' => $user['id'],
+                'name' => $current->displayName(),
+                'email' => $user['email'],
+                'isAdmin' => $isAdmin,
+                'isStaff' => $current->isStaff(),
+            ],
+            'csrf' => Csrf::token($this->session()),
+            'nonce' => $this->view()->nonce(),
+            'locale' => \App\Modules\I18n\I18n::locale(),
+            'nav' => $nav,
+            'tabs' => $tabs,
+            'theme' => $this->themes()->assets(),
+            'path' => $this->request()->path,
+            'notices' => $isAdmin ? $this->plugins()->notices() : [],
+            'themeNotice' => $isAdmin ? $this->settings()->get('theme.notice') : null,
+            'breakGlass' => $isAdmin && is_file($this->paths->storage('enable-local-login')),
+            'adminNav' => $user !== null && $current->isStaff()
+                ? \App\Modules\Admin\AdminNav::groupsFor($isAdmin, fn (string $c) => $current->canAnywhere($c))
+                : [],
+            'head' => $this->capture('render.head'),
+            'bodyEnd' => $this->capture('render.body_end'),
+        ];
+    }
+
+    /** Collects what plugins echo on a render hook. */
+    private function capture(string $hook): string
+    {
+        ob_start();
+        try {
+            $this->hooks->do($hook, $this);
+        } finally {
+            $out = (string) ob_get_clean();
+        }
+        return $out;
     }
 }

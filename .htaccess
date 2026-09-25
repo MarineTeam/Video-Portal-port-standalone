@@ -1,0 +1,19 @@
+# Marine Team — for a host whose document root is this folder rather than
+# public/. Everything is sent into public/, so app/, storage/, plugins/ and
+# the rest can never be fetched directly.
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^public/ - [L]
+  RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+  # Without mod_rewrite nothing works, and nothing private may leak either.
+  Require all denied
+</IfModule>
+
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>

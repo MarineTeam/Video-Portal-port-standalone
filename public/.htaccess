@@ -1,0 +1,31 @@
+# Marine Team — the document root.
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # The installer rewrites this line for a site installed in a subdirectory.
+  # RewriteBase /
+
+  # The front controller answers anything that isn't a real file here.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# Hidden files are never served.
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  <FilesMatch "^(sw\.js|offline\.html|manifest\.json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType text/javascript .mjs
+  AddType application/wasm .wasm
+</IfModule>
