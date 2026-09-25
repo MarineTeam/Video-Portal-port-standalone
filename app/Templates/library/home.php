@@ -3,11 +3,11 @@
  * @var \App\Core\View $v
  * @var array $branding
  * @var ?array<string, mixed> $hero the featured series, or the newest
- * @var list<array<string, mixed>> $continue
+ * @var ?array{title: string, videos: list<array<string, mixed>>} $continue the row above the browse list
  * @var list<array<string, mixed>> $categories top level
  * @var list<array<string, mixed>> $series in no category
  * @var list<array<string, mixed>> $videos standing alone, in no category
- * @var list<array<string, mixed>> $recent
+ * @var list<array{type: string, title: string, href: ?string, series: list<array<string, mixed>>}> $rows configured at /admin/home-rows
  */
 $empty = $categories === [] && $series === [] && $videos === [];
 ?>
@@ -24,10 +24,10 @@ $empty = $categories === [] && $series === [] && $videos === [];
   <h1><?= e(t('home.welcome', ['name' => $branding['name']])) ?></h1>
 <?php endif ?>
 
-<?php if ($continue !== []): ?>
+<?php if ($continue !== null): ?>
   <section aria-labelledby="continue-h">
-    <h2 id="continue-h"><?= e(t('library.continueWatching')) ?></h2>
-    <div class="row-scroll"><?= $v->partial('partials/library-videos', ['videos' => $continue]) ?></div>
+    <h2 id="continue-h"><?= e($continue['title']) ?></h2>
+    <div class="row-scroll"><?= $v->partial('partials/library-videos', ['videos' => $continue['videos']]) ?></div>
   </section>
 <?php endif ?>
 
@@ -41,9 +41,9 @@ $empty = $categories === [] && $series === [] && $videos === [];
   <?php endif ?>
 </section>
 
-<?php if (count($recent) > 1): ?>
-  <section aria-labelledby="recent-h">
-    <h2 id="recent-h"><a href="<?= e(url('/recently-added')) ?>"><?= e(t('library.recentlyAdded')) ?></a></h2>
-    <div class="row-scroll"><?= $v->partial('partials/library-series-tiles', ['series' => $recent]) ?></div>
+<?php foreach ($rows as $i => $row): ?>
+  <section aria-labelledby="row-h-<?= e((string) $i) ?>" data-home-row="<?= e(strtolower($row['type'])) ?>">
+    <h2 id="row-h-<?= e((string) $i) ?>"><?php if ($row['href'] !== null): ?><a href="<?= e(url($row['href'])) ?>"><?= e($row['title']) ?></a><?php else: ?><?= e($row['title']) ?><?php endif ?></h2>
+    <div class="row-scroll"><?= $v->partial('partials/library-series-tiles', ['series' => $row['series']]) ?></div>
   </section>
-<?php endif ?>
+<?php endforeach ?>

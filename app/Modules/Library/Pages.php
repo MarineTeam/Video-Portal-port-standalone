@@ -63,16 +63,17 @@ final class Pages
         $browse = $this->browse();
         $branding = \App\Modules\Themes\Appearance::forPage($this->app)['branding'];
         $featured = $browse->seriesWhere('s.featured = 1', [], 's.position, s.created_at DESC', 1);
-        $recent = $browse->seriesWhere('1 = 1', [], 's.created_at DESC', 12);
+        $newest = $featured === [] ? $browse->seriesWhere('1 = 1', [], 's.created_at DESC', 1) : [];
+        $sections = HomeRows::sections($this->app, $browse);
         return $this->app->page('library/home', [
             'title' => $branding['name'],
             'branding' => $branding,
-            'hero' => $featured[0] ?? $recent[0] ?? null,
-            'continue' => $browse->continueWatching(),
+            'hero' => $featured[0] ?? $newest[0] ?? null,
+            'continue' => $sections['continue'],
             'categories' => $browse->categories(null),
             'series' => $browse->series(null),
             'videos' => $browse->videos(null, null),
-            'recent' => $recent,
+            'rows' => $sections['rows'],
             'meta' => ['og:title' => $branding['name'], 'og:type' => 'website', 'og:url' => Url::absolute('/')],
         ]);
     }

@@ -68,6 +68,10 @@ return [
 
     'home.welcome' => 'Bienvenido a {name}',
     'home.empty' => 'Todavía no se ha publicado nada.',
+    'home.becauseYouWatched' => 'Porque viste {title}',
+    'home.becauseYouWatchedAny' => 'Porque viste…',
+    'home.trending' => 'Tendencias de la semana',
+    'home.missingCategory' => '(categoría eliminada)',
 
     'profile.title' => 'Tu perfil',
     'profile.overview' => 'Resumen',

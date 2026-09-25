@@ -77,7 +77,7 @@ commit as the code it describes.
 
 | Path | Status | Notes |
 |---|---|---|
-| `/` | partial | Library\Pages: hero (featured, else newest series), Continue watching, browse tiles, Recently added; configurable home rows with /admin/home-rows |
+| `/` | done | Library\Pages: hero (featured, else newest series), Continue watching above the browse tiles, then the rows from /admin/home-rows (Because you watched, Trending this week, Recently added, category and tag rows) |
 | `/access-denied` | done | One plain sentence; guest link only while the switch is open |
 | `/admin` | partial | Dashboard with counts and setup warnings; library cards pending |
 | `/admin/access-attempts` | done | Filter by address, reason, date and unreviewed; mark reviewed; prune past 90 days |
@@ -99,7 +99,7 @@ commit as the code it describes.
 | `/admin/forms/[id]` | todo | |
 | `/admin/groups` | todo | |
 | `/admin/groups/[id]` | todo | |
-| `/admin/home-rows` | todo | |
+| `/admin/home-rows` | done | Library\Admin\HomeRowsAdmin: toggle, rename, reorder the built-in rows; add category and tag rows; says when a row's plugin is off |
 | `/admin/live` | todo | |
 | `/admin/media-check` | todo | |
 | `/admin/people` | todo | |
@@ -231,8 +231,8 @@ commit as the code it describes.
 | `/api/admin/guest-login` | GET PATCH | done |  |
 | `/api/admin/guides/[id]` | GET PATCH DELETE | todo | |
 | `/api/admin/guides` | GET POST | todo | |
-| `/api/admin/home-rows/[id]` | PATCH DELETE | todo | |
-| `/api/admin/home-rows` | GET POST | todo | |
+| `/api/admin/home-rows/[id]` | PATCH DELETE | done | title, enabled, move up/down; only curated rows delete |
+| `/api/admin/home-rows` | GET POST | done | POST creates CATEGORY/TAG rows only |
 | `/api/admin/live/[id]` | PATCH DELETE | todo | |
 | `/api/admin/live` | GET POST | todo | |
 | `/api/admin/people/[id]` | PATCH DELETE | todo | |
@@ -440,7 +440,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | Webhook | `webhooks` | todo | |
 | Announcement | `announcements` | todo | |
 | LiveStream | `live_streams` | todo | |
-| HomeRow | `home_rows` | todo | |
+| HomeRow | `home_rows` | done | Library\HomeRows (seeded once, built-in order when empty or unreadable) |
 | Subscription | `subscriptions` | todo | |
 | PendingNotification | `pending_notifications` | todo | |
 | Playlist | `playlists` | todo | |

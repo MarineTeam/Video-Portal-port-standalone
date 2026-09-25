@@ -64,6 +64,41 @@ final class Browse
         return $this->db()->one('SELECT * FROM {{categories}} WHERE slug = ? AND deleted_at IS NULL', [$slug]);
     }
 
+    /** @return array<string, mixed>|null */
+    public function categoryById(string $id): ?array
+    {
+        return $this->db()->one('SELECT * FROM {{categories}} WHERE id = ? AND deleted_at IS NULL', [$id]);
+    }
+
+    /**
+     * Series like this one: in the same category or sharing its tags, the
+     * most shared tags first, then the newest.
+     *
+     * @param array<string, mixed> $series
+     * @return list<array<string, mixed>>
+     */
+    public function related(array $series, int $limit = 12): array
+    {
+        $shared = '(SELECT COUNT(*) FROM {{series_tags}} a JOIN {{series_tags}} b ON b.tag = a.tag AND b.series_id = ? WHERE a.series_id = s.id)';
+        $extra = 's.id <> ? AND (' . ($series['category_id'] !== null ? 's.category_id = ? OR ' : '') . "$shared > 0)";
+        $params = $series['category_id'] !== null ? [$series['id'], $series['category_id'], $series['id']] : [$series['id'], $series['id']];
+        $found = $this->seriesWhere($extra, $params, 's.created_at DESC', 100);
+        if ($found === []) {
+            return [];
+        }
+        $tags = array_column($this->db()->all('SELECT tag FROM {{series_tags}} WHERE series_id = ?', [$series['id']]), 'tag');
+        $overlap = [];
+        if ($tags !== []) {
+            $ids = array_column($found, 'id');
+            foreach ($this->db()->all('SELECT series_id, COUNT(*) AS n FROM {{series_tags}} WHERE tag IN (' . implode(',', array_fill(0, count($tags), '?')) . ') AND series_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') GROUP BY series_id', [...$tags, ...$ids]) as $r) {
+                $overlap[(string) $r['series_id']] = (int) $r['n'];
+            }
+        }
+        // usort is stable: equal overlap keeps newest first.
+        usort($found, fn ($a, $b) => ($overlap[$b['id']] ?? 0) <=> ($overlap[$a['id']] ?? 0));
+        return array_slice($found, 0, $limit);
+    }
+
     /**
      * The category's ancestors, top first, for breadcrumbs.
      *

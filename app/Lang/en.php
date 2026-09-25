@@ -70,6 +70,10 @@ return [
 
     'home.welcome' => 'Welcome to {name}',
     'home.empty' => 'Nothing has been published yet.',
+    'home.becauseYouWatched' => 'Because you watched {title}',
+    'home.becauseYouWatchedAny' => 'Because you watched…',
+    'home.trending' => 'Trending this week',
+    'home.missingCategory' => '(category deleted)',
 
     'profile.title' => 'Your profile',
     'profile.overview' => 'Overview',
