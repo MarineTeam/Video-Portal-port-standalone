@@ -23,6 +23,8 @@ final class RedirectProvidersTest extends TestCase
     protected function tearDown(): void
     {
         Http::fake(null);
+        // The suite's own address (tests/bootstrap.php); one test here changes it.
+        \App\Core\Url::configure('https://church.example.org');
     }
 
     public function test_auth0_sends_organization_only_when_one_is_required(): void
