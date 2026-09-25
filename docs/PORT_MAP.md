@@ -118,7 +118,7 @@ commit as the code it describes.
 | `/admin/teams` | todo | |
 | `/admin/trash` | done | Restore; delete for good removes the provider asset first |
 | `/admin/users` | done | Roles (ADMIN only, never the last admin), pre-authorise by email, revoke; changing a role signs the person out |
-| `/admin/video-feeds` | todo | |
+| `/admin/video-feeds` | done | Administrators only (a feed can file videos anywhere) |
 | `/admin/videos` | done | VideosAdmin: add by link or upload (tus, presigned PUT/multipart, resumable, chunked), Bunny import, bulk; edit page at /admin/videos/[id] (the port's) with thumbnail, captions, restricted viewing |
 | `/admin/webhooks` | todo | |
 | `/books/[fileId]` | todo | |
@@ -275,9 +275,9 @@ commit as the code it describes.
 | `/api/admin/trash` | GET | done | Only the kinds the reader manages site-wide |
 | `/api/admin/users/[id]` | PATCH DELETE | done | Last-admin guard; role change deletes sessions |
 | `/api/admin/users` | GET POST | done |  |
-| `/api/admin/video-feeds/[id]` | PATCH DELETE | todo | |
-| `/api/admin/video-feeds/[id]/sync` | POST | todo | |
-| `/api/admin/video-feeds` | GET POST | todo | |
+| `/api/admin/video-feeds/[id]` | PATCH DELETE | done |  |
+| `/api/admin/video-feeds/[id]/sync` | POST | done | Forces a full pass |
+| `/api/admin/video-feeds` | GET POST | done |  |
 | `/api/admin/videos/[id]/captions` | GET POST DELETE | done | Provider captions (Bunny, Vimeo) or a WebVTT sidecar in storage/media/captions; SRT converted |
 | `/api/admin/videos/[id]/chapters` | GET POST | todo | |
 | `/api/admin/videos/[id]` | PATCH DELETE | done | PATCH also takes `move` |
@@ -306,7 +306,7 @@ commit as the code it describes.
 | `/api/cron/notification-digest` | GET | todo | |
 | `/api/cron/schedule-reminders` | GET | todo | |
 | `/api/cron/sync-schedules` | GET POST | todo | |
-| `/api/cron/sync-video-feeds` | GET | todo | |
+| `/api/cron/sync-video-feeds` | GET | done | Job `sync-video-feeds`, daily at 07:15 UTC as before |
 | `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min through /cron/run; abandoned upload placeholders marked FAILED after a day |
 | `/api/cron/transcribe` | GET | todo | |
 | `/api/downloads/[videoId]` | GET | done | Four gates after canViewVideo; an MP4 link or the specific reason there isn’t one |
@@ -489,7 +489,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | GroupAttendance | `group_attendances` | todo | |
 | Broadcast | `broadcasts` | todo | |
 | BroadcastRecipient | `broadcast_recipients` | todo | |
-| VideoFeed | `video_feeds` | todo | |
+| VideoFeed | `video_feeds` | done | |
 | LiveChatMessage | `live_chat_messages` | todo | |
 | LiveChatMute | `live_chat_mutes` | todo | |
 | TvDevice | `tv_devices` | todo | |
@@ -570,7 +570,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/upload-types.test.ts` | done | tests/Unit/Files/UploadTypesTest.php |
 | `lib/validation/schemas.test.ts` | todo | |
 | `lib/verses.test.ts` | todo | |
-| `lib/video-feed-sync.test.ts` | todo | |
+| `lib/video-feed-sync.test.ts` | done | tests/Unit/Video/VideoFeedSyncTest.php, plus the fetchers against recorded answers |
 | `lib/video-source.test.ts` | done | tests/Unit/Library/VideoSourceTest.php |
 | `lib/view-key.test.ts` | done | tests/Unit/Library/ViewKeyTest.php |
 
@@ -616,6 +616,7 @@ met, with the reason.
 - **The player speaks each embed's postMessage protocol itself** (YouTube's widget messages, Vimeo's player API messages, Player.js for Bunny) instead of loading the YouTube IFrame API, the Vimeo Player SDK or player.js into the page: no third-party script runs in the site's origin, and the CSP needs only frame-src for them. The heartbeat is accurate wherever a protocol or a native `<video>` reports position, elapsed-time elsewhere (Google Drive preview).
 - **Host-disk video is the one exception to "video bytes never pass through PHP"**: its upload is chunked through the site (there is nowhere else for it to go) and a video not everybody may watch streams through `/api/videos/local/[name]`, offloaded by X-Sendfile / X-Accel-Redirect / X-LiteSpeed-Location where detected. Videos anybody may watch sit in `public/media/videos/` for the web server; a `local-videos` job (every five minutes) and every change above a video (category, series, viewer restriction, restore — the `library.changed` hook the library's audit fires) move files between the two, so a take-down time or a category going members-only never leaves a public copy.
 - **Share passwords**: new ones use `password_hash()`; imported `scrypt$salt$key` hashes are checked by a vendored pure-PHP scrypt (`app/Support/Scrypt.php`, RFC 7914 vectors and a Node-made hash in the tests, about 2.5 s and 22 MB at Node's defaults) and rehashed on the first right guess. Because that check is slow, unlocking is also limited to 30 tries per address per 15 minutes, beside the per-link lockout.
+- **Video feeds read their keys from the YouTube and Vimeo provider settings** (Data API key, access token) rather than YOUTUBE_API_KEY / VIMEO_ACCESS_TOKEN, and the screen names the missing one. `/admin/downloads` needs manage_plugins, as its place in the menu says.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.

@@ -48,7 +48,8 @@ final class Downloads
         $self = new self($app);
         $r->get('/api/downloads/[videoId]', [$self, 'download'], [Middleware::member($app)]);
         $r->get('/profile/downloads', [$self, 'profilePage'], [Middleware::member($app)]);
-        $admin = Middleware::admin($app);
+        // The menu files this beside the plugins; so does the permission.
+        $admin = Middleware::can($app, 'manage_plugins');
         $r->get('/admin/downloads', [$self, 'adminPage'], [$admin]);
         $r->get('/api/admin/downloads', [$self, 'adminGet'], [$admin]);
         $r->add('PATCH', '/api/admin/downloads', [$self, 'adminPatch'], [$admin]);
@@ -128,6 +129,11 @@ final class Downloads
         if ($access->video($video, $series) !== ContentAccess::OK) {
             return ['allowed' => false, 'reason' => 'not_found'];
         }
+        // A video on YouTube or Vimeo has no file of ours: no button at all, rather than one that fails.
+        $provider = $this->app->services()->get('video', (string) $video['provider']);
+        if (!$provider instanceof VideoProvider || !$provider->capabilities()->mp4) {
+            return ['allowed' => false, 'reason' => 'not_supported'];
+        }
         $categoryId = $video['category_id'] ?? ($series['category_id'] ?? null);
         if (!PluginStates::enabled($this->app->db(), 'downloads', $categoryId !== null ? (string) $categoryId : null)) {
             return ['allowed' => false, 'reason' => 'feature_off'];
@@ -198,6 +204,7 @@ final class Downloads
 
     public const REASONS = [
         'not_found' => 'This video isn’t available to you.',
+        'not_supported' => 'This video plays from another site, so there’s no file here to save.',
         'feature_off' => 'Downloads aren’t turned on here.',
         'content_blocked' => 'This video can’t be downloaded.',
         'audience' => 'Downloads are limited to certain people, and you aren’t one of them yet.',

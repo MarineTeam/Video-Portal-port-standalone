@@ -28,7 +28,7 @@ final class AdminNav
                 ['href' => '/admin/videos', 'label' => 'Videos', 'needs' => 'manage_videos'],
                 ['href' => '/admin/files', 'label' => 'Files', 'needs' => 'manage_files'],
                 ['href' => '/admin/speakers', 'label' => 'Speakers', 'needs' => 'manage_videos'],
-                ['href' => '/admin/video-feeds', 'label' => 'Video feeds', 'needs' => 'manage_videos'],
+                ['href' => '/admin/video-feeds', 'label' => 'Video feeds', 'needs' => 'admin'],
                 ['href' => '/admin/home-rows', 'label' => 'Homepage rows', 'needs' => 'manage_plugins'],
                 ['href' => '/admin/media-check', 'label' => 'Media check', 'needs' => 'manage_videos'],
                 ['href' => '/admin/trash', 'label' => 'Trash', 'needs' => $content],
