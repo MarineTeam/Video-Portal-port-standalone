@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat done) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -42,7 +42,7 @@ commit as the code it describes.
 | Live streaming and chat | plugin | done | plugins/live-streaming: /live, the "Live now" banner and nav entry, /admin/live, and a polling chat that opens half an hour early and closes an hour after |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
-| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | todo | |
+| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall done (plugins/prayer); the rest todo |
 | Television | plugin | todo | |
 | Data import from the Next.js deployment (`tools/export-from-nextjs`, `/admin/tools/import`) | core | todo | |
 
@@ -105,7 +105,7 @@ commit as the code it describes.
 | `/admin/people` | todo | |
 | `/admin/permissions` | done | Groups (capabilities sanitised to the known list), assignments site-wide or scoped to a category/series, category and series editors |
 | `/admin/plugins` | done | Activate, per-category overrides, zip install/delete, auto-deactivation notices; never loads third-party plugins |
-| `/admin/prayer` | todo | |
+| `/admin/prayer` | done | The queue, waiting first: let through, take down, mark answered with a line saying what happened, change the audience, delete (`moderate_prayer`) |
 | `/admin/query-monitor` | done | Reports the storage/config.php flag, toggles the bar (plugins row "query-monitor", fail-open) |
 | `/admin/schedules` | todo | |
 | `/admin/schedules/[id]` | todo | |
@@ -139,7 +139,7 @@ commit as the code it describes.
 | `/live` | done | Whatever is on now, a countdown to the next one otherwise, "Coming up" underneath, and the chat beside it |
 | `/playlists` | done | plugins/playlists |
 | `/playlists/[id]` | done | the owner's, or read-only for anyone once shareable (noindex); each reader sees only the videos they may watch |
-| `/prayer` | todo | |
+| `/prayer` | done | The wall as this reader may see it, the form to ask (honeypot, rate-limited), and "I prayed for this"; noindex |
 | `/present/[fileId]` | todo | |
 | `/profile` | done | Overview: unread count and plugin cards (profile.overview) |
 | `/profile/devices` | todo | |
@@ -244,8 +244,8 @@ commit as the code it describes.
 | `/api/admin/plugins/[slug]` | PATCH | done |  |
 | `/api/admin/plugins/overrides/[id]` | DELETE | done |  |
 | `/api/admin/plugins` | GET | done | PLUGIN_META slugs plus installed packages; never the query-monitor row |
-| `/api/admin/prayer/[id]` | PATCH DELETE | todo | |
-| `/api/admin/prayer` | GET | todo | |
+| `/api/admin/prayer/[id]` | PATCH DELETE | done | `{status, visibility, answeredNote}`; the decision is audited, the words never are |
+| `/api/admin/prayer` | GET | done | The same presenter as the wall, so an anonymous request is anonymous here too |
 | `/api/admin/query-monitor` | PATCH | done | `{enabled}` → `{enabled, configured}` |
 | `/api/admin/schedules/[id]/events` | GET POST | todo | |
 | `/api/admin/schedules/[id]` | GET PATCH DELETE | todo | |
@@ -339,9 +339,9 @@ commit as the code it describes.
 | `/api/playlists/[id]` | GET PATCH DELETE | done | `{playlist, items}`; PATCH `{title, public}` |
 | `/api/playlists/for-video` | GET | done | `[{id, title, contains}]` for the Add to playlist menu |
 | `/api/playlists` | GET POST | done | POST `{title, videoId?}` |
-| `/api/prayer/[id]/pray` | POST | todo | |
-| `/api/prayer/[id]` | DELETE | todo | |
-| `/api/prayer` | GET POST | todo | |
+| `/api/prayer/[id]/pray` | POST | done | Members; a number, never a list of names; twice is not two |
+| `/api/prayer/[id]` | DELETE | done | The writer's, and the moderator's; anybody else gets 404 |
+| `/api/prayer` | GET POST | done | Every read goes through `Prayer::visibleTo`; asking is open to visitors, with a honeypot and a per-address and per-account limit |
 | `/api/profile/calendar` | POST DELETE | todo | |
 | `/api/profile/devices/[id]` | DELETE | todo | |
 | `/api/profile/devices` | GET | todo | |
@@ -478,8 +478,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | FormField | `form_fields` | todo | |
 | FormSubmission | `form_submissions` | todo | |
 | FormAnswer | `form_answers` | todo | |
-| PrayerRequest | `prayer_requests` | todo | |
-| PrayerIntercession | `prayer_intercessions` | todo | |
+| PrayerRequest | `prayer_requests` | done | plugins/prayer |
+| PrayerIntercession | `prayer_intercessions` | done | Unique per request and member |
 | SmallGroup | `small_groups` | todo | |
 | SmallGroupMember | `small_group_members` | todo | |
 | GroupMessage | `group_messages` | todo | |
@@ -543,7 +543,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/permissions.test.ts` | done | tests/Unit/Access/PermissionsTest.php |
 | `lib/plugins.test.ts` | done | tests/Unit/Plugins/PluginStatesTest.php |
 | `lib/podcast-mirror.test.ts` | done | tests/Unit/PodcastMirrorTest.php |
-| `lib/prayer.test.ts` | todo | |
+| `lib/prayer.test.ts` | done | tests/Unit/Plugins/PrayerTest.php (every case) and tests/Integration/PrayerTest.php |
 | `lib/public-url.test.ts` | done | tests/Unit/Core/PublicUrlTest.php |
 | `lib/push-endpoint.test.ts` | done | tests/Unit/Push/PushEndpointTest.php |
 | `lib/reader-cache.test.ts` | todo | |
@@ -648,6 +648,10 @@ met, with the reason.
 - **`/live` counts down to the next scheduled stream, but the chat belongs only to the stream whose evening it is** — from half an hour before its start until an hour after it ends. A stream three weeks off gets a countdown and a place in "Coming up", not a comment box.
 - **An embed or cover address must be https.** An http embed inside an https page is blocked by the browser anyway, and the page adds the embed's origin to `frame-src` for that request only, so the CSP never has to list every streaming host a church might use.
 - **Publishing a stream tells every member**, rather than checking access per member as a video does: a `LiveStream` row has no member-only gate and no category, so there is nothing to check it against.
+- **A taken-down prayer request is hidden from its writer too**, not only from everybody else: a moderator's decision that re-showed the words to the person who wrote them would invite the same request again, and the row is kept so the decision is a record. The moderator still sees it.
+- **Whoever asks for prayer chooses who may see it, a visitor included.** The brief gives the three audiences to whoever writes the request without saying that a visitor is excluded, and "this shouldn't be a wall at all" is a visitor's decision as much as a member's. Members are the default, and nothing is shown to anybody until a moderator has read it.
+- **The prayer wall's limits are 5 requests an hour per account and 20 per address.** The brief asks for both; the numbers are the port's. A single address is the looser of the two because a church shares one office network.
+- **"Take down" and "delete" are different acts on the wall**: taking one down sets `HIDDEN` and keeps the row (the decision survives, and the same words can't be reposted past it), while delete removes it — the writer's own, or a moderator's for good. Only the second is a delete.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -694,3 +698,11 @@ met, with the reason.
   5 integration tests through a real server, and a two-tab Chromium run:
   one tab's message reaching the other by polling, and a moderator's
   take-down removing it from the tab that was behind.
+- 2026-09-25 — the prayer wall (plugins/prayer): /prayer, /admin/prayer and
+  /api/prayer*, with `Prayer::canSee`/`bylineFor`/`present`/`visibleTo`/
+  `canPrayFor`/`canDelete` as the one place each decision is made. Nothing
+  on the wall until a moderator reads it, anonymous meaning anonymous on
+  every screen including the queue, "I prayed for this" as a number, and
+  the request's words kept out of the audit log. 19 unit tests (the
+  original's case list) and 6 integration tests, plus a Chromium run of a
+  visitor asking, a moderator letting it through and a member praying.
