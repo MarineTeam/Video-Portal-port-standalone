@@ -512,7 +512,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/bunny.test.ts` | todo | |
 | `lib/client-bundle.test.ts` | todo | |
 | `lib/content-language.test.ts` | todo | |
-| `lib/content.test.ts` | partial | categoryChainIds cases in PermissionsTest; canAccess and sequential unlock arrive with the Library |
+| `lib/content.test.ts` | done | tests/Unit/Library/ContentTest.php; the DB-backed checks in tests/Integration/ContentAccessTest.php |
 | `lib/cover.test.ts` | todo | |
 | `lib/cron-guard.test.ts` | done | tests/Unit/Jobs/CronGuardTest.php (no development exception: see Deviations) |
 | `lib/cron.test.ts` | todo | |
@@ -555,7 +555,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/schedules/logic.test.ts` | todo | |
 | `lib/schedules/visibility.test.ts` | todo | |
 | `lib/services.test.ts` | todo | |
-| `lib/share-links.test.ts` | todo | |
+| `lib/share-links.test.ts` | done | tests/Unit/Library/ShareLinksTest.php |
 | `lib/share-password.test.ts` | todo | |
 | `lib/sheets/dates.test.ts` | todo | |
 | `lib/sheets/parse.test.ts` | todo | |
@@ -571,7 +571,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/validation/schemas.test.ts` | todo | |
 | `lib/verses.test.ts` | todo | |
 | `lib/video-feed-sync.test.ts` | todo | |
-| `lib/video-source.test.ts` | todo | |
+| `lib/video-source.test.ts` | done | tests/Unit/Library/VideoSourceTest.php |
 | `lib/view-key.test.ts` | done | tests/Unit/Library/ViewKeyTest.php |
 
 ## Security review (route by route)
@@ -604,6 +604,9 @@ met, with the reason.
 - **The backup is a multi-member gzip**: each request appends its own member, which is valid gzip (RFC 1952) and what `gunzip`, `zcat` and phpMyAdmin (zlib's `gzread`) read as one stream — PHP's `gzdecode()` alone stops after the first. Rows of `sessions`, `rate_limits` and `uploads` are left out (their tables are kept): they are throwaway state.
 - **Two profile routes the port adds for local accounts:** `POST /api/profile/password` (current + new; ends every other session) and `DELETE /api/profile/sessions` ("sign out everywhere else"), which the brief puts on /profile/settings without naming routes. The inbox API's JSON shape is the port's own (`{notifications, hasMore, unreadCount}`), since the brief names the route but not its body.
 - **The query monitor's deploy-level switch is `'query_monitor' => true` in `storage/config.php`** (the port's stand-in for `QUERY_MONITOR_ENABLED`), since a host without a shell has no environment variables; like the original's, the admin page can only report it.
+- **Videos store `provider` + `external_id`** (with `provider_data` for a provider's own bookkeeping) instead of `source` + `bunnyVideoId` + `externalId`, since the port has ten providers rather than three. `Library\Presenter::video()` sends the original fields back — `source` (BUNNY/YOUTUBE/VIMEO, or the port's provider name), `bunnyVideoId`, `externalId` — so every JSON shape is unchanged for the original three.
+- **Members-only is inherited down the tree**: a series, video or file is members-only when it, its series, or any category above it says so (the original read the item's own flag, and its series' for files). A category marked members-only now means everything in it, which is what an admin ticking it expects. Viewer restrictions and share grants decide as before.
+- **Member-only content stays out of the sitemap too**, following "a guest browsing the site never sees that the content exists" rather than the older README line that listed member-only categories and series there.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log
