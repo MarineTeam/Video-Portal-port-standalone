@@ -51,12 +51,20 @@ final class ExternalSignIn
         $r->post('/auth/callback', [$self, 'callback']);
         $r->post('/auth/token', [$self, 'token']);
         $r->post('/admin/providers/auth/[provider]/trial', [$self, 'trialStart'], [Middleware::admin($app)]);
+        // Providers that handle their own forms (Supabase) add their routes;
+        // those resolve the provider per request, trial or active.
+        foreach ($app->services()->providers('auth') as $class) {
+            $instance = new $class([]);
+            if ($instance instanceof AuthProvider) {
+                $instance->routes($r, $app);
+            }
+        }
     }
 
     // Which provider, with which settings ---------------------------------------------------------
 
     /** The trial's settings while one is running, else the active provider. */
-    private function provider(bool $trial): ?AuthProvider
+    public function provider(bool $trial): ?AuthProvider
     {
         if ($trial) {
             $t = $this->app->session()->get('auth_trial');
@@ -73,7 +81,7 @@ final class ExternalSignIn
     }
 
     /** @return array{mode: string, organizationIds: list<string>, guest: bool} */
-    private function context(bool $guest): array
+    public function context(bool $guest): array
     {
         $s = $this->app->settings();
         return [
@@ -116,7 +124,7 @@ final class ExternalSignIn
             return Response::redirect($provider->authorizeUrl($state, $nonce, $verifier, $this->context($guest)));
         } catch (\Throwable $e) {
             Log::warning('Sign-in start failed: ' . $e->getMessage());
-            return $this->app->page('auth/message', ['title' => t('auth.signInTitle'), 'message' => t('auth.providerUnavailable')], 503, 'layouts/auth');
+            return $this->app->page('auth/message', ['title' => t('auth.signInTitle'), 'body' => t('auth.providerUnavailable')], 503, 'layouts/auth');
         }
     }
 
@@ -183,7 +191,7 @@ final class ExternalSignIn
 
     // Ending up somewhere --------------------------------------------------------------------------
 
-    private function finish(Identity $identity, string $returnTo, bool $trial): Response
+    public function finish(Identity $identity, string $returnTo, bool $trial): Response
     {
         if ($trial) {
             return $this->trialFinish($identity);
@@ -193,7 +201,7 @@ final class ExternalSignIn
     }
 
     /** One plain page for a refusal, with what the provider said recorded for the administrator. */
-    private function refused(?Identity $identity, string $detail, bool $trial): Response
+    public function refused(?Identity $identity, string $detail, bool $trial): Response
     {
         if ($trial) {
             $this->app->session()->forget('auth_trial');

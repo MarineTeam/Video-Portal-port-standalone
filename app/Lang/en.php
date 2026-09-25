@@ -236,4 +236,5 @@ return [
     'auth.providerUnavailable' => 'The sign-in service isn’t answering. Try again in a minute.',
     'auth.finishing' => 'Finishing signing in…',
     'auth.refused' => 'That sign-in didn’t work.',
+    'auth.magicSent' => 'If {email} can sign in here, a sign-in link is on its way. Open it in this browser.',
 ];

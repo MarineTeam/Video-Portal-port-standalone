@@ -56,6 +56,7 @@ final class Registry
             Auth\Auth0Provider::class,
             Auth\ClerkProvider::class,
             Auth\FirebaseProvider::class,
+            Auth\SupabaseProvider::class,
             Video\BunnyStreamProvider::class,
             Video\YouTubeProvider::class,
             Video\VimeoProvider::class,

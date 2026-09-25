@@ -234,4 +234,5 @@ return [
     'auth.providerUnavailable' => 'El servicio de inicio de sesión no responde. Vuelve a intentarlo en un minuto.',
     'auth.finishing' => 'Terminando de iniciar sesión…',
     'auth.refused' => 'Ese inicio de sesión no ha funcionado.',
+    'auth.magicSent' => 'Si {email} puede iniciar sesión aquí, te llega un enlace. Ábrelo en este navegador.',
 ];

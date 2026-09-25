@@ -78,7 +78,8 @@ final class Routes
         if ($this->app->currentUser()->isSignedIn()) {
             return Response::redirect(Url::safeReturnTo($req->query('returnTo')));
         }
-        return $this->page('auth/login', $this->loginVars($req));
+        $error = $this->app->session()->pull('login_error');
+        return $this->page('auth/login', $this->loginVars($req, is_string($error) ? $error : null));
     }
 
     /** @return array<string, mixed> */
@@ -130,6 +131,8 @@ final class Routes
                 'label' => $primary instanceof \App\Services\Auth\RedirectProvider ? $primary->displayName() : $primary::label(),
                 'flow' => $primary->flow(),
                 'widget' => $primary instanceof \App\Services\Auth\TokenProvider ? $primary->widget() : null,
+                // A form-flow provider (Supabase) posts to its own routes from here.
+                'forms' => $primary instanceof \App\Services\Auth\SupabaseProvider ? $primary->forms() : null,
                 'trial' => $trial,
             ],
             // Everybody may still try the password form while local accounts are open to members.
