@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat done) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -39,7 +39,7 @@ commit as the code it describes.
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
 | Member plugins (favorites … downloads, 21 of Appendix E) | plugins | done | all 21 in plugins/, each against the page hooks (page.category/series/video.panels, home.row, render.page_top, related.items) and the library's classes; integration tests through a real server (tests/Integration/*Test.php extending ServerTestCase) |
-| Live streaming and chat | plugin | todo | |
+| Live streaming and chat | plugin | done | plugins/live-streaming: /live, the "Live now" banner and nav entry, /admin/live, and a polling chat that opens half an hour early and closes an hour after |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
 | Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | todo | |
@@ -100,7 +100,7 @@ commit as the code it describes.
 | `/admin/groups` | todo | |
 | `/admin/groups/[id]` | todo | |
 | `/admin/home-rows` | done | Library\Admin\HomeRowsAdmin: toggle, rename, reorder the built-in rows; add category and tag rows; says when a row's plugin is off |
-| `/admin/live` | todo | |
+| `/admin/live` | done | Schedule a stream (title, embed address, cover, start/end), publish it, switch its chat on and set slow mode (manage_plugins) |
 | `/admin/media-check` | done | Library\Admin\MediaCheckAdmin (see Deviations): videos whose service is gone, whose host-disk file is missing, stuck or failed, failed transcriptions; local files missing; pasted links checked on request; unused host-disk video files (administrators may delete) |
 | `/admin/people` | todo | |
 | `/admin/permissions` | done | Groups (capabilities sanitised to the known list), assignments site-wide or scoped to a category/series, category and series editors |
@@ -136,7 +136,7 @@ commit as the code it describes.
 | `/guides/[slug]` | todo | |
 | `/hymns/[fileId]` | todo | |
 | `/link` | todo | |
-| `/live` | todo | |
+| `/live` | done | Whatever is on now, a countdown to the next one otherwise, "Coming up" underneath, and the chat beside it |
 | `/playlists` | done | plugins/playlists |
 | `/playlists/[id]` | done | the owner's, or read-only for anyone once shareable (noindex); each reader sees only the videos they may watch |
 | `/prayer` | todo | |
@@ -233,8 +233,8 @@ commit as the code it describes.
 | `/api/admin/guides` | GET POST | todo | |
 | `/api/admin/home-rows/[id]` | PATCH DELETE | done | title, enabled, move up/down; only curated rows delete |
 | `/api/admin/home-rows` | GET POST | done | POST creates CATEGORY/TAG rows only |
-| `/api/admin/live/[id]` | PATCH DELETE | todo | |
-| `/api/admin/live` | GET POST | todo | |
+| `/api/admin/live/[id]` | PATCH DELETE | done | Publishing one fires `live.published`, which tells members after the response has gone |
+| `/api/admin/live` | GET POST | done | `manage_plugins`; an embed or cover address must be https |
 | `/api/admin/people/[id]` | PATCH DELETE | todo | |
 | `/api/admin/people/merge` | POST | todo | |
 | `/api/admin/people` | GET POST | todo | |
@@ -325,9 +325,9 @@ commit as the code it describes.
 | `/api/hymnals/search` | GET | todo | |
 | `/api/hymns/lookup` | POST | todo | |
 | `/api/inbox` | GET PATCH DELETE | done | `{notifications, hasMore, unreadCount}`; PATCH/DELETE take `{ids}` or `{all: true}` |
-| `/api/live/[id]/chat/[messageId]` | DELETE | todo | |
-| `/api/live/[id]/chat/mute` | POST | todo | |
-| `/api/live/[id]/chat` | GET POST | todo | |
+| `/api/live/[id]/chat/[messageId]` | DELETE | done | The author's own, or anybody's for a moderator; hidden rather than deleted |
+| `/api/live/[id]/chat/mute` | POST | done | `{messageId, muted?}` — the person is named by their message, so no account id travels to a chat |
+| `/api/live/[id]/chat` | GET POST | done | `?since=<id>` polls; the answer carries `state`, `slowMode`, `messages` and the `removed` ids (the port's shape) |
 | `/api/locale` | POST | done | Sets marine-locale cookie |
 | `/api/manifest` | GET | done | From branding, base-path aware |
 | `/api/notes/[id]` | PATCH DELETE | done | the member's own |
@@ -439,7 +439,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | DraftRevision | `draft_revisions` | done | Series drafts |
 | Webhook | `webhooks` | done | series.published / video.published → JSON POST through fetchUntrusted, X-Webhook-Signature (hex HMAC-SHA256), sent after the response where the host allows |
 | Announcement | `announcements` | done | the banner through render.page_top; cached a minute per audience, forgotten on every write; dismissed per browser session |
-| LiveStream | `live_streams` | todo | |
+| LiveStream | `live_streams` | done | plugins/live-streaming |
 | HomeRow | `home_rows` | done | Library\HomeRows (seeded once, built-in order when empty or unreadable) |
 | Subscription | `subscriptions` | done | a new video reaches unmuted followers of its series and every category above it who may watch it (push + inbox) |
 | PendingNotification | `pending_notifications` | done | plugins/notifications (DAILY members with a browser signed up) |
@@ -490,8 +490,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | Broadcast | `broadcasts` | todo | |
 | BroadcastRecipient | `broadcast_recipients` | todo | |
 | VideoFeed | `video_feeds` | done | |
-| LiveChatMessage | `live_chat_messages` | todo | |
-| LiveChatMute | `live_chat_mutes` | todo | |
+| LiveChatMessage | `live_chat_messages` | done | Taken down = `hidden`, never deleted |
+| LiveChatMute | `live_chat_mutes` | done | Per stream: muted for the evening, not for ever |
 | TvDevice | `tv_devices` | todo | |
 
 ## Test files (Appendix D) — 73
@@ -533,7 +533,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/i18n/i18n.test.ts` | done | tests/Unit/I18n/I18nTest.php |
 | `lib/ics.test.ts` | todo | |
 | `lib/identity-linking.test.ts` | done | tests/Unit/Access/IdentityLinkingTest.php |
-| `lib/live-chat.test.ts` | todo | |
+| `lib/live-chat.test.ts` | done | tests/Unit/Plugins/LiveChatTest.php (every case) and tests/Integration/LiveTest.php |
 | `lib/names.test.ts` | todo | |
 | `lib/nav-tabs.test.ts` | done | tests/js/nav-tabs.test.mjs |
 | `lib/offline-calendar.test.ts` | todo | |
@@ -640,6 +640,14 @@ met, with the reason.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 - **OneDrive uploads go to a Business or SharePoint drive only.** The brief offers upload "for either"; personal OneDrive has no app-only access, and a delegated refresh token there rotates and lapses, which would need the site to rewrite its own saved settings from a background request. Personal OneDrive links still resolve and play; uploads use the same Entra app the Business links already need, with Files.ReadWrite.All and a chosen drive.
+- **A live stream's chat is moderated by `moderate_comments` held anywhere, and /admin/live needs `manage_plugins`** — the capability the admin menu already declares for it. A stream sits in no category, so a per-category grant has nothing to scope to here; the capability list gains nothing new.
+- **The chat's poll answer is the port's**: `{state, slowMode, muted, messages: [{id, author, body, createdAt, mine, canDelete}], removed: [id]}`. `removed` is what makes "a removed message never reappears" true for a tab that was a few seconds behind — it lists the stream's taken-down ids (200 at most) so every open page drops them; no account id is ever in the answer. A take-down sets `hidden` rather than deleting the row, for both an author and a moderator, so the same message can't be re-sent past a moderator by reposting.
+- **A mute names its target by one of their messages** (`POST /api/live/[id]/chat/mute {messageId}`), since the chat never carries account ids to the browser. Muting hides everything that person has already written in that stream; lifting it (`{muted: false}`) lets them write again but leaves what was taken down down.
+- **A chat message is cleaned before it is stored**: whitespace collapses to single spaces and a run of one character to three, and what is left must be between 1 and 500 characters. That is the shouting a length limit leaves standing; the limit itself is the port's number.
+- **A stream with no end time is assumed to run for two hours**, which is what the chat's close (an hour after the end) counts from. The brief asks for "a sensible one rather than for ever" without naming it.
+- **`/live` counts down to the next scheduled stream, but the chat belongs only to the stream whose evening it is** — from half an hour before its start until an hour after it ends. A stream three weeks off gets a countdown and a place in "Coming up", not a comment box.
+- **An embed or cover address must be https.** An http embed inside an https page is blocked by the browser anyway, and the page adds the embed's origin to `frame-src` for that request only, so the CSP never has to list every streaming host a church might use.
+- **Publishing a stream tells every member**, rather than checking access per member as a video does: a `LiveStream` row has no member-only gate and no category, so there is nothing to check it against.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -676,3 +684,13 @@ met, with the reason.
   scripture, recently added, /feed.xml, podcast feeds, /sitemap.xml
   (the port's route; the original's sitemap.ts), /robots.txt and the view
   beacon. 359 unit, 20 integration, 25 browser-module tests.
+- 2026-09-25 — step 5 begins: the Live streaming plugin (plugins/live-streaming).
+  /live, /admin/live and /api/live/*, the "Live now" banner and nav entry
+  through `render.page_top` and `nav.sections`, /live in the sitemap, and a
+  polling chat (no socket: nothing here is long-lived enough to hold one)
+  that opens half an hour early, closes an hour after, collapses shouting,
+  counts slow mode from each person's own last message and never carries a
+  taken-down message or an account id back. 17 unit tests for the rules,
+  5 integration tests through a real server, and a two-tab Chromium run:
+  one tab's message reaching the other by polling, and a moderator's
+  take-down removing it from the tab that was behind.

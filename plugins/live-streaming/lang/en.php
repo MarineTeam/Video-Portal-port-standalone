@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'live.title' => 'Live',
+    'live.now' => 'Live now',
+    'live.nothingScheduled' => 'Nothing is scheduled at the moment.',
+    'live.startsAt' => 'Starts',
+    'live.upcoming' => 'Coming up',
+    'live.chat' => 'Chat',
+    'live.say' => 'Say something',
+    'live.send' => 'Send',
+    'live.delete' => 'Take down',
+    'live.mute' => 'Mute',
+    'live.confirmMute' => 'Stop this person writing in this chat, and hide what they have written?',
+    'live.chatOpensSoon' => 'The chat opens half an hour before the stream starts.',
+    'live.chatClosed' => 'The chat is closed.',
+    'live.muted' => 'You have been muted in this chat.',
+    'live.signIn' => 'Sign in to join the chat.',
+    'live.slowMode' => 'Slow mode: {seconds} seconds to wait.',
+    'live.slowModeOn' => 'Slow mode is on: one message every {seconds} seconds.',
+    'live.tooLong' => 'That is either nothing at all or too long for a chat.',
+    'live.aMember' => 'A member',
+    'live.httpsOnly' => 'The address must start with https://.',
+    'live.endsBeforeItStarts' => 'It would end before it starts.',
+    'live.notifyTitle' => 'Going live',
+];

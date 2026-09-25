@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'live.title' => 'En directo',
+    'live.now' => 'En directo ahora',
+    'live.nothingScheduled' => 'No hay nada programado por ahora.',
+    'live.startsAt' => 'Empieza',
+    'live.upcoming' => 'Próximamente',
+    'live.chat' => 'Chat',
+    'live.say' => 'Escribe algo',
+    'live.send' => 'Enviar',
+    'live.delete' => 'Retirar',
+    'live.mute' => 'Silenciar',
+    'live.confirmMute' => '¿Impedir que esta persona escriba en este chat y ocultar lo que ha escrito?',
+    'live.chatOpensSoon' => 'El chat abre media hora antes de que empiece la emisión.',
+    'live.chatClosed' => 'El chat está cerrado.',
+    'live.muted' => 'Te han silenciado en este chat.',
+    'live.signIn' => 'Inicia sesión para participar en el chat.',
+    'live.slowMode' => 'Modo lento: faltan {seconds} segundos.',
+    'live.slowModeOn' => 'El modo lento está activado: un mensaje cada {seconds} segundos.',
+    'live.tooLong' => 'Eso no es nada o es demasiado largo para un chat.',
+    'live.aMember' => 'Un miembro',
+    'live.httpsOnly' => 'La dirección debe empezar por https://.',
+    'live.endsBeforeItStarts' => 'Terminaría antes de empezar.',
+    'live.notifyTitle' => 'Emisión en directo',
+];
