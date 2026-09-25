@@ -41,11 +41,19 @@ final class Routes
         $app->hooks->on('jobs.register', function (\App\Modules\Jobs\Scheduler $s) use ($app): void {
             $s->register('sync-video-status', 900, fn (float $deadline) => StatusSync::run($app, $deadline));
             $s->register('local-videos', 300, fn (float $deadline) => 'moved ' . (new Videos($app))->reconcileLocal());
+            $s->register('podcast-mirror', 900, function (float $deadline) use ($app): string {
+                $r = PodcastMirror::reconcile($app, $deadline);
+                return "copied {$r['copied']}, removed {$r['removed']}" . ($r['failed'] > 0 ? ", failed {$r['failed']}" : '');
+            });
         });
         // Something above a video changed who may see it.
         $app->hooks->on('library.changed', function (string $action, string $type) use ($app): void {
             if (in_array($type, ['category', 'series'], true) || str_starts_with($action, 'viewers.') || $action === 'video.restore') {
                 (new Videos($app))->reconcileLocal();
+            }
+            // A file, its series or a category stopping to qualify takes the public copy down now.
+            if (in_array($type, ['category', 'series', 'file'], true)) {
+                PodcastMirror::reconcile($app, microtime(true) + 5, removalsOnly: true);
             }
         });
     }

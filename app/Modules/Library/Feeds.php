@@ -105,11 +105,18 @@ final class Feeds
         $name = $this->siteName();
         $cover = self::absolute($series['cover_image_url'] ?? null);
         $items = '';
+        // With a public zone, an episode is listed only once its copy has landed there.
+        $mirror = PodcastMirror::provider($this->app);
         foreach ($browse->files((string) $series['id']) as $f) {
             if (!(bool) $f['podcast_published'] || !str_starts_with((string) $f['mime_type'], 'audio/')) {
                 continue;
             }
-            $url = Url::absolute('/api/files/' . $f['id'] . '/content');
+            if ($mirror !== null && $f['backend'] === 'bunny' && $f['public_path'] === null) {
+                continue;
+            }
+            $url = $mirror !== null && $f['public_path'] !== null
+                ? $mirror->publicUrl((string) $f['public_path'])
+                : Url::absolute('/api/files/' . $f['id'] . '/content');
             $items .= "  <item>\n"
                 . '    <title>' . self::x((string) $f['title']) . "</title>\n"
                 . '    <guid isPermaLink="false">' . self::x((string) $f['id']) . "</guid>\n"

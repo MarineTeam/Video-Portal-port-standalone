@@ -295,3 +295,58 @@ for (const form of document.querySelectorAll('form[data-video-captions]')) {
     }
   });
 }
+
+// Bunny Storage browser: folders to walk, files to tick and import.
+const storage = document.querySelector('[data-storage-browser]');
+if (storage) {
+  let dir = '';
+  const list = storage.querySelector('[data-storage-entries]');
+  const load = async () => {
+    storage.querySelector('[data-storage-dir]').textContent = `/${dir}`;
+    storage.querySelector('[data-storage-up]').hidden = dir === '';
+    list.textContent = '';
+    try {
+      const { entries } = await MT.api(`/api/admin/files/bunny-storage?dir=${encodeURIComponent(dir)}`);
+      if (entries.length === 0) list.innerHTML = '<li class="muted">Empty.</li>';
+      for (const entry of entries) {
+        const li = document.createElement('li');
+        if (entry.isDirectory) {
+          const open = document.createElement('button');
+          open.type = 'button';
+          open.className = 'link';
+          open.textContent = `📁 ${entry.name}`;
+          open.addEventListener('click', () => { dir = entry.path; load(); });
+          li.append(open);
+        } else {
+          const label = document.createElement('label');
+          label.className = 'check';
+          const box = document.createElement('input');
+          box.type = 'checkbox';
+          box.value = entry.path;
+          box.disabled = entry.imported || !entry.importable;
+          label.append(box, ` ${entry.name} `);
+          const note = document.createElement('span');
+          note.className = 'muted';
+          note.textContent = entry.imported ? '(already here)' : !entry.importable ? '(not a type this site takes)' : `${Math.round(entry.size / 1048576)} MB`;
+          label.append(note);
+          li.append(label);
+        }
+        list.append(li);
+      }
+    } catch (error) {
+      showError(storage, error.message);
+    }
+  };
+  storage.addEventListener('toggle', () => { if (storage.open && !list.dataset.loaded) { list.dataset.loaded = '1'; load(); } });
+  storage.querySelector('[data-storage-up]').addEventListener('click', () => { dir = dir.split('/').slice(0, -1).join('/'); load(); });
+  storage.querySelector('[data-storage-import]').addEventListener('click', async () => {
+    const paths = [...list.querySelectorAll('input:checked')].map((b) => b.value);
+    if (paths.length === 0) return;
+    try {
+      await MT.api('/api/admin/files/import', { method: 'POST', body: { paths, seriesId: storage.querySelector('[data-storage-series]').value || null } });
+      window.location.reload();
+    } catch (error) {
+      showError(storage, error.message);
+    }
+  });
+}

@@ -13,6 +13,8 @@
  * @var ?string $storedWith
  * @var bool $canPublish
  * @var string $accept
+ * @var bool $bunnyStorage whether a Bunny Storage zone is set up (import, replace from storage)
+ * @var bool $podcastZone whether a public podcast zone mirrors published audio
  */
 $query = array_filter(['q' => $q, 'seriesId' => $seriesId, 'kind' => $kind], fn ($x) => $x !== '');
 $seriesOptions = function (string $selected = '') use ($series): string {
@@ -65,6 +67,20 @@ $size = function (?int $bytes): string {
 </form>
 <?php endif ?>
 
+<?php if ($bunnyStorage): ?>
+<details class="card" data-storage-browser>
+  <summary>Import from Bunny Storage</summary>
+  <p class="small muted">Files already in the storage zone — a scanned hymnal too big to upload here, say. They stay where they are; each becomes a file here.</p>
+  <p class="small"><strong data-storage-dir>/</strong> <button type="button" class="link" data-storage-up hidden>↑ Up</button></p>
+  <ul class="plain stack small" data-storage-entries><li class="muted">Loading…</li></ul>
+  <div class="row">
+    <label>Into series<select name="seriesId" data-storage-series><option value="">— none —</option><?= $v->raw($seriesOptions()) ?></select></label>
+    <button type="button" class="button primary small" data-storage-import>Import ticked</button>
+  </div>
+  <p class="error" data-error hidden></p>
+</details>
+<?php endif ?>
+
 <form method="get" class="row">
   <input type="search" name="q" value="<?= e($q) ?>" placeholder="Filter by title" aria-label="Filter by title">
   <select name="seriesId" aria-label="Series">
@@ -114,7 +130,7 @@ $size = function (?int $bytes): string {
             <?php if (!$f['published']): ?><span class="badge muted">Draft</span><?php endif ?>
             <?php if ($f['memberOnly']): ?><span class="badge">Members</span><?php endif ?>
             <?php if ($f['hidden']): ?><span class="badge muted">Hidden</span><?php endif ?>
-            <?php if ($f['kind'] === 'audio' && $f['podcastPublished']): ?><span class="badge">In podcast</span><?php endif ?>
+            <?php if ($f['kind'] === 'audio' && $f['podcastPublished']): ?><span class="badge"><?= e($podcastZone && $f['backend'] === 'bunny' && $f['publicPath'] === null ? 'Podcast pending' : 'In podcast') ?></span><?php endif ?>
           </summary>
           <form class="stack" data-api="/api/admin/files/<?= e($f['id']) ?>" data-method="PATCH">
             <label>Title<input name="title" value="<?= e($f['title']) ?>" required maxlength="255"></label>
@@ -142,6 +158,10 @@ $size = function (?int $bytes): string {
             <?= $v->partial('partials/admin-publishing', ['item' => $f, 'canPublish' => $canPublish, 'downloads' => false]) ?>
             <div class="row">
               <button class="button small primary" type="submit">Save</button>
+              <?php if ($bunnyStorage): ?>
+                <label class="small">or a path in storage<input name="storagePath" form="replace-<?= e($f['id']) ?>" maxlength="1000" placeholder="scans/hymnal-2026.pdf"></label>
+                <button class="button small" type="submit" form="replace-<?= e($f['id']) ?>">Use it</button>
+              <?php endif ?>
               <label class="button small">Replace file…<input type="file" accept="<?= e($accept) ?>" hidden data-upload-to="/api/admin/files/<?= e($f['id']) ?>/replace" data-purpose="file" data-confirm="Replace this file’s contents? Links to it keep working."></label>
             </div>
             <p class="error" data-error hidden></p>
@@ -162,6 +182,9 @@ $size = function (?int $bytes): string {
   </tbody>
 </table>
 </div>
+<?php if ($bunnyStorage): foreach ($files as $f): ?>
+  <form id="replace-<?= e($f['id']) ?>" hidden data-api="/api/admin/files/<?= e($f['id']) ?>/replace" data-method="POST" data-confirm="Point this file at that object in storage? Links to it keep working."></form>
+<?php endforeach; endif ?>
 <?= $v->partial('partials/pager', ['list' => ['total' => $total, 'page' => $page, 'pageSize' => $perPage], 'query' => $query, 'path' => '/admin/files']) ?>
 <?php endif ?>
 <script type="module" src="<?= e(asset('js/library-admin.js')) ?>"></script>

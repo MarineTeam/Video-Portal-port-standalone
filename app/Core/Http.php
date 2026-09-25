@@ -23,13 +23,13 @@ final class Http
     public const UNTRUSTED_MAX_BYTES = 5_000_000;
     public const MAX_REDIRECTS = 5;
 
-    /** @var (callable(string, string, array<string, string>, ?string): HttpResponse)|null test double */
+    /** @var (callable(string, string, array<string, string>, ?string, array<string, mixed>): HttpResponse)|null test double */
     private static $fake = null;
 
     /** @var (callable(string): list<string>)|null test double for DNS */
     private static $fakeResolver = null;
 
-    /** @param callable(string, string, array<string, string>, ?string): HttpResponse|null $fake */
+    /** @param (callable(string, string, array<string, string>, ?string, array<string, mixed>): HttpResponse)|null $fake the options are passed too, for a fake that honours sink */
     public static function fake(?callable $fake): void
     {
         self::$fake = $fake;
@@ -43,22 +43,25 @@ final class Http
 
     /**
      * @param array<string, string> $headers
-     * @param array{timeout?: int, maxBytes?: int, resolve?: array{host: string, ip: string, port: int}|null, followRedirects?: bool} $options
+     * Two options keep large transfers out of memory: bodyFile sends a file
+     * from disk as the body, and sink receives the response body in chunks
+     * (after onHeaders has seen the status and headers) instead of it being
+     * collected — a file larger than memory_limit passes straight through.
+     *
+     * @param array{timeout?: int, maxBytes?: int, resolve?: array{host: string, ip: string, port: int}|null, followRedirects?: bool, bodyFile?: string, sink?: callable(string): void, onHeaders?: callable(int, array<string, string>): void} $options
      */
     public static function request(string $method, string $url, array $headers = [], ?string $body = null, array $options = []): HttpResponse
     {
         if (self::$fake !== null) {
-            return (self::$fake)($method, $url, $headers, $body);
+            return (self::$fake)($method, $url, $headers, $body, $options);
         }
-        $timeout = $options['timeout'] ?? 15;
-        $maxBytes = $options['maxBytes'] ?? 20_000_000;
         if (function_exists('curl_init')) {
-            return self::viaCurl($method, $url, $headers, $body, $timeout, $maxBytes, $options['resolve'] ?? null, $options['followRedirects'] ?? true);
+            return self::viaCurl($method, $url, $headers, $body, $options);
         }
         if (!filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)) {
             throw new HttpException('This host allows no outbound requests: neither curl nor allow_url_fopen is available.');
         }
-        return self::viaStreams($method, $url, $headers, $body, $timeout, $maxBytes, $options['followRedirects'] ?? true);
+        return self::viaStreams($method, $url, $headers, $body, $options);
     }
 
     /** @param array<string, string> $headers */
@@ -281,14 +284,22 @@ final class Http
 
     /**
      * @param array<string, string> $headers
-     * @param array{host: string, ip: string, port: int}|null $resolve
+     * @param array<string, mixed> $options
      */
-    private static function viaCurl(string $method, string $url, array $headers, ?string $body, int $timeout, int $maxBytes, ?array $resolve, bool $follow): HttpResponse
+    private static function viaCurl(string $method, string $url, array $headers, ?string $body, array $options): HttpResponse
     {
+        $timeout = (int) ($options['timeout'] ?? 15);
+        $maxBytes = (int) ($options['maxBytes'] ?? 20_000_000);
+        /** @var array{host: string, ip: string, port: int}|null $resolve */
+        $resolve = $options['resolve'] ?? null;
+        $follow = (bool) ($options['followRedirects'] ?? true);
+        $sink = $options['sink'] ?? null;
+        $onHeaders = $options['onHeaders'] ?? null;
         $ch = curl_init($url);
         $received = '';
         $responseHeaders = [];
         $tooBig = false;
+        $headersSent = false;
         $lines = [];
         foreach ($headers as $name => $value) {
             $lines[] = $name . ': ' . str_replace(["\r", "\n"], '', $value);
@@ -315,7 +326,15 @@ final class Http
                 }
                 return strlen($line);
             },
-            CURLOPT_WRITEFUNCTION => static function ($ch, string $chunk) use (&$received, &$tooBig, $maxBytes): int {
+            CURLOPT_WRITEFUNCTION => static function ($ch, string $chunk) use (&$received, &$tooBig, &$headersSent, &$responseHeaders, $maxBytes, $sink, $onHeaders): int {
+                if ($sink !== null) {
+                    if (!$headersSent && $onHeaders !== null) {
+                        $onHeaders((int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE), $responseHeaders);
+                    }
+                    $headersSent = true;
+                    $sink($chunk);
+                    return strlen($chunk);
+                }
                 if (strlen($received) + strlen($chunk) > $maxBytes) {
                     $tooBig = true;
                     return 0;
@@ -324,7 +343,18 @@ final class Http
                 return strlen($chunk);
             },
         ];
-        if ($body !== null) {
+        $upload = null;
+        if (isset($options['bodyFile'])) {
+            $upload = fopen((string) $options['bodyFile'], 'rb');
+            if ($upload === false) {
+                throw new HttpException('The file to send couldn’t be read.');
+            }
+            $opts[CURLOPT_UPLOAD] = true;
+            $opts[CURLOPT_INFILE] = $upload;
+            $opts[CURLOPT_INFILESIZE] = (int) filesize((string) $options['bodyFile']);
+            // A long upload is paced by its size, not by the default timeout.
+            $opts[CURLOPT_TIMEOUT] = max($timeout, 600);
+        } elseif ($body !== null) {
             $opts[CURLOPT_POSTFIELDS] = $body;
         }
         if ($resolve !== null) {
@@ -336,6 +366,13 @@ final class Http
         $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $error = curl_error($ch);
         curl_close($ch);
+        if (is_resource($upload)) {
+            fclose($upload);
+        }
+        if ($sink !== null && !$headersSent && $onHeaders !== null && $ok !== false) {
+            // An empty body: the headers are still news.
+            $onHeaders($status, $responseHeaders);
+        }
         if ($tooBig) {
             throw new HttpException('The response was larger than allowed.');
         }
@@ -345,9 +382,19 @@ final class Http
         return new HttpResponse($status, $responseHeaders, $received);
     }
 
-    /** @param array<string, string> $headers */
-    private static function viaStreams(string $method, string $url, array $headers, ?string $body, int $timeout, int $maxBytes, bool $follow): HttpResponse
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, mixed> $options
+     */
+    private static function viaStreams(string $method, string $url, array $headers, ?string $body, array $options): HttpResponse
     {
+        $timeout = (int) ($options['timeout'] ?? 15);
+        $maxBytes = (int) ($options['maxBytes'] ?? 20_000_000);
+        $follow = (bool) ($options['followRedirects'] ?? true);
+        if (isset($options['bodyFile'])) {
+            // PHP's http wrapper can only send a body it holds in memory.
+            $body = (string) file_get_contents((string) $options['bodyFile']);
+        }
         $lines = [];
         foreach ($headers as $name => $value) {
             $lines[] = $name . ': ' . str_replace(["\r", "\n"], '', $value);
@@ -369,14 +416,40 @@ final class Http
             throw new HttpException(error_get_last()['message'] ?? 'Request failed.');
         }
         $meta = stream_get_meta_data($handle);
+        $sink = $options['sink'] ?? null;
+        if ($sink !== null) {
+            [$status, $responseHeaders] = self::parseWrapperHeaders($meta['wrapper_data'] ?? []);
+            if (isset($options['onHeaders'])) {
+                ($options['onHeaders'])($status, $responseHeaders);
+            }
+            while (!feof($handle)) {
+                $chunk = fread($handle, 262144);
+                if ($chunk === false || $chunk === '') {
+                    break;
+                }
+                $sink($chunk);
+            }
+            fclose($handle);
+            return new HttpResponse($status, $responseHeaders, '');
+        }
         $data = stream_get_contents($handle, $maxBytes + 1);
         fclose($handle);
         if ($data !== false && strlen($data) > $maxBytes) {
             throw new HttpException('The response was larger than allowed.');
         }
+        [$status, $responseHeaders] = self::parseWrapperHeaders($meta['wrapper_data'] ?? []);
+        return new HttpResponse($status, $responseHeaders, $data === false ? '' : $data);
+    }
+
+    /**
+     * @param array<mixed> $lines the http wrapper's header lines, redirects included
+     * @return array{0: int, 1: array<string, string>} the last response's status and headers
+     */
+    private static function parseWrapperHeaders(array $lines): array
+    {
         $status = 0;
         $responseHeaders = [];
-        foreach ($meta['wrapper_data'] ?? [] as $line) {
+        foreach ($lines as $line) {
             if (preg_match('#^HTTP/\S+\s+(\d{3})#', (string) $line, $m)) {
                 $status = (int) $m[1];
                 $responseHeaders = [];
@@ -385,6 +458,6 @@ final class Http
                 $responseHeaders[strtolower(trim($k))] = trim($v);
             }
         }
-        return new HttpResponse($status, $responseHeaders, $data === false ? '' : $data);
+        return [$status, $responseHeaders];
     }
 }

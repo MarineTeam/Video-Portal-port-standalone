@@ -46,6 +46,8 @@ final class FilesAdmin
         $r->add('PATCH', '/api/admin/files/[id]', [$self, 'update'], [$can]);
         $r->add('DELETE', '/api/admin/files/[id]', [$self, 'trash'], [$can]);
         $r->post('/api/admin/files/[id]/replace', [$self, 'replace'], [$can]);
+        $r->get('/api/admin/files/bunny-storage', [$self, 'storageList'], [$can]);
+        $r->post('/api/admin/files/import', [$self, 'import'], [$can]);
     }
 
     private function db(): Db
@@ -136,6 +138,8 @@ final class FilesAdmin
             'categories' => (new CategoriesAdmin($this->app, $this->catalog))->tree(),
             'storedWith' => ($p = $this->app->services()->active('files')) === null ? null : $p::label(),
             'canPublish' => $this->catalog->can('publish_content', ['categoryId' => null, 'seriesId' => null]),
+            'bunnyStorage' => $this->app->services()->savedConfig('files', 'bunny') !== [],
+            'podcastZone' => \App\Modules\Library\PodcastMirror::provider($this->app) !== null,
             'accept' => implode(',', array_map(fn ($e) => '.' . $e, array_keys(array_filter(UploadTypes::TYPES, fn ($t) => in_array($t['kind'], UploadTypes::PURPOSES['file'], true))))),
         ], 200, 'layouts/admin');
     }
@@ -277,11 +281,19 @@ final class FilesAdmin
     public function replace(Request $req, array $p): Response
     {
         $file = $this->file($p['id']);
-        $data = Validator::check($req->input(), ['upload' => ['string', 'required', 'max' => 40]]);
-        // A fresh object name, so a cached copy of the old bytes can't answer for the new.
-        $stored = $this->store((string) $data['upload'], Id::new());
+        $data = Validator::check($req->input(), ['upload' => ['string', 'nullable', 'max' => 40], 'storagePath' => ['string', 'nullable', 'max' => 1000]]);
+        if (($data['storagePath'] ?? null) !== null) {
+            // A big scan uploaded to Bunny Storage directly, chosen from its listing.
+            $stored = $this->fromStorage((string) $data['storagePath']);
+        } elseif (($data['upload'] ?? null) !== null) {
+            // A fresh object name, so a cached copy of the old bytes can't answer for the new.
+            $stored = $this->store((string) $data['upload'], Id::new());
+        } else {
+            throw ApiError::invalid('Upload a file, or choose one from storage.');
+        }
         $this->db()->update('file_assets', $stored + ['contents_indexed_at' => null, 'text_indexed_at' => null, 'cover_data_url' => null], ['id' => $file['id']]);
-        if ($file['storage_path'] !== $stored['storage_path']) {
+        // Only an object this site wrote goes: an imported one is the zone owner's.
+        if ($file['storage_path'] !== $stored['storage_path'] && str_starts_with((string) $file['storage_path'], 'files/')) {
             try {
                 FileAssets::delete($this->app, $file);
             } catch (ApiError $e) {
@@ -292,6 +304,113 @@ final class FilesAdmin
         $this->catalog->audit('file.replace', 'file', (string) $file['id'], (string) $file['title']);
         $this->app->hooks->do('file.replaced', $fresh, $this->app);
         return Response::json($this->present($fresh));
+    }
+
+    // Bunny Storage: what is already in the zone ---------------------------------------------
+
+    private function bunny(): \App\Services\Files\BunnyStorageProvider
+    {
+        $p = $this->app->services()->get('files', 'bunny');
+        if (!$p instanceof \App\Services\Files\BunnyStorageProvider || $this->app->services()->savedConfig('files', 'bunny') === []) {
+            throw ApiError::invalid('Bunny Storage isn’t set up under Services.');
+        }
+        return $p;
+    }
+
+    /**
+     * A row's storage columns for an object already in the zone.
+     *
+     * @return array{backend: string, storage_path: string, size_bytes: ?int, mime_type: string}
+     */
+    private function fromStorage(string $path): array
+    {
+        $path = ltrim($path, '/');
+        if ($path === '' || str_contains($path, '..') || preg_match('/[\x00-\x1f]/', $path)) {
+            throw ApiError::invalid('That isn’t a file in storage.');
+        }
+        $type = UploadTypes::uploadType(basename($path), 'file') ?? throw ApiError::invalid(UploadTypes::refusal('file'));
+        $dir = dirname($path) === '.' ? '' : dirname($path);
+        $size = null;
+        try {
+            foreach ($this->bunny()->list($dir) as $entry) {
+                if (!$entry['isDirectory'] && $entry['path'] === $path) {
+                    $size = $entry['size'];
+                }
+            }
+        } catch (\RuntimeException $e) {
+            throw new ApiError($e->getMessage(), 502, 'provider_error');
+        }
+        if ($size === null) {
+            throw ApiError::notFound('There’s no file at ' . $path . ' in the storage zone.');
+        }
+        return ['backend' => 'bunny', 'storage_path' => $path, 'size_bytes' => $size, 'mime_type' => $type['type']];
+    }
+
+    public function storageList(Request $req): Response
+    {
+        $this->catalog->require('manage_files', ['categoryId' => null, 'seriesId' => null]);
+        $dir = trim((string) ($req->query('dir') ?? ''), '/');
+        if (str_contains($dir, '..')) {
+            throw ApiError::invalid('Bad folder.');
+        }
+        try {
+            $entries = $this->bunny()->list($dir);
+        } catch (\RuntimeException $e) {
+            throw new ApiError($e->getMessage(), 502, 'provider_error');
+        }
+        $paths = array_column(array_filter($entries, fn ($e) => !$e['isDirectory']), 'path');
+        $known = $paths === [] ? [] : array_flip(array_map('strval', $this->db()->column(
+            "SELECT storage_path FROM {{file_assets}} WHERE backend = 'bunny' AND storage_path IN (" . implode(', ', array_fill(0, count($paths), '?')) . ')',
+            $paths,
+        )));
+        return Response::json(['dir' => $dir, 'entries' => array_map(fn ($e) => $e + [
+            'imported' => isset($known[$e['path']]),
+            'importable' => $e['isDirectory'] || UploadTypes::uploadType($e['name'], 'file') !== null,
+        ], $entries)]);
+    }
+
+    public function import(Request $req): Response
+    {
+        $data = Validator::check($req->input(), [
+            'paths' => ['array', 'required', 'max' => 200, 'of' => 'string', 'each' => ['max' => 1000]],
+            'seriesId' => ['id', 'nullable'],
+            'categoryId' => ['id', 'nullable'],
+            'published' => ['bool'],
+        ]);
+        $seriesId = $data['seriesId'] ?? null;
+        $categoryId = $seriesId === null ? ($data['categoryId'] ?? null) : null;
+        $placement = ['series_id' => $seriesId, 'category_id' => $categoryId];
+        $scope = $this->catalog->scopeOf('file', $placement);
+        $this->catalog->require('manage_files', $scope);
+        $published = $data['published'] ?? false;
+        if ($published) {
+            $this->catalog->requirePublishIfTouched(['published' => true], $scope);
+        }
+        $made = 0;
+        $skipped = [];
+        foreach (array_unique($data['paths']) as $path) {
+            if ($this->db()->value("SELECT 1 FROM {{file_assets}} WHERE backend = 'bunny' AND storage_path = ?", [$path]) !== null) {
+                $skipped[] = $path;
+                continue;
+            }
+            try {
+                $stored = $this->fromStorage((string) $path);
+            } catch (ApiError $e) {
+                $skipped[] = $path;
+                continue;
+            }
+            $id = Id::new();
+            $this->db()->insert('file_assets', $stored + $placement + [
+                'id' => $id,
+                'title' => mb_substr(\App\Support\Filename::titleFromFilename(basename((string) $path)) ?: 'Untitled file', 0, 255),
+                'url' => \App\Core\Url::to('/api/files/' . $id . '/content'),
+                'published' => $published,
+                'position' => $this->catalog->nextPosition('file', $placement),
+            ]);
+            $made++;
+        }
+        $this->catalog->audit('file.import', 'file', 'bunny', "$made imported");
+        return Response::json(['imported' => $made, 'skipped' => $skipped]);
     }
 
     public function bulk(Request $req): Response

@@ -70,7 +70,7 @@ commit as the code it describes.
 | email | PHP mail() | done | |
 | email | Resend, Mailgun, SendGrid, Postmark, Amazon SES, Brevo, Microsoft Graph | done | One HttpEmailProvider base: the key is checked before a test message goes out; SES signed with the shared App\Support\SigV4 |
 | files | Local disk | done | |
-| files | Bunny Storage | todo | |
+| files | Bunny Storage | done | Signed 10-minute redirects (optionally address-bound) with token auth; otherwise a streamed proxy with Range; storage listing and import; public podcast zone |
 | sms | Twilio, Vonage, MessageBird, Plivo, Sinch, Telnyx, Amazon SNS, ClickSend, Textlocal, BulkSMS, JSON webhook | todo | |
 
 ## Pages (Appendix C.1) — 91
@@ -213,8 +213,8 @@ commit as the code it describes.
 | `/api/admin/files/[id]` | PATCH DELETE | done | PATCH also takes `move` |
 | `/api/admin/files/[id]/text` | GET POST DELETE | todo | |
 | `/api/admin/files/bulk` | POST | done | publish, unpublish, delete, move, podcast, unpodcast |
-| `/api/admin/files/bunny-storage` | GET | todo | With the Bunny Storage provider (3.6) |
-| `/api/admin/files/import` | POST | todo | With the Bunny Storage provider (3.6) |
+| `/api/admin/files/bunny-storage` | GET | done | ?dir=, marks what is already imported |
+| `/api/admin/files/import` | POST | done | Objects stay where they are; each becomes a file row |
 | `/api/admin/files` | GET POST | done | POST takes a chunked upload id (the port's uploader; the original posted the file) |
 | `/api/admin/forms/[id]/fields/[fieldId]` | PATCH DELETE | todo | |
 | `/api/admin/forms/[id]/fields` | POST | todo | |
@@ -542,7 +542,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/page-offset.test.ts` | todo | |
 | `lib/permissions.test.ts` | done | tests/Unit/Access/PermissionsTest.php |
 | `lib/plugins.test.ts` | done | tests/Unit/Plugins/PluginStatesTest.php |
-| `lib/podcast-mirror.test.ts` | todo | |
+| `lib/podcast-mirror.test.ts` | done | tests/Unit/PodcastMirrorTest.php |
 | `lib/prayer.test.ts` | todo | |
 | `lib/public-url.test.ts` | done | tests/Unit/Core/PublicUrlTest.php |
 | `lib/push-endpoint.test.ts` | done | tests/Unit/Push/PushEndpointTest.php |
@@ -617,6 +617,8 @@ met, with the reason.
 - **Host-disk video is the one exception to "video bytes never pass through PHP"**: its upload is chunked through the site (there is nowhere else for it to go) and a video not everybody may watch streams through `/api/videos/local/[name]`, offloaded by X-Sendfile / X-Accel-Redirect / X-LiteSpeed-Location where detected. Videos anybody may watch sit in `public/media/videos/` for the web server; a `local-videos` job (every five minutes) and every change above a video (category, series, viewer restriction, restore — the `library.changed` hook the library's audit fires) move files between the two, so a take-down time or a category going members-only never leaves a public copy.
 - **Share passwords**: new ones use `password_hash()`; imported `scrypt$salt$key` hashes are checked by a vendored pure-PHP scrypt (`app/Support/Scrypt.php`, RFC 7914 vectors and a Node-made hash in the tests, about 2.5 s and 22 MB at Node's defaults) and rehashed on the first right guess. Because that check is slow, unlocking is also limited to 30 tries per address per 15 minutes, beside the per-link lockout.
 - **Video feeds read their keys from the YouTube and Vimeo provider settings** (Data API key, access token) rather than YOUTUBE_API_KEY / VIMEO_ACCESS_TOKEN, and the screen names the missing one. `/admin/downloads` needs manage_plugins, as its place in the menu says.
+- **`Http` streams large transfers**: `bodyFile` uploads from disk and `sink`/`onHeaders` hand the body on in chunks, so a Bunny Storage upload, proxy or podcast copy never holds a file in memory (curl; the streams fallback can stream down but must read an upload into memory).
+- **Replacing a file only deletes the old object when this site wrote it** (`files/…`); an object imported from the zone belongs to whoever put it there.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.

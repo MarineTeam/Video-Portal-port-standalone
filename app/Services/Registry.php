@@ -50,6 +50,7 @@ final class Registry
             Email\BrevoProvider::class,
             Email\GraphProvider::class,
             Files\LocalDiskProvider::class,
+            Files\BunnyStorageProvider::class,
             Auth\LocalProvider::class,
             Video\BunnyStreamProvider::class,
             Video\YouTubeProvider::class,
@@ -216,6 +217,14 @@ final class Registry
         if (is_string($s3['endpoint'] ?? null) && preg_match('#^(https://[a-z0-9.-]+(:\d+)?)#i', (string) $s3['endpoint'], $m)) {
             $out['connect'][] = $m[1];
             $out['media'][] = $m[1];
+        }
+        // Signed file links redirect to the storage pull zone: the reader
+        // fetches it, audio plays from it, images show from it.
+        $bunny = $this->savedConfig('files', 'bunny');
+        if (is_string($bunny['pull_zone_host'] ?? null) && preg_match('/^[a-z0-9.-]+$/i', (string) $bunny['pull_zone_host'])) {
+            foreach (['connect', 'media', 'img'] as $directive) {
+                $out[$directive][] = 'https://' . $bunny['pull_zone_host'];
+            }
         }
         return $out;
     }
