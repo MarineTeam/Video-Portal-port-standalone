@@ -19,7 +19,7 @@ commit as the code it describes.
 |---|---|---|
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
-| 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | todo |
+| 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | in progress (3.1–3.4 done: content core, admin CMS, providers and player, public pages/search/feeds/sitemap; next: share links, downloads, video feeds, then the remaining providers) |
 | 4 | Bundled plugins, simplest first | todo |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
@@ -647,3 +647,9 @@ met, with the reason.
   verified against stub embeds since the sandbox can't load YouTube), the
   watch-progress heartbeat and mark-watched, and the sync-video-status and
   local-videos jobs.
+- 2026-09-25 — public library: home, category, series and video pages
+  (aliases, gates with generic titles, sequential unlock, premieres,
+  resume, JSON-LD), search with the fuzzy fallback, tags, speakers,
+  scripture, recently added, /feed.xml, podcast feeds, /sitemap.xml
+  (the port's route; the original's sitemap.ts), /robots.txt and the view
+  beacon. 359 unit, 20 integration, 25 browser-module tests.
