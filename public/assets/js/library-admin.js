@@ -1,7 +1,7 @@
-// The videos admin: adding by upload (whatever the Video slot's service asks
-// the browser to do), the Bunny import, bulk actions, and a video's thumbnail
-// and captions. The server hands each upload a ticket; no long-lived
-// credential reaches this page.
+// The videos and files admin: adding a video by upload (whatever the Video
+// slot's service asks the browser to do), the Bunny import, bulk actions, a
+// video's thumbnail and captions, and replacing a file. The server hands each
+// upload a ticket; no long-lived credential reaches this page.
 import MT from './mt.js';
 import { uploadInChunks, formToJson } from './forms.js';
 
@@ -234,6 +234,30 @@ for (const box of document.querySelectorAll('[data-bulk-endpoint]')) {
   box.querySelector('[data-bulk-op-move]')?.addEventListener('change', (e) => {
     if (e.target.value === '') return;
     run({ action: 'move', seriesId: e.target.value === 'none' ? null : e.target.value });
+  });
+}
+
+// An upload handed to one endpoint as {upload}: a file's replacement.
+for (const picker of document.querySelectorAll('input[type=file][data-upload-to]')) {
+  picker.addEventListener('change', async () => {
+    const file = picker.files?.[0];
+    if (!file) return;
+    if (picker.dataset.confirm && !window.confirm(picker.dataset.confirm)) {
+      picker.value = '';
+      return;
+    }
+    const label = picker.closest('label');
+    label?.classList.add('busy');
+    try {
+      const upload = await uploadInChunks(file, picker.dataset.purpose || 'file');
+      await MT.api(picker.dataset.uploadTo, { method: 'POST', body: { upload } });
+      window.location.reload();
+    } catch (error) {
+      window.alert(error.message);
+      picker.value = '';
+    } finally {
+      label?.classList.remove('busy');
+    }
   });
 }
 

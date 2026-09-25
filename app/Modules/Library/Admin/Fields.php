@@ -66,6 +66,27 @@ final class Fields
         'transcript' => ['transcript', ['text', 'nullable', 'max' => 2_000_000]],
     ];
 
+    /** Files have no download setting of their own (a file is its own download). */
+    public const FILE = [
+        'published' => ['published', ['bool']],
+        'publishAt' => ['publish_at', ['datetime', 'nullable']],
+        'unpublishAt' => ['unpublish_at', ['datetime', 'nullable']],
+        'hidden' => ['hidden', ['bool']],
+        'memberOnly' => ['member_only', ['bool']],
+        'title' => ['title', ['string', 'required', 'max' => 255]],
+        'seriesId' => ['series_id', ['id', 'nullable']],
+        'categoryId' => ['category_id', ['id', 'nullable']],
+        'pageNumber' => ['page_number', ['int', 'nullable', 'min' => 0, 'max' => 100_000]],
+        'groupLabel' => ['group_label', ['string', 'nullable', 'max' => 255]],
+        'ccliNumber' => ['ccli_number', ['string', 'nullable', 'max' => 64]],
+        'songAuthor' => ['song_author', ['string', 'nullable', 'max' => 500]],
+        'songCopyright' => ['song_copyright', ['string', 'nullable', 'max' => 500]],
+        'musicalKey' => ['musical_key', ['string', 'nullable', 'max' => 16]],
+        'tempoBpm' => ['tempo_bpm', ['int', 'nullable', 'min' => 1, 'max' => 400]],
+        'pageOffset' => ['page_offset', ['int', 'min' => -10_000, 'max' => 10_000]],
+        'podcastPublished' => ['podcast_published', ['bool']],
+    ];
+
     /**
      * @param array<string, array{0: string, 1: array<int|string, mixed>}> $spec
      * @param array<string, mixed> $input

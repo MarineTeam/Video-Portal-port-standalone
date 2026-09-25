@@ -94,7 +94,7 @@ commit as the code it describes.
 | `/admin/downloads` | todo | |
 | `/admin/events` | todo | |
 | `/admin/events/[id]` | todo | |
-| `/admin/files` | todo | |
+| `/admin/files` | done | FilesAdmin: chunked upload stored with the Files slot, inline edit, replace, bulk (incl. podcast), kind filter |
 | `/admin/forms` | todo | |
 | `/admin/forms/[id]` | todo | |
 | `/admin/groups` | todo | |
@@ -209,13 +209,13 @@ commit as the code it describes.
 | `/api/admin/events/series` | GET POST | todo | |
 | `/api/admin/files/[id]/contents` | GET PUT | todo | |
 | `/api/admin/files/[id]/lyrics` | GET PUT | todo | |
-| `/api/admin/files/[id]/replace` | POST | todo | |
-| `/api/admin/files/[id]` | PATCH DELETE | todo | |
+| `/api/admin/files/[id]/replace` | POST | done | Takes a chunked upload id; the Bunny Storage pick arrives with that provider |
+| `/api/admin/files/[id]` | PATCH DELETE | done | PATCH also takes `move` |
 | `/api/admin/files/[id]/text` | GET POST DELETE | todo | |
-| `/api/admin/files/bulk` | POST | todo | |
-| `/api/admin/files/bunny-storage` | GET | todo | |
-| `/api/admin/files/import` | POST | todo | |
-| `/api/admin/files` | GET POST | todo | |
+| `/api/admin/files/bulk` | POST | done | publish, unpublish, delete, move, podcast, unpodcast |
+| `/api/admin/files/bunny-storage` | GET | todo | With the Bunny Storage provider (3.6) |
+| `/api/admin/files/import` | POST | todo | With the Bunny Storage provider (3.6) |
+| `/api/admin/files` | GET POST | done | POST takes a chunked upload id (the port's uploader; the original posted the file) |
 | `/api/admin/forms/[id]/fields/[fieldId]` | PATCH DELETE | todo | |
 | `/api/admin/forms/[id]/fields` | POST | todo | |
 | `/api/admin/forms/[id]` | GET PATCH DELETE | todo | |
@@ -312,7 +312,7 @@ commit as the code it describes.
 | `/api/downloads/[videoId]` | GET | todo | |
 | `/api/events/[slug]/register` | POST DELETE | todo | |
 | `/api/favorites` | POST | todo | |
-| `/api/files/[id]/content` | GET | todo | |
+| `/api/files/[id]/content` | GET | done | ContentAccess per request; Range, ETag/304, private no-cache, ?download=1; X-Sendfile family via RangeStreamer |
 | `/api/files/[id]/search` | GET | todo | |
 | `/api/forms/[slug]` | POST | todo | |
 | `/api/groups/[slug]/join` | POST DELETE | todo | |

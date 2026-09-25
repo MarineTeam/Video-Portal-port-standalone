@@ -101,4 +101,4 @@ $api = '/api/admin/videos/' . $video['id'];
 
 <?= $v->partial('partials/admin-viewers', ['path' => 'videos', 'id' => $video['id'], 'noun' => 'video', 'viewers' => $viewers, 'groups' => $groups]) ?>
 <p><button type="button" class="button danger" data-api="<?= e($api) ?>" data-method="DELETE" data-redirect="/admin/videos" data-confirm="Move this video to the trash?">Delete video</button></p>
-<script type="module" src="<?= e(asset('js/video-upload.js')) ?>"></script>
+<script type="module" src="<?= e(asset('js/library-admin.js')) ?>"></script>

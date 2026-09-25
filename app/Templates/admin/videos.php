@@ -146,4 +146,4 @@ $seriesOptions = function (string $selected = '') use ($series): string {
 </div>
 <?= $v->partial('partials/pager', ['list' => ['total' => $total, 'page' => $page, 'pageSize' => $perPage], 'query' => $query, 'path' => '/admin/videos']) ?>
 <?php endif ?>
-<script type="module" src="<?= e(asset('js/video-upload.js')) ?>"></script>
+<script type="module" src="<?= e(asset('js/library-admin.js')) ?>"></script>
