@@ -12,6 +12,7 @@
  * @var bool $hasCaptionOps
  * @var ?array<string, mixed> $player
  * @var list<array<string, mixed>> $chapters in time order
+ * @var ?string $transcribeBlocked why automatic transcription can't run, or null
  */
 $api = '/api/admin/videos/' . $video['id'];
 ?>
@@ -67,6 +68,24 @@ $api = '/api/admin/videos/' . $video['id'];
     <summary>Notes and transcript</summary>
     <label>Sermon notes<textarea name="noteOutline" rows="8" data-null><?= e((string) ($video['noteOutline'] ?? '')) ?></textarea></label>
     <label>Transcript<textarea name="transcript" rows="8" data-null><?= e((string) ($video['transcript'] ?? '')) ?></textarea></label>
+    <?php $ts = $video['transcriptStatus'] ?? null; ?>
+    <p class="small<?= $ts === 'FAILED' ? ' error' : ' muted' ?>" data-transcript-status>
+      <?php if ($ts === 'QUEUED'): ?>Queued for transcription: the transcription job will pick it up (every ten minutes).
+      <?php elseif ($ts === 'RUNNING'): ?>Being transcribed now.
+      <?php elseif ($ts === 'DONE'): ?>Transcribed automatically. Edit it above as you like.
+      <?php elseif ($ts === 'FAILED'): ?>The last transcription failed: <?= e((string) ($video['transcriptError'] ?? 'no reason given')) ?>
+      <?php endif ?>
+    </p>
+    <?php if ($transcribeBlocked === null): ?>
+      <?php $busy = in_array($ts, ['QUEUED', 'RUNNING'], true); ?>
+      <?php if (trim((string) ($video['transcript'] ?? '')) !== ''): ?>
+        <button type="button" class="button small" data-api="<?= e($api) ?>/transcribe" data-method="POST" data-confirm="Replace the transcript above with an automatic one when it is ready?"<?= $busy ? ' disabled' : '' ?>>Transcribe it for me</button>
+      <?php else: ?>
+        <button type="button" class="button small" data-api="<?= e($api) ?>/transcribe" data-method="POST"<?= $busy ? ' disabled' : '' ?>>Transcribe it for me</button>
+      <?php endif ?>
+    <?php else: ?>
+      <p class="small muted">Automatic transcription: <?= e($transcribeBlocked) ?></p>
+    <?php endif ?>
   </details>
   <div><button class="button primary" type="submit">Save</button></div>
   <p class="small" data-done-message hidden></p>

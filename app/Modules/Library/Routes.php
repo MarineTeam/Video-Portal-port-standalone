@@ -40,6 +40,8 @@ final class Routes
         $r->post('/api/watch-progress/mark-watched', fn (Request $req) => self::progress($app, $req, true));
         $app->hooks->on('jobs.register', function (\App\Modules\Jobs\Scheduler $s) use ($app): void {
             $s->register('sync-video-status', 900, fn (float $deadline) => StatusSync::run($app, $deadline));
+            // "Transcribe it for me": one video at a time, only while the budget allows starting another.
+            $s->register('transcribe', 600, fn (float $deadline) => Transcription::run($app, $deadline), 20.0);
             $s->register('local-videos', 300, fn (float $deadline) => 'moved ' . (new Videos($app))->reconcileLocal());
             $s->register('podcast-mirror', 900, function (float $deadline) use ($app): string {
                 $r = PodcastMirror::reconcile($app, $deadline);

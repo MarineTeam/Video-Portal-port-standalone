@@ -142,6 +142,20 @@ final class LocalVideoProvider extends BaseVideoProvider
         }
     }
 
+    /** Where the file is on disk now (in storage or public), or null. */
+    public static function filePath(VideoRef $video): ?string
+    {
+        if (!self::isName($video->id)) {
+            return null;
+        }
+        foreach ([self::publicPath($video->id), self::privatePath($video->id)] as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+        return null;
+    }
+
     public function playbackUrl(VideoRef $video): string
     {
         return is_file(self::publicPath($video->id))

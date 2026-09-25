@@ -61,6 +61,8 @@ final class Routes
         $r->post('/admin/providers/[slot]/[provider]/switch', [$self, 'serviceSwitch'], [$admin]);
         $r->post('/admin/providers/[slot]/off', [$self, 'serviceOff'], [$admin]);
 
+        Integrations::register($r, $app);
+
         $r->get('/admin/jobs', [$self, 'jobs'], [$admin]);
         $r->post('/admin/jobs/[name]/run', [$self, 'jobRun'], [$admin]);
 
@@ -363,6 +365,7 @@ final class Routes
             'outbound' => Cache::remember('outbound-probe', 3600, fn () => Http::probeOutbound()),
             'https' => $req->https,
             'flash' => $this->app->session()->pull('flash'),
+            'integrations' => array_combine(array_keys(Integrations::groups()), array_map(fn (array $g, string $id) => ['label' => $g['label'], 'description' => $g['description'], 'set' => $this->app->settings()->has('integration.' . $id)], Integrations::groups(), array_keys(Integrations::groups()))),
         ]);
     }
 

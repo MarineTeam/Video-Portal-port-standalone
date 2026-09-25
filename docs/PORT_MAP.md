@@ -283,7 +283,7 @@ commit as the code it describes.
 | `/api/admin/videos/[id]` | PATCH DELETE | done | PATCH also takes `move` |
 | `/api/admin/videos/[id]/sync-status` | POST | done | Takes the browser's upload report (upload id, ETags, the service's id) |
 | `/api/admin/videos/[id]/thumbnail` | POST | done | Bunny is told to fetch it; host disk, S3, links keep it as the poster |
-| `/api/admin/videos/[id]/transcribe` | POST | todo | |
+| `/api/admin/videos/[id]/transcribe` | POST | done | Library\Transcription::queue: 202 with the video QUEUED; 409 with the reason when no service is set or the provider gives no file |
 | `/api/admin/videos/[id]/viewer-groups` | GET POST | done |  |
 | `/api/admin/videos/[id]/viewers` | GET POST | done | Same module as series |
 | `/api/admin/videos/bulk` | POST | done | publish, unpublish, delete, move, schedule, expire |
@@ -308,7 +308,7 @@ commit as the code it describes.
 | `/api/cron/sync-schedules` | GET POST | todo | |
 | `/api/cron/sync-video-feeds` | GET | done | Job `sync-video-feeds`, daily at 07:15 UTC as before |
 | `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min through /cron/run; abandoned upload placeholders marked FAILED after a day |
-| `/api/cron/transcribe` | GET | todo | |
+| `/api/cron/transcribe` | GET | done | Job `transcribe` every 10 minutes through /cron/run, 20 s budget for starting work; stale RUNNING (30 min) re-queued |
 | `/api/downloads/[videoId]` | GET | done | Four gates after canViewVideo; an MP4 link or the specific reason there isn’t one |
 | `/api/events/[slug]/register` | POST DELETE | todo | |
 | `/api/favorites` | POST | todo | |
@@ -562,8 +562,8 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/slug.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/sms.test.ts` | todo | |
 | `lib/toc-nav.test.ts` | todo | |
-| `lib/transcribe-worker.test.ts` | todo | |
-| `lib/transcribe.test.ts` | todo | |
+| `lib/transcribe-worker.test.ts` | done | tests/Integration/TranscriptionTest.php (claim, DONE/FAILED, stale sweep, deadline) |
+| `lib/transcribe.test.ts` | done | tests/Integration/TranscriptionTest.php (multipart shape, model/language fields, size limit, the settings test) |
 | `lib/tv-feed.test.ts` | todo | |
 | `lib/tv-nav.test.ts` | todo | |
 | `lib/tv-pairing.test.ts` | todo | |
@@ -624,6 +624,9 @@ met, with the reason.
 - **Apple's form_post** arrives cross-site without the Lax session cookie, so /auth/callback answers such a POST with a same-origin page that re-posts it once; the spent-once state is that route's CSRF protection.
 - **Callback failures from any provider are recorded with the reason `AUTH0_CALLBACK_ERROR`**, the original's name, so existing reports keep working.
 - **Chapters seek the player in place** (native currentTime, or each embed's postMessage seek) instead of reloading the iframe with a new start time; each chapter's link is still the `?t=` address, so a shared link behaves as before.
+- **Integrations are settings groups at `/admin/integrations/[group]`**, listed under Admin → Services beside the slots: the same generated fields and Test button as a provider, plus Save and Switch off, stored as one `integration.<group>` setting with its secrets encrypted. Transcription is the first; Web Push, Google Sheets and video import join it as their features arrive.
+- **A transcription server must be at a public address.** The brief allows "a Whisper server on a machine in the office", but the transcription URL is typed by an admin, and the untrusted-URL rule (no loopback, private or link-local addresses, on any hop) wins over that convenience. Such a server needs a public address (a port forward or a tunnel). The request is pinned to the address the check resolved and follows no redirects.
+- **Transcription takes one video per job run and may outlive the 20-second budget.** The budget decides whether to start another video, not how long one may take: a single speech-to-text request can't be split without an audio tool on the host. The job raises its own time limit where the host allows (`set_time_limit`), and a run the host kills leaves the video RUNNING until the half-hour sweep re-queues it. The file sent is the video's own MP4 (the smallest rendition where the provider has several), streamed through storage/tmp, and a file above the configured limit (25 MB by default, OpenAI's) is refused before anything is sent.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.

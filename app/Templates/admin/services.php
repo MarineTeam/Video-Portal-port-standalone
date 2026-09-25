@@ -9,6 +9,7 @@
  * @var array{ok: bool, message: string} $outbound
  * @var bool $https
  * @var ?string $flash
+ * @var array<string, array{label: string, description: string, set: bool}> $integrations
  */
 $labels = ['auth' => 'Sign-in', 'video' => 'Video', 'email' => 'Email', 'files' => 'Files', 'sms' => 'Text messages'];
 ?>
@@ -45,3 +46,17 @@ $labels = ['auth' => 'Sign-in', 'video' => 'Video', 'email' => 'Email', 'files' 
   <?php endif ?>
 </section>
 <?php endforeach ?>
+
+<section class="card">
+  <h2>Integrations</h2>
+  <p class="small muted">Optional extras, each with its own settings and test. Nothing here is needed for the site to run.</p>
+  <ul class="providers">
+  <?php foreach ($integrations as $gid => $g): ?>
+    <li>
+      <a href="<?= e(url('/admin/integrations/' . $gid)) ?>"><?= e($g['label']) ?></a>
+      <span class="badge<?= $g['set'] ? '' : ' muted' ?>"><?= $g['set'] ? 'set' : 'not set' ?></span>
+      <div class="small muted"><?= e($g['description']) ?></div>
+    </li>
+  <?php endforeach ?>
+  </ul>
+</section>

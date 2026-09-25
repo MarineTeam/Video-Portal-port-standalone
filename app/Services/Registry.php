@@ -311,8 +311,21 @@ final class Registry
      */
     public static function mergeSubmitted(string $class, array $saved, array $submitted): array
     {
+        return self::mergeFields($class::configSchema(), $saved, $submitted);
+    }
+
+    /**
+     * The same merge for any list of fields (the integrations' settings).
+     *
+     * @param list<array<string, mixed>> $fields
+     * @param array<string, mixed> $saved
+     * @param array<string, mixed> $submitted
+     * @return array<string, mixed>
+     */
+    public static function mergeFields(array $fields, array $saved, array $submitted): array
+    {
         $out = [];
-        foreach ($class::configSchema() as $field) {
+        foreach ($fields as $field) {
             $key = $field['key'];
             $value = $submitted[$key] ?? null;
             if (($field['secret'] ?? false) && ($value === null || $value === '')) {

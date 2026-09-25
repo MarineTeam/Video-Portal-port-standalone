@@ -52,6 +52,7 @@ final class VideosAdmin
         $r->add('PATCH', '/api/admin/videos/[id]', [$self, 'update'], [$can]);
         $r->add('DELETE', '/api/admin/videos/[id]', [$self, 'trash'], [$can]);
         $r->post('/api/admin/videos/[id]/sync-status', [$self, 'syncStatus'], [$can]);
+        $r->post('/api/admin/videos/[id]/transcribe', [$self, 'transcribe'], [$can]);
         $r->post('/api/admin/videos/[id]/thumbnail', [$self, 'thumbnail'], [$can]);
         $r->get('/api/admin/videos/[id]/captions', [$self, 'captionsList'], [$can]);
         $r->post('/api/admin/videos/[id]/captions', [$self, 'captionsAdd'], [$can]);
@@ -160,6 +161,7 @@ final class VideosAdmin
             'groups' => $this->db()->all('SELECT id, name FROM {{permission_groups}} ORDER BY name'),
             'thumbnail' => \App\Modules\Library\VideoSource::thumbnailUrl($video),
             'chapters' => ChaptersAdmin::forVideo($this->db(), (string) $video['id']),
+            'transcribeBlocked' => \App\Modules\Library\Transcription::reason($this->app, $video),
             'hasCaptionOps' => $this->videos->providerFor($video)->capabilities()->captions,
             'player' => $video['status'] === 'READY' ? \App\Modules\Library\Player::spec($this->app, $video) : null,
         ], 200, 'layouts/admin');
@@ -244,6 +246,19 @@ final class VideosAdmin
         $fresh = $this->videos->sync($video, $report);
         $this->catalog->audit('video.sync', 'video', (string) $video['id'], (string) $fresh['status']);
         return Response::json($this->present($fresh));
+    }
+
+    /**
+     * "Transcribe it for me": queued for the transcription job.
+     *
+     * @param array<string, string> $p
+     */
+    public function transcribe(Request $req, array $p): Response
+    {
+        $video = $this->video($p['id']);
+        \App\Modules\Library\Transcription::queue($this->app, $video);
+        $this->catalog->audit('video.transcribe', 'video', (string) $video['id']);
+        return Response::json($this->present($this->catalog->find('video', (string) $video['id'])), 202);
     }
 
     /** @param array<string, string> $p */
