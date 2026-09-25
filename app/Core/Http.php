@@ -143,8 +143,15 @@ final class Http
             return false;
         }
         // Decimal/hex/octal spellings of an address ("2130706433", "0x7f.1").
-        if (preg_match('/^[0-9.x]+$/', $host)) {
-            return false;
+        $labels = explode('.', $host);
+        foreach ($labels as $label) {
+            if (preg_match('/^(0x[0-9a-f]*|\d+)$/', $label)) {
+                // Numeric labels mean an address spelled some other way; a
+                // real top-level domain never is one.
+                if ($label === end($labels) || preg_match('/^0x/', $label)) {
+                    return false;
+                }
+            }
         }
         return preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/', $host) === 1;
     }
