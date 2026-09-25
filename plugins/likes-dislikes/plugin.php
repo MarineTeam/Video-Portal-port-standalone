@@ -44,14 +44,6 @@ return new class (__DIR__) extends BasePlugin {
         });
         $hooks->filter('page.series.panels', fn (array $panels, array $ctx) => [...$panels, ...$this->panel($app, $ctx, 'series', (string) $ctx['series']['id'])]);
         $hooks->filter('page.video.panels', fn (array $panels, array $ctx) => [...$panels, ...$this->panel($app, $ctx, 'video', (string) $ctx['video']['id'])]);
-        $hooks->filter('profile.export', function (array $doc, string $userId) use ($app): array {
-            $doc['reactions'] = $app->db()->all(
-                'SELECT r.series_id, s.title AS series_title, r.video_id, v.title AS video_title, r.type, r.updated_at FROM {{reactions}} r
-                 LEFT JOIN {{series}} s ON s.id = r.series_id LEFT JOIN {{videos}} v ON v.id = r.video_id WHERE r.user_id = ? ORDER BY r.updated_at',
-                [$userId],
-            );
-            return $doc;
-        });
     }
 
     /** @return array{likes: int, dislikes: int, mine: ?string} */

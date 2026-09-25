@@ -131,6 +131,7 @@ value and returns it (changed or not). Lower priority runs first.
 | `profile.export` | filter | `array $doc, string $userId` | add a section to "Download my data" (it is checked for credentials after you) |
 | `page.category.panels` | filter | `array $panels, array $context` | add to a category page; `$context`: `category`, `categoryId`, `viewer` (`Library\Viewer`), `plugins` (slug ⇒ on, resolved for this category), `app` |
 | `page.series.panels` | filter | `array $panels, array $context` | add to a series page; `$context`: `series`, `videos`, `categoryId`, `viewer`, `plugins`, `app` |
+| `related.items` | filter | `array $items, string $kind, array $context` | the Related content plugin's rows (series or videos) before they are shown |
 | `page.video.panels` | filter | `array $panels, array $context` | add to a video page; `$context`: `video`, `series`, `siblings`, `categoryId`, `viewer`, `locked`, `player`, `plugins`, `app` |
 
 A panel is `['area' => 'actions' | 'below', 'html' => string, 'order' => int]`:
@@ -149,7 +150,7 @@ $title, $body, $url)`.
 
 These are part of the API and will fire from the library, access and profile
 modules as they are ported (see `docs/PORT_MAP.md`): `content.can_view`,
-`home.rows`, `related.items`, `admin.menu`, `settings.register`,
+`home.rows`, `admin.menu`, `settings.register`,
 `plugin.category_override`. (`series.saved`, `video.saved`, `file.saved`,
 `*.published`, `*.trashed`, `*.restored`, `*.purged` and
 `content.search_sources` fire already.)

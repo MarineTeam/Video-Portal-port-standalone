@@ -95,7 +95,7 @@ final class EngagementPluginsTest extends ServerTestCase
     {
         self::api('POST', '/api/ratings', ['videoId' => self::$ids['video'], 'value' => 3], 'ruth');
         $doc = self::http('GET', '/api/profile/export', null, 'ruth')['json'];
-        self::assertContains('Romans 1', array_column($doc['ratings'], 'video_title'));
+        self::assertContains(self::$ids['video'], array_column($doc['ratings'], 'videoId'));
         self::assertContains('LIKE', array_column($doc['reactions'], 'type'));
     }
 }

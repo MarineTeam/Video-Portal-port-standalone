@@ -52,13 +52,6 @@ return new class (__DIR__) extends BasePlugin {
             }
             return [...$cards, ['title' => t('favorites.nav'), 'count' => $n, 'href' => '/favorites']];
         });
-        $hooks->filter('profile.export', function (array $doc, string $userId) use ($app): array {
-            $doc['favorites'] = [
-                'series' => $app->db()->all('SELECT f.series_id, s.title, f.created_at FROM {{series_favorites}} f JOIN {{series}} s ON s.id = f.series_id WHERE f.user_id = ? ORDER BY f.created_at', [$userId]),
-                'videos' => $app->db()->all('SELECT f.video_id, v.title, f.created_at FROM {{video_favorites}} f JOIN {{videos}} v ON v.id = f.video_id WHERE f.user_id = ? ORDER BY f.created_at', [$userId]),
-            ];
-            return $doc;
-        });
     }
 
     /**

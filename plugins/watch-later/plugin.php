@@ -58,14 +58,6 @@ return new class (__DIR__) extends BasePlugin {
             }
             return [...$cards, ['title' => t('watchLater.nav'), 'count' => $n, 'href' => '/watch-later']];
         });
-        $hooks->filter('profile.export', function (array $doc, string $userId) use ($app): array {
-            $doc['watchLater'] = [
-                'categories' => $app->db()->all('SELECT w.category_id, c.name, w.created_at FROM {{category_watch_laters}} w JOIN {{categories}} c ON c.id = w.category_id WHERE w.user_id = ? ORDER BY w.created_at', [$userId]),
-                'series' => $app->db()->all('SELECT w.series_id, s.title, w.created_at FROM {{series_watch_laters}} w JOIN {{series}} s ON s.id = w.series_id WHERE w.user_id = ? ORDER BY w.created_at', [$userId]),
-                'videos' => $app->db()->all('SELECT w.video_id, v.title, w.created_at FROM {{video_watch_laters}} w JOIN {{videos}} v ON v.id = w.video_id WHERE w.user_id = ? ORDER BY w.created_at', [$userId]),
-            ];
-            return $doc;
-        });
     }
 
     /**

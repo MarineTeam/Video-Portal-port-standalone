@@ -137,7 +137,9 @@ final class CurrentUser
         if ($user === null) {
             return '';
         }
-        foreach (['display_name', 'name'] as $field) {
+        // A chosen display name counts only while the Profiles plugin is on.
+        $fields = \App\Modules\Plugins\PluginStates::enabled($this->app->db(), 'profiles') ? ['display_name', 'name'] : ['name'];
+        foreach ($fields as $field) {
             if (is_string($user[$field] ?? null) && trim($user[$field]) !== '') {
                 return trim($user[$field]);
             }

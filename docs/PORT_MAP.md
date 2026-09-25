@@ -20,7 +20,7 @@ commit as the code it describes.
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
-| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes) |
+| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
@@ -38,7 +38,7 @@ commit as the code it describes.
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
-| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
+| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
@@ -124,7 +124,7 @@ commit as the code it describes.
 | `/books/[fileId]` | todo | |
 | `/calendar` | todo | |
 | `/categories/[slug]` | done | Children, series, standalone videos and files; generic title + sign-in page (401) for a members-only one |
-| `/directory` | todo | |
+| `/directory` | done | plugins/profiles: name only by default, each contact detail its own yes, search by name and note only, noindex |
 | `/events` | todo | |
 | `/events/[slug]` | todo | |
 | `/favorites` | done | plugins/favorites |
@@ -152,7 +152,7 @@ commit as the code it describes.
 | `/profile/shared-links` | done | The member’s own links |
 | `/read/[fileId]` | todo | |
 | `/recently-added` | done | Newest series and videos |
-| `/recently-played` | todo | |
+| `/recently-played` | done | plugins/watch-history |
 | `/scripture` | done | Books with a video the reader may open, in canonical order |
 | `/scripture/[book]` | done |  |
 | `/search` | done | Library\Search: ranked substring + FULLTEXT pass, fuzzy re-rank of ≤500 titles only on an empty result; category/speaker filters, newest sort; content.search_sources for plugins; 100-char cap |
@@ -519,7 +519,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/cross-site.test.ts` | todo | |
 | `lib/data-export.test.ts` | done | tests/Unit/Profile/DataExportTest.php (+ a schema completeness check) and tests/Integration/DataExportTest.php |
 | `lib/device-settings.test.ts` | done | tests/js/device-settings.test.mjs |
-| `lib/directory.test.ts` | todo | |
+| `lib/directory.test.ts` | done | tests/Unit/Plugins/DirectoryTest.php (every case) and tests/Integration/DiscoveryPluginsTest.php |
 | `lib/download-source.test.ts` | done | tests/Unit/Video/DownloadSourceTest.php |
 | `lib/downloads.test.ts` | done | tests/Unit/DownloadsTest.php |
 | `lib/event-series.test.ts` | todo | |
@@ -631,6 +631,8 @@ met, with the reason.
 - **The "Share at" box belongs to the Social share plugin**, as the brief describes it, so it leaves the video page when that plugin is off; the `?t=` link itself is the library's and always works.
 - **The request bodies of `/api/favorites`, `/api/watch-later`, `/api/ratings` and `/api/reactions`** are the port's (`{seriesId}`, `{videoId}`, `{categoryId}` → `{favorited}` / `{saved}`), since the brief names the routes and methods only. Each is a toggle, so a stale page can't double-add.
 - **Share links, downloads, chapters, transcripts, trending and recommendations were built in the library (step 3) and gated on their plugin's state**, before the page hooks existed; they move into `plugins/` with the rest of step 4.
+- **A display name counts only while the Profiles plugin is on**; switched off, members are shown by their sign-in name again and `/directory` is gone. The account fields stay stored either way.
+- **Bundled plugins add no data-export sections of their own**: the core's export already holds every member table (favorites, ratings, reactions, watch history…), whether or not the plugin that writes them is on, since the data outlives the switch.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.

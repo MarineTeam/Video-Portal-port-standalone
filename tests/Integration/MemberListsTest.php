@@ -98,10 +98,10 @@ final class MemberListsTest extends ServerTestCase
     {
         self::api('POST', '/api/favorites', ['videoId' => self::$ids['video']], 'ruth');
         $doc = self::http('GET', '/api/profile/export', null, 'ruth')['json'];
-        self::assertIsArray($doc['favorites'] ?? null);
-        self::assertContains('Romans', array_column($doc['favorites']['series'], 'title'));
-        self::assertArrayHasKey('watchLater', $doc);
+        // The core's export already holds every member table, plugin or not.
+        self::assertContains(self::$ids['romans'], array_column($doc['favoriteSeries'], 'seriesId'));
+        self::assertArrayHasKey('watchLaterCategories', $doc);
         $mine = self::http('GET', '/api/profile/export', null, 'admin')['json'];
-        self::assertSame([], $mine['favorites']['series']);
+        self::assertSame([], $mine['favoriteSeries']);
     }
 }
