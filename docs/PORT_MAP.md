@@ -33,7 +33,7 @@ commit as the code it describes.
 | Services registry and Admin → Services | core | partial | Registry, generated forms, signed test-then-switch at /admin/providers; auth trial-mode switch arrives with external providers |
 | Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | todo | |
 | Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | todo | |
-| Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | partial | Branding, i18n, nav, device settings, per-device bottom bar, inbox, profile shell, data export done; video feeds with the Library (step 3); query monitor pending |
+| Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | partial | Branding, i18n, nav, device settings, per-device bottom bar, inbox, profile shell, data export, query monitor done; video feeds with the Library (step 3) |
 | Read API `/api/v1` | core | todo | |
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
@@ -106,7 +106,7 @@ commit as the code it describes.
 | `/admin/permissions` | done | Groups (capabilities sanitised to the known list), assignments site-wide or scoped to a category/series, category and series editors |
 | `/admin/plugins` | done | Activate, per-category overrides, zip install/delete, auto-deactivation notices; never loads third-party plugins |
 | `/admin/prayer` | todo | |
-| `/admin/query-monitor` | todo | |
+| `/admin/query-monitor` | done | Reports the storage/config.php flag, toggles the bar (plugins row "query-monitor", fail-open) |
 | `/admin/schedules` | todo | |
 | `/admin/schedules/[id]` | todo | |
 | `/admin/series` | todo | |
@@ -246,7 +246,7 @@ commit as the code it describes.
 | `/api/admin/plugins` | GET | done | PLUGIN_META slugs plus installed packages; never the query-monitor row |
 | `/api/admin/prayer/[id]` | PATCH DELETE | todo | |
 | `/api/admin/prayer` | GET | todo | |
-| `/api/admin/query-monitor` | PATCH | todo | |
+| `/api/admin/query-monitor` | PATCH | done | `{enabled}` → `{enabled, configured}` |
 | `/api/admin/schedules/[id]/events` | GET POST | todo | |
 | `/api/admin/schedules/[id]` | GET PATCH DELETE | todo | |
 | `/api/admin/schedules/[id]/sync` | POST | todo | |
@@ -603,6 +603,7 @@ met, with the reason.
 - **The site closes itself when its files are newer than its database** (`app.version` differs from `App::VERSION`), not only while `storage/maintenance` exists, so an FTP upload never serves new code against the old schema to visitors. Administrators still get through, with a notice pointing to /admin/update.
 - **The backup is a multi-member gzip**: each request appends its own member, which is valid gzip (RFC 1952) and what `gunzip`, `zcat` and phpMyAdmin (zlib's `gzread`) read as one stream — PHP's `gzdecode()` alone stops after the first. Rows of `sessions`, `rate_limits` and `uploads` are left out (their tables are kept): they are throwaway state.
 - **Two profile routes the port adds for local accounts:** `POST /api/profile/password` (current + new; ends every other session) and `DELETE /api/profile/sessions` ("sign out everywhere else"), which the brief puts on /profile/settings without naming routes. The inbox API's JSON shape is the port's own (`{notifications, hasMore, unreadCount}`), since the brief names the route but not its body.
+- **The query monitor's deploy-level switch is `'query_monitor' => true` in `storage/config.php`** (the port's stand-in for `QUERY_MONITOR_ENABLED`), since a host without a shell has no environment variables; like the original's, the admin page can only report it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log

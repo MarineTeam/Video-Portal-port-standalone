@@ -184,6 +184,11 @@ final class App
         } catch (\Throwable $e) {
             $response = ErrorHandler::respond($e, $request, $this->viewerIsAdmin());
         }
+        try {
+            \App\Modules\Admin\QueryMonitor::inject($this, $request, $response);
+        } catch (\Throwable) {
+            // A debugging aid never breaks the page it is describing.
+        }
 
         try {
             if ($this->session !== null) {
