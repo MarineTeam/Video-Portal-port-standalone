@@ -10,7 +10,7 @@
  * @var list<string> $tags
  * @var bool $signedIn
  * @var ?array<string, mixed> $share
- * @var array{actions: list<string>, below: list<string>} $panels from plugins (page.series.panels)
+ * @var array{actions: list<string>, top: list<string>, below: list<string>} $panels from plugins (page.series.panels)
  */
 ?>
 <div hidden data-view-event="<?= e(\App\Core\View::json(['seriesId' => $series['id']])) ?>"></div>
@@ -29,6 +29,7 @@
     <?php if ($panels['actions'] !== []): ?><div class="video-actions"><?php foreach ($panels['actions'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?></div><?php endif ?>
   </div>
 </header>
+<?php foreach ($panels['top'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>
 <?php if ($videos === [] && $files === []): ?>
   <p class="muted"><?= e(t('library.empty')) ?></p>
 <?php endif ?>

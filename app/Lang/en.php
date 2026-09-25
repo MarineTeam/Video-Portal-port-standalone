@@ -137,9 +137,6 @@ return [
     'settings.deleteConfirmLabel' => 'Type {email} to confirm',
     'settings.delete' => 'Delete my account',
 
-    'library.chapters' => 'Chapters',
-    'library.copyChapterLink' => 'Copy a link to “{title}”',
-    'library.transcript' => 'Transcript',
     'library.continueWatching' => 'Continue watching',
     'library.recentlyAdded' => 'Recently added',
     'library.browse' => 'Browse',

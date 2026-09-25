@@ -7,7 +7,6 @@ namespace App\Modules\Library;
 use App\Core\App;
 use App\Core\Db;
 use App\Core\Id;
-use App\Modules\Plugins\PluginStates;
 
 /**
  * The homepage's configurable rows (/admin/home-rows): the four built-in
@@ -94,16 +93,12 @@ final class HomeRows
                     }
                     break;
                 case 'RECOMMENDATIONS':
-                    if (PluginStates::enabled($db, 'recommendations')) {
-                        [$anchor, $series] = self::recommendations($browse);
-                        if ($anchor !== null && $series !== []) {
-                            $rows[] = ['type' => 'RECOMMENDATIONS', 'title' => $title ?? t('home.becauseYouWatched', ['title' => $anchor['title']]), 'href' => null, 'series' => $series];
-                        }
-                    }
-                    break;
                 case 'TRENDING':
-                    if (PluginStates::enabled($db, 'view-counts')) {
-                        $rows[] = ['type' => 'TRENDING', 'title' => $title ?? self::defaultTitle($row), 'href' => null, 'series' => self::trending($browse, $db)];
+                    // Filled by the plugin that owns the row (Recommendations, View counts):
+                    // home.row receives null and answers the row, or null for none.
+                    $filled = $app->hooks->apply('home.row', null, (string) $row['type'], ['browse' => $browse, 'title' => $title, 'db' => $db]);
+                    if (is_array($filled) && is_array($filled['series'] ?? null)) {
+                        $rows[] = ['type' => (string) $row['type'], 'title' => (string) ($filled['title'] ?? $title ?? self::defaultTitle($row)), 'href' => $filled['href'] ?? null, 'series' => $filled['series']];
                     }
                     break;
                 case 'RECENTLY_ADDED':

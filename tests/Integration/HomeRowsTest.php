@@ -27,6 +27,8 @@ final class HomeRowsTest extends DatabaseTestCase
     private const PREFIX = 'hr_';
     private static ?Db $db = null;
     private static ?App $app = null;
+    /** The same site with no plugin booted. */
+    private static ?App $bare = null;
     /** @var array<string, string> */
     private static array $ids = [];
 
@@ -43,6 +45,12 @@ final class HomeRowsTest extends DatabaseTestCase
         $root = dirname(__DIR__, 2);
         self::$app = new App(new Paths($root, sys_get_temp_dir(), "$root/plugins", "$root/themes"));
         self::$app->config = ['database' => self::dbConfig(self::PREFIX)];
+        self::$bare = new App(new Paths($root, sys_get_temp_dir(), "$root/plugins", "$root/themes"));
+        self::$bare->config = self::$app->config;
+        // The rows these two plugins own, booted as the loader would.
+        foreach (['recommendations', 'view-counts'] as $slug) {
+            (require "$root/plugins/$slug/plugin.php")->boot(self::$app->hooks, self::$app);
+        }
 
         $cat = Id::new();
         $db->insert('categories', ['id' => $cat, 'name' => 'Sermons', 'slug' => 'sermons', 'published' => true, 'tags' => []]);
@@ -91,14 +99,15 @@ final class HomeRowsTest extends DatabaseTestCase
     }
 
     /** @return array{continue: mixed, rows: list<array<string, mixed>>} */
-    private function sections(bool $member = false): array
+    private function sections(bool $member = false, bool $plugins = true): array
     {
+        $app = $plugins ? self::$app : self::$bare;
         $this->db();
         Cache::forgetMemo();
         PluginStates::forget();
         $viewer = $member ? new Viewer((array) self::$db->one('SELECT * FROM {{users}} WHERE id = ?', [self::$ids['user']])) : Viewer::guest();
-        $access = new ContentAccess(self::$app, $viewer);
-        return HomeRows::sections(self::$app, new Browse(self::$app, $access));
+        $access = new ContentAccess($app, $viewer);
+        return HomeRows::sections($app, new Browse($app, $access));
     }
 
     /** @return array<string, list<string>> row type => series titles */
@@ -149,18 +158,9 @@ final class HomeRowsTest extends DatabaseTestCase
         self::assertSame(['Hope'], self::shape($guest)['TAG:/tags/advent']);
     }
 
-    public function test_a_rows_plugin_being_off_hides_it(): void
+    public function test_a_row_whose_plugin_isnt_loaded_is_left_out(): void
     {
-        $db = $this->db();
-        $db->run('DELETE FROM {{home_rows}}');
-        $db->insert('plugins', ['id' => Id::new(), 'slug' => 'recommendations', 'name' => 'Recommendations', 'enabled' => 0]);
-        $db->insert('plugins', ['id' => Id::new(), 'slug' => 'view-counts', 'name' => 'View counts', 'enabled' => 0]);
-        Cache::forget('plugin-rows');
-        try {
-            self::assertSame(['RECENTLY_ADDED'], array_keys(self::shape($this->sections(member: true))));
-        } finally {
-            $db->run("DELETE FROM {{plugins}} WHERE slug IN ('recommendations', 'view-counts')");
-            Cache::forget('plugin-rows');
-        }
+        $this->db()->run('DELETE FROM {{home_rows}}');
+        self::assertSame(['RECENTLY_ADDED'], array_keys(self::shape($this->sections(member: true, plugins: false))));
     }
 }

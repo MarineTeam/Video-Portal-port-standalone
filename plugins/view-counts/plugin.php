@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 use App\Core\App;
 use App\Core\Hooks;
+use App\Modules\Library\HomeRows;
 use App\Modules\Plugins\BasePlugin;
 
 /**
@@ -28,6 +29,10 @@ return new class (__DIR__) extends BasePlugin {
         $this->useLang($hooks);
         $hooks->filter('page.series.panels', fn (array $panels, array $ctx) => [...$panels, ...$this->counter($ctx, (int) ($ctx['series']['view_count'] ?? 0))]);
         $hooks->filter('page.video.panels', fn (array $panels, array $ctx) => [...$panels, ...$this->counter($ctx, (int) ($ctx['video']['view_count'] ?? 0))]);
+        // The homepage's "Trending this week" row is this plugin's.
+        $hooks->filter('home.row', fn (?array $row, string $type, array $ctx) => $type === 'TRENDING'
+            ? ['series' => HomeRows::trending($ctx['browse'], $ctx['db'])]
+            : $row);
     }
 
     /**

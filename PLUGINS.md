@@ -131,12 +131,13 @@ value and returns it (changed or not). Lower priority runs first.
 | `profile.export` | filter | `array $doc, string $userId` | add a section to "Download my data" (it is checked for credentials after you) |
 | `page.category.panels` | filter | `array $panels, array $context` | add to a category page; `$context`: `category`, `categoryId`, `viewer` (`Library\Viewer`), `plugins` (slug ⇒ on, resolved for this category), `app` |
 | `page.series.panels` | filter | `array $panels, array $context` | add to a series page; `$context`: `series`, `videos`, `categoryId`, `viewer`, `plugins`, `app` |
+| `home.row` | filter | `?array $row, string $type, array $context` | fill a plugin-owned homepage row (`RECOMMENDATIONS`, `TRENDING`): return `['series' => list, 'title'?, 'href'?]`, or null for none; `$context`: `browse`, `title` (the admin's, or null), `db` |
 | `related.items` | filter | `array $items, string $kind, array $context` | the Related content plugin's rows (series or videos) before they are shown |
 | `page.video.panels` | filter | `array $panels, array $context` | add to a video page; `$context`: `video`, `series`, `siblings`, `categoryId`, `viewer`, `locked`, `player`, `plugins`, `app` |
 
-A panel is `['area' => 'actions' | 'below', 'html' => string, 'order' => int]`:
-`actions` is the row of buttons under the title, `below` sits under the
-page's own content. The html is yours, so escape what you put in it —
+A panel is `['area' => 'actions' | 'top' | 'below', 'html' => string, 'order' => int]`:
+`actions` is the row of buttons under the title, `top` just under that and
+above the page's own text (chapters), `below` under the page's own content. The html is yours, so escape what you put in it —
 render it from your own template (below) and it is. Check
 `$context['plugins']['your-slug']` before adding anything: that is the
 plugin's state for this page's category, so a category that switches you
@@ -150,7 +151,7 @@ $title, $body, $url)`.
 
 These are part of the API and will fire from the library, access and profile
 modules as they are ported (see `docs/PORT_MAP.md`): `content.can_view`,
-`home.rows`, `admin.menu`, `settings.register`,
+`admin.menu`, `settings.register`,
 `plugin.category_override`. (`series.saved`, `video.saved`, `file.saved`,
 `*.published`, `*.trashed`, `*.restored`, `*.purged` and
 `content.search_sources` fire already.)

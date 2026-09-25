@@ -135,9 +135,6 @@ return [
     'settings.deleteConfirmLabel' => 'Escribe {email} para confirmar',
     'settings.delete' => 'Borrar mi cuenta',
 
-    'library.chapters' => 'Capítulos',
-    'library.copyChapterLink' => 'Copiar un enlace a «{title}»',
-    'library.transcript' => 'Transcripción',
     'library.continueWatching' => 'Seguir viendo',
     'library.recentlyAdded' => 'Añadido recientemente',
     'library.browse' => 'Explorar',

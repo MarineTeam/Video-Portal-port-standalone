@@ -212,9 +212,6 @@ final class Pages
         $speaker = $video['speaker_id'] !== null ? $this->app->db()->one('SELECT id, name, slug FROM {{speakers}} WHERE id = ?', [$video['speaker_id']]) : null;
         $player = ($locked || $premiere || $video['status'] !== 'READY') ? null : Player::spec($this->app, $video, $start ?? 0);
         $plugins = PluginStates::forCategory($this->app->db(), $categoryId !== null ? (string) $categoryId : null);
-        $chapters = $player !== null && ($plugins['chapters'] ?? false)
-            ? $this->app->db()->all('SELECT title, timestamp_seconds FROM {{chapters}} WHERE video_id = ? ORDER BY timestamp_seconds, position', [$video['id']])
-            : [];
         $panels = Panels::collect($this->app, 'page.video.panels', [
             'video' => $decorated,
             'series' => $series,
@@ -228,8 +225,6 @@ final class Pages
         return $this->app->page('library/video', [
             'title' => $video['title'],
             'panels' => $panels,
-            'chapters' => $chapters,
-            'transcript' => !$locked && ($plugins['transcripts'] ?? false) && trim((string) ($video['transcript'] ?? '')) !== '' ? (string) $video['transcript'] : null,
             'description' => self::excerpt($video['description'] ?? null),
             'video' => $decorated,
             'series' => $series,
