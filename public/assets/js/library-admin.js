@@ -6,6 +6,7 @@ import MT from './mt.js';
 import { uploadInChunks, formToJson } from './forms.js';
 
 const RESUMABLE_CHUNK = 10 * 1024 * 1024; // a multiple of 256 KiB (Google) and 320 KiB (OneDrive)
+const DROPBOX_CHUNK = 8 * 1024 * 1024; // a multiple of 4 MiB, as Dropbox asks
 
 function showError(form, message) {
   const target = form.querySelector('[data-error]');
@@ -112,7 +113,32 @@ const kinds = {
     }
     let body = {};
     try { body = JSON.parse(last.responseText || '{}'); } catch { /* no body */ }
-    return body.id ? { externalId: String(body.id) } : { completed: true };
+    // Drive names its file here; OneDrive's path was chosen by the server.
+    return body.id ? { externalId: String(body.id), completed: true } : { completed: true };
+  },
+
+  // Dropbox's upload session, with the short-lived token the server minted,
+  // to the path the server chose.
+  async dropbox(file, ticket, progress) {
+    const call = async (endpoint, arg, slice, offset) => {
+      const r = await xhr('POST', `${ticket.content}/2/files/${endpoint}`, slice ?? new Blob([]), {
+        Authorization: `Bearer ${ticket.accessToken}`,
+        'Content-Type': 'application/octet-stream',
+        // Dropbox-API-Arg must be ASCII: escape anything else.
+        'Dropbox-API-Arg': JSON.stringify(arg).replace(/[\u007f-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`),
+      }, (sent) => progress((offset + sent) / file.size));
+      if (r.status !== 200) throw new Error(`Dropbox refused the upload (${r.status}): ${r.responseText.slice(0, 200)}`);
+      return r.responseText ? JSON.parse(r.responseText) : {};
+    };
+    const { session_id: sessionId } = await call('upload_session/start', { close: false }, null, 0);
+    let offset = 0;
+    while (offset < file.size) {
+      const end = Math.min(offset + DROPBOX_CHUNK, file.size);
+      await call('upload_session/append_v2', { cursor: { session_id: sessionId, offset }, close: end === file.size }, file.slice(offset, end), offset);
+      offset = end;
+    }
+    await call('upload_session/finish', { cursor: { session_id: sessionId, offset }, commit: { path: ticket.path, mode: 'add', autorename: false, mute: true } }, null, offset);
+    return { completed: true };
   },
 
   async chunked(file, ticket, progress) {

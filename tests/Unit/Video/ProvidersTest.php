@@ -49,6 +49,7 @@ final class ProvidersTest extends TestCase
     {
         Http::fake(null);
         Http::fakeResolver(null);
+        \App\Core\Url::configure('http://localhost');
     }
 
     private static function json(mixed $data, int $status = 200, array $headers = []): HttpResponse
@@ -73,6 +74,7 @@ final class ProvidersTest extends TestCase
 
     public function test_youtube_player_and_limits(): void
     {
+        \App\Core\Url::configure('https://church.example.org');
         $p = (new YouTubeProvider([]))->player(new VideoRef('dQw4w9WgXcQ'), new PlayerOptions(90));
         $this->assertSame(['iframe', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&enablejsapi=1&origin=https%3A%2F%2Fchurch.example.org&start=90'], [$p->kind, $p->src]);
         $this->assertFalse((new YouTubeProvider([]))->capabilities()->upload, 'no upload without OAuth');

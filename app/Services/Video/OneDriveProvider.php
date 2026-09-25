@@ -15,6 +15,12 @@ use App\Services\TestResult;
  * and SharePoint need an Entra app with Files.Read.All: the player gets the
  * short-lived pre-authenticated download URL Graph mints per request, after
  * the site has decided the viewer may watch.
+ *
+ * Uploads are optional and go to one Business or SharePoint drive, with the
+ * same app holding Files.ReadWrite.All: Graph's upload session gives the
+ * browser a pre-authenticated URL to PUT ranges to, at a path PHP chose;
+ * PHP then makes an anonymous view link, or says the tenant forbids them.
+ * Personal OneDrive stays link-only (see PORT_MAP's deviations).
  */
 final class OneDriveProvider extends BaseVideoProvider
 {
@@ -45,7 +51,31 @@ final class OneDriveProvider extends BaseVideoProvider
             ['key' => 'clientId', 'label' => 'Application (client) ID', 'type' => 'text'],
             ['key' => 'clientSecret', 'label' => 'Client secret', 'type' => 'text', 'secret' => true],
             ['key' => 'testLink', 'label' => 'A Business sharing link to test with', 'type' => 'text'],
+            ['key' => 'uploadDriveId', 'label' => 'Drive ID to upload to (optional; needs Files.ReadWrite.All)', 'type' => 'text', 'help' => 'A user’s OneDrive for Business or a SharePoint document library, from Graph (…/drives).'],
+            ['key' => 'uploadFolder', 'label' => 'Folder in that drive', 'type' => 'text', 'default' => 'Videos'],
         ];
+    }
+
+    public static function cspSources(): array
+    {
+        // Upload sessions are pre-authenticated URLs on the tenant's SharePoint host.
+        return ['connect' => ['https://*.sharepoint.com']];
+    }
+
+    private function canUpload(): bool
+    {
+        return $this->business() && preg_match('/^[A-Za-z0-9!_-]{8,200}$/', $this->str('uploadDriveId')) === 1;
+    }
+
+    private function driveBase(): string
+    {
+        return 'https://graph.microsoft.com/v1.0/drives/' . rawurlencode($this->str('uploadDriveId'));
+    }
+
+    /** A drive path, each segment encoded, for root:/…: addressing. */
+    private static function encodePath(string $path): string
+    {
+        return implode('/', array_map('rawurlencode', explode('/', trim($path, '/'))));
     }
 
     private function business(): bool
@@ -55,7 +85,7 @@ final class OneDriveProvider extends BaseVideoProvider
 
     public function capabilities(): VideoCapabilities
     {
-        return new VideoCapabilities(link: true, thumbnails: true, duration: true, mp4: true, progressEvents: true);
+        return new VideoCapabilities(upload: $this->canUpload(), link: true, thumbnails: true, duration: true, mp4: true, progressEvents: true);
     }
 
     public function matchesLink(string $url): bool
@@ -64,6 +94,11 @@ final class OneDriveProvider extends BaseVideoProvider
     }
 
     private function graphToken(): string
+    {
+        return \App\Core\Cache::memo('onedrive-token:' . hash('sha256', $this->str('tenantId') . '|' . $this->str('clientId') . '|' . $this->str('clientSecret')), fn () => $this->fetchGraphToken());
+    }
+
+    private function fetchGraphToken(): string
     {
         $r = Http::request('POST', 'https://login.microsoftonline.com/' . rawurlencode($this->str('tenantId')) . '/oauth2/v2.0/token', ['Content-Type' => 'application/x-www-form-urlencoded'], http_build_query([
             'client_id' => $this->str('clientId'),
@@ -115,8 +150,81 @@ final class OneDriveProvider extends BaseVideoProvider
         );
     }
 
+    public function createUpload(string $title, UploadHints $hints): UploadTicket
+    {
+        if (!$this->canUpload()) {
+            parent::createUpload($title, $hints);
+        }
+        $ext = strtolower(pathinfo($hints->fileName, PATHINFO_EXTENSION));
+        $name = \App\Support\Slug::slugify($title !== '' ? $title : pathinfo($hints->fileName, PATHINFO_FILENAME));
+        $folder = trim($this->str('uploadFolder', 'Videos'), '/');
+        // A path of this site's choosing, unique, so the upload never lands on another file.
+        $path = ($folder !== '' ? $folder . '/' : '') . ($name !== '' ? $name . '-' : '') . bin2hex(random_bytes(4)) . '.' . (preg_match('/^[a-z0-9]{2,5}$/', $ext) ? $ext : 'mp4');
+        $r = Http::request('POST', $this->driveBase() . '/root:/' . self::encodePath($path) . ':/createUploadSession', [
+            'Authorization' => 'Bearer ' . $this->graphToken(),
+            'Content-Type' => 'application/json',
+        ], '{"item":{"@microsoft.graph.conflictBehavior":"fail"}}');
+        $url = $r->json()['uploadUrl'] ?? null;
+        if (!$r->ok() || !is_string($url) || !str_starts_with($url, 'https://')) {
+            throw new VideoProviderException('Microsoft wouldn’t open an upload: ' . (string) ($r->json()['error']['message'] ?? $r->status));
+        }
+        return new UploadTicket('resumable', substr(hash('sha256', 'onedrive-upload:' . $this->str('uploadDriveId') . ':' . $path), 0, 40), ['url' => $url, 'method' => 'PUT'], ['uploaded' => true, 'path' => $path]);
+    }
+
+    public function completeUpload(VideoRef $video): VideoInfo
+    {
+        $path = (string) ($video->data['path'] ?? '');
+        if (($video->data['uploaded'] ?? false) !== true || $path === '') {
+            return $this->get($video);
+        }
+        $headers = ['Authorization' => 'Bearer ' . $this->graphToken()];
+        $r = Http::request('GET', $this->driveBase() . '/root:/' . self::encodePath($path) . '?$select=id,file,video', $headers);
+        $item = $r->json();
+        if (!$r->ok() || !is_array($item) || !is_string($item['id'] ?? null)) {
+            throw new VideoProviderException('Microsoft has no finished upload at ' . $path . '.');
+        }
+        $l = Http::request('POST', $this->driveBase() . '/items/' . rawurlencode($item['id']) . '/createLink', $headers + ['Content-Type' => 'application/json'], '{"type":"view","scope":"anonymous"}');
+        $web = $l->json()['link']['webUrl'] ?? null;
+        if (!$l->ok() || !is_string($web)) {
+            throw new VideoProviderException($l->status === 403 || $l->status === 400
+                ? 'The upload is in the drive, but this tenant forbids “anyone with the link” sharing, so it can’t be played here. Allow anonymous links for the site in the SharePoint admin centre, or share it another way.'
+                : 'Microsoft wouldn’t make a link for the upload: ' . (string) ($l->json()['error']['message'] ?? $l->status));
+        }
+        $ms = $item['video']['duration'] ?? null;
+        return new VideoInfo('READY', is_numeric($ms) ? (int) round((float) $ms / 1000) : null, data: [
+            'link' => $web,
+            'business' => Links::onedrive($web)['business'] ?? true,
+            'itemId' => $item['id'],
+            'mimeType' => (string) ($item['file']['mimeType'] ?? 'video/mp4'),
+        ]);
+    }
+
+    public function owns(VideoRef $video): bool
+    {
+        return ($video->data['uploaded'] ?? false) === true && isset($video->data['itemId']);
+    }
+
+    public function delete(VideoRef $video): void
+    {
+        if (!$this->owns($video) || !$this->canUpload()) {
+            return;
+        }
+        $r = Http::request('DELETE', $this->driveBase() . '/items/' . rawurlencode((string) $video->data['itemId']), ['Authorization' => 'Bearer ' . $this->graphToken()]);
+        if (!$r->ok() && $r->status !== 404) {
+            throw new VideoProviderException('Microsoft refused the delete: ' . (string) ($r->json()['error']['message'] ?? $r->status));
+        }
+    }
+
     private function streamUrl(VideoRef $video): string
     {
+        if ($this->owns($video) && $this->canUpload()) {
+            // Our own upload: the drive item's short-lived download address.
+            $r = Http::request('GET', $this->driveBase() . '/items/' . rawurlencode((string) $video->data['itemId']) . '?$select=id,@microsoft.graph.downloadUrl', ['Authorization' => 'Bearer ' . $this->graphToken()]);
+            $url = $r->json()['@microsoft.graph.downloadUrl'] ?? null;
+            if (is_string($url)) {
+                return $url;
+            }
+        }
         $link = (string) ($video->data['link'] ?? '');
         if (($video->data['business'] ?? false) === true) {
             $url = $this->item($link, true)['@microsoft.graph.downloadUrl'] ?? null;
@@ -149,6 +257,12 @@ final class OneDriveProvider extends BaseVideoProvider
         }
         try {
             $this->graphToken();
+            if ($this->canUpload()) {
+                $r = Http::request('GET', $this->driveBase() . '?$select=id,name', ['Authorization' => 'Bearer ' . $this->graphToken()]);
+                if (!$r->ok()) {
+                    return TestResult::fail('The app signed in but can’t open the upload drive: ' . (string) ($r->json()['error']['message'] ?? $r->status) . '. Grant Files.ReadWrite.All and check the drive ID.');
+                }
+            }
             if ($this->str('testLink') !== '') {
                 $this->item($this->str('testLink'), true);
                 return TestResult::ok('The app signed in and opened the test link, so the permission and the consent are both in place.');

@@ -19,7 +19,7 @@ commit as the code it describes.
 |---|---|---|
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
-| 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | in progress (3.1–3.4 done: content core, admin CMS, providers and player, public pages/search/feeds/sitemap; next: share links, downloads, video feeds, then the remaining providers) |
+| 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | in progress (3.1–3.6 done: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; next: 3.2b chapters, transcription, /admin/media-check, /admin/home-rows) |
 | 4 | Bundled plugins, simplest first | todo |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
@@ -59,9 +59,9 @@ commit as the code it describes.
 | video | bunny.net Stream | done | tus upload, signed embeds, CDN token, MP4 renditions, captions, library import |
 | video | YouTube | done | Links (oEmbed or Data API); upload through a resumable session the server opens with OAuth |
 | video | Vimeo | done | Links; with a token: tus upload, captions, MP4 files |
-| video | Dropbox | partial | Links (direct raw URLs); upload not yet |
-| video | Google Drive | partial | Links, preview or API mode; upload not yet |
-| video | OneDrive / SharePoint | partial | Links (personal and Business via Graph); upload not yet |
+| video | Dropbox | done | Links (direct raw URLs); optional upload through an app-folder app: a four-hour token and a server-chosen path for the browser's upload session, then a public shared link |
+| video | Google Drive | done | Links, preview or API mode; optional upload (OAuth, drive.file): resumable session opened from this origin, file confirmed as the app's, then shared with anyone with the link |
+| video | OneDrive / SharePoint | done | Links (personal and Business via Graph); optional upload to a Business/SharePoint drive through a Graph upload session, then an anonymous view link (or the tenant's refusal, said plainly); personal uploads: see Deviations |
 | video | Internet Archive | done | Links; picks the best MP4 |
 | video | S3-compatible | done | Presigned PUT, multipart over 100 MB, SigV4 (AWS test vectors), CORS rule shown |
 | video | Direct link | done | HEAD through the untrusted-URL fetcher |
@@ -626,6 +626,8 @@ met, with the reason.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
+- **OneDrive uploads go to a Business or SharePoint drive only.** The brief offers upload "for either"; personal OneDrive has no app-only access, and a delegated refresh token there rotates and lapses, which would need the site to rewrite its own saved settings from a background request. Personal OneDrive links still resolve and play; uploads use the same Entra app the Business links already need, with Files.ReadWrite.All and a chosen drive.
+- **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
 
