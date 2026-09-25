@@ -1,0 +1,30 @@
+{
+    "name": "marineteam/marine-team",
+    "description": "Marine Team: a church media library and week-planner for ordinary shared hosting (PHP + MySQL/MariaDB).",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo_mysql": "*",
+        "ext-mbstring": "*",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "ext-ctype": "*",
+        "ext-fileinfo": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5",
+        "phpstan/phpstan": "^2.1"
+    },
+    "config": {
+        "platform": { "php": "8.2.0" },
+        "sort-packages": true
+    },
+    "autoload-dev": {
+        "psr-4": { "Tests\\": "tests/" }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse --memory-limit=1G"
+    }
+}

@@ -1,0 +1,7 @@
+/vendor/
+/storage/*
+!/storage/.htaccess
+!/storage/index.php
+/.phpunit.cache/
+/build/
+/tools/*.phar
