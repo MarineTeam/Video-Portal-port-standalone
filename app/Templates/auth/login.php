@@ -6,10 +6,25 @@
  * @var string $returnTo
  * @var bool $magicLink
  * @var bool $selfRegistration
+ * @var ?array{label: string, flow: string, widget: ?array{script: string, config: array<string, mixed>}, trial: bool} $external
+ * @var bool $localOpen whether members may use the password form beside an external provider
+ * @var array $shell
  */
 ?>
 <h1><?= e(t('auth.signInTitle')) ?></h1>
 <?php if ($error !== null): ?><p class="error" role="alert"><?= e($error) ?></p><?php endif ?>
+<?php if ($external !== null): ?>
+  <?php if ($external['flow'] === 'redirect'): ?>
+    <p><a class="button primary" href="<?= e(url('/auth/start', array_filter(['returnTo' => $returnTo, 'trial' => $external['trial'] ? '1' : null]))) ?>"><?= e(t('auth.continueWith', ['provider' => $external['label']])) ?></a></p>
+  <?php elseif ($external['widget'] !== null): ?>
+    <div id="external-sign-in" data-token-sign-in="<?= e(\App\Core\View::json($external['widget']['config'] + ['returnTo' => $returnTo, 'trial' => $external['trial']])) ?>"></div>
+    <p class="error" data-token-error hidden></p>
+    <script src="<?= e($external['widget']['script']) ?>" crossorigin="anonymous" async data-token-sdk></script>
+    <script type="module" src="<?= e(asset('js/token-sign-in.js')) ?>"></script>
+  <?php endif ?>
+  <details class="card"<?= $error !== null ? ' open' : '' ?>>
+    <summary><?= e($localOpen ? t('auth.withPassword') : t('auth.adminSignIn')) ?></summary>
+<?php endif ?>
 <?php if ($magicLink): ?>
 <form method="post" action="<?= e(url('/auth/magic')) ?>" class="stack">
   <?= $v->raw(csrf_field()) ?>
@@ -27,3 +42,6 @@
 </form>
 <p class="small"><a href="<?= e(url('/auth/reset')) ?>"><?= e(t('auth.forgot')) ?></a>
 <?php if ($selfRegistration): ?> · <a href="<?= e(url('/auth/register')) ?>"><?= e(t('auth.register')) ?></a><?php endif ?></p>
+<?php if ($external !== null): ?>
+  </details>
+<?php endif ?>

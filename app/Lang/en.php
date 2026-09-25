@@ -230,4 +230,10 @@ return [
     'downloads.remove' => 'Remove',
     'downloads.button' => 'Download',
     'downloads.saved' => 'Saved on this device',
+    'auth.continueWith' => 'Continue with {provider}',
+    'auth.adminSignIn' => 'Administrators: sign in with a password',
+    'auth.withPassword' => 'Sign in with a password instead',
+    'auth.providerUnavailable' => 'The sign-in service isn’t answering. Try again in a minute.',
+    'auth.finishing' => 'Finishing signing in…',
+    'auth.refused' => 'That sign-in didn’t work.',
 ];

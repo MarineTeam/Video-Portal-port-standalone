@@ -24,6 +24,8 @@ final class Csrf
         '/api/v1',
         '/cron/run',
         '/api/auth/registration-check',
+        // Apple's form_post arrives cross-site; the spent-once state is its CSRF check.
+        '/auth/callback',
         '/api/tv/pair',
         '/api/tv/poll',
         '/api/sms/status/',

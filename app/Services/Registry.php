@@ -52,6 +52,8 @@ final class Registry
             Files\LocalDiskProvider::class,
             Files\BunnyStorageProvider::class,
             Auth\LocalProvider::class,
+            Auth\OidcProvider::class,
+            Auth\Auth0Provider::class,
             Video\BunnyStreamProvider::class,
             Video\YouTubeProvider::class,
             Video\VimeoProvider::class,

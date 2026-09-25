@@ -93,6 +93,39 @@ final class Routes
             'selfRegistration' => $local->selfRegistration(),
             'breakGlass' => Access::breakGlass($this->app),
             'primary' => $this->app->services()->activeId('auth'),
+        ] + $this->externalVars($req);
+    }
+
+    /**
+     * How an external primary provider appears on /auth/login: a button for
+     * the redirect flow, the provider's own widget for the token flow; the
+     * password form then stays for administrators (and members, if allowed).
+     *
+     * @return array<string, mixed>
+     */
+    private function externalVars(Request $req): array
+    {
+        $trial = $req->query('trial') === '1' && is_array($this->app->session()->get('auth_trial'));
+        $primary = $this->app->services()->active('auth');
+        if ($trial) {
+            $t = (array) $this->app->session()->get('auth_trial');
+            $class = $this->app->services()->providerClass('auth', (string) $t['provider']);
+            $config = json_decode((string) \App\Core\Crypto::decrypt((string) $t['config']), true);
+            $primary = $class !== null && is_array($config) ? new $class($config) : null;
+        }
+        if (!$primary instanceof \App\Services\Auth\AuthProvider || $primary::id() === 'local') {
+            return ['external' => null, 'localOpen' => true];
+        }
+        $local = $this->local();
+        return [
+            'external' => [
+                'label' => $primary instanceof \App\Services\Auth\RedirectProvider ? $primary->displayName() : $primary::label(),
+                'flow' => $primary->flow(),
+                'widget' => $primary instanceof \App\Services\Auth\TokenProvider ? $primary->widget() : null,
+                'trial' => $trial,
+            ],
+            // Everybody may still try the password form while local accounts are open to members.
+            'localOpen' => $local->membersMayUse(),
         ];
     }
 

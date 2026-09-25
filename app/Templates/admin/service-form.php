@@ -26,7 +26,14 @@
     <p><?= e($result['message']) ?></p>
     <?php if ($result['steps'] !== []): ?><ul class="small"><?php foreach ($result['steps'] as $step): ?><li><?= e($step) ?></li><?php endforeach ?></ul><?php endif ?>
   </div>
-  <?php if ($result['ok'] && $token !== null): ?>
+  <?php if ($result['ok'] && $token !== null && $slot === 'auth' && $provider !== 'local'): ?>
+    <form method="post" action="<?= e(url("/admin/providers/auth/$provider/trial")) ?>" class="stack narrow">
+      <?= $v->raw(csrf_field()) ?>
+      <input type="hidden" name="token" value="<?= e($token) ?>">
+      <p class="small">Before anybody else signs in this way, you do: sign in through <?= e($class::label()) ?> as yourself (<?= e((string) ($shell['user']['email'] ?? '')) ?>). If it lets you in under the current rules, it becomes how people sign in; if not, nothing changes. Local sign-in stays open for administrators either way.</p>
+      <button type="submit" class="button primary">Sign in with <?= e($class::label()) ?> to switch</button>
+    </form>
+  <?php elseif ($result['ok'] && $token !== null): ?>
     <form method="post" action="<?= e(url("/admin/providers/$slot/$provider/switch")) ?>" class="stack narrow">
       <?= $v->raw(csrf_field()) ?>
       <input type="hidden" name="token" value="<?= e($token) ?>">
@@ -56,6 +63,10 @@
             <option value="<?= e($optValue) ?>" <?= (string) $value === (string) $optValue ? 'selected' : '' ?>><?= e($optLabel) ?></option>
           <?php endforeach ?>
         </select>
+      </label>
+    <?php elseif (!empty($field['secret']) && $type === 'textarea'): ?>
+      <label><?= e($field['label']) ?> <?= $v->raw(!empty($value) ? '<span class="badge">set</span>' : '') ?>
+        <textarea name="<?= e($key) ?>" rows="4" autocomplete="off" spellcheck="false" placeholder="<?= !empty($value) ? 'Leave blank to keep the saved value' : '' ?>"></textarea>
       </label>
     <?php elseif (!empty($field['secret'])): ?>
       <label><?= e($field['label']) ?> <?= $v->raw(!empty($value) ? '<span class="badge">set</span>' : '') ?>

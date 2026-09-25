@@ -15,6 +15,7 @@ final class Modules
         \App\Modules\Site\Routes::class,
         \App\Modules\Site\Assets::class,
         \App\Modules\Access\Routes::class,
+        \App\Modules\Access\ExternalSignIn::class,
         \App\Modules\Access\AdminRoutes::class,
         \App\Modules\Branding\AdminRoutes::class,
         \App\Modules\Themes\AdminRoutes::class,

@@ -51,8 +51,8 @@ commit as the code it describes.
 | Slot | Provider | Status | Notes |
 |---|---|---|---|
 | auth | Local accounts (password, magic link) | done | |
-| auth | Auth0 | todo | |
-| auth | OpenID Connect + presets (Google, Entra ID, Apple, Okta, Keycloak, Authentik, Zitadel, Logto, Kinde, Clerk-OIDC) | todo | |
+| auth | Auth0 | done | Redirect flow with PKCE; organization parameter rules; org_id from the verified ID token; /auth/guest; subs verbatim |
+| auth | OpenID Connect + presets (Google, Entra ID, Apple, Okta, Keycloak, Authentik, Zitadel, Logto, Kinde, Clerk-OIDC) | done | One RedirectProvider: discovery, PKCE, JWKS (RS256/ES256, kid rotation), Entra's per-tenant issuer, Apple's ES256 client secret and form_post |
 | auth | Clerk (native) | todo | |
 | auth | Supabase Auth | todo | |
 | auth | Firebase Authentication | todo | |
@@ -619,6 +619,10 @@ met, with the reason.
 - **Video feeds read their keys from the YouTube and Vimeo provider settings** (Data API key, access token) rather than YOUTUBE_API_KEY / VIMEO_ACCESS_TOKEN, and the screen names the missing one. `/admin/downloads` needs manage_plugins, as its place in the menu says.
 - **`Http` streams large transfers**: `bodyFile` uploads from disk and `sink`/`onHeaders` hand the body on in chunks, so a Bunny Storage upload, proxy or podcast copy never holds a file in memory (curl; the streams fallback can stream down but must read an upload into memory).
 - **Replacing a file only deletes the old object when this site wrote it** (`files/…`); an object imported from the zone belongs to whoever put it there.
+- **A sign-in switch needs a trial sign-in**, as the brief asks: after the test passes, the admin signs in through the new provider with the tested settings; the switch happens only if it comes back as that admin's own verified address and the current authorization rules would let them in (so a switch can't lock them out). The trial identity is linked to the admin.
+- **OpenID Connect subs are prefixed with the preset** (`google|…`, `entra|…`, `oidc|…` for a custom issuer) rather than one "oidc" prefix, so two issuers' subjects can never meet; Auth0's stay verbatim.
+- **Apple's form_post** arrives cross-site without the Lax session cookie, so /auth/callback answers such a POST with a same-origin page that re-posts it once; the spent-once state is that route's CSRF protection.
+- **Callback failures from any provider are recorded with the reason `AUTH0_CALLBACK_ERROR`**, the original's name, so existing reports keep working.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.

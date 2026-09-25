@@ -228,4 +228,10 @@ return [
     'downloads.remove' => 'Quitar',
     'downloads.button' => 'Descargar',
     'downloads.saved' => 'Guardado en este dispositivo',
+    'auth.continueWith' => 'Continuar con {provider}',
+    'auth.adminSignIn' => 'Administradores: iniciar sesión con contraseña',
+    'auth.withPassword' => 'Iniciar sesión con contraseña',
+    'auth.providerUnavailable' => 'El servicio de inicio de sesión no responde. Vuelve a intentarlo en un minuto.',
+    'auth.finishing' => 'Terminando de iniciar sesión…',
+    'auth.refused' => 'Ese inicio de sesión no ha funcionado.',
 ];
