@@ -192,4 +192,17 @@ carries on from where it stopped.
 - `storage/uploads/` — uploaded files (when files are stored on this host).
 - `storage/logs/` — readable at Admin → Logs.
 
-Backups of the database can be downloaded from Admin → Backup & import.
+## Backups
+
+Admin → Backup & import → *Make a backup* downloads the whole database as a
+`.sql.gz` file. It is written a few thousand rows per request, so a large site
+never hits the host's time limit, and it is deleted from the server once it
+has downloaded. The same page offers the uploaded files as zip files of about
+100 MB each; download every part.
+
+Keep `storage/config.php` with your backups: saved passwords and API keys in
+the database are encrypted with the key it holds. To restore, create an empty
+database, import the `.sql.gz` with phpMyAdmin (*Import*), upload the site's
+files and your `storage/` folder (with `config.php`, and the unzipped
+`uploads/` and `media/` folders), and correct the database details in
+`storage/config.php` if they changed.

@@ -46,6 +46,13 @@ final class Jobs
                 $n++;
             }
         }
+        foreach (glob($app->paths->storage('tmp/backups') . '/*') ?: [] as $file) {
+            // A backup or files part nobody downloaded.
+            if (is_file($file) && (int) @filemtime($file) < time() - 86400) {
+                @unlink($file);
+                $n++;
+            }
+        }
         foreach (glob($app->paths->storage('tmp/release') . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
             $state = json_decode((string) @file_get_contents("$dir/state.json"), true);
             if (($state['stage'] ?? null) !== 'swapped' && (int) @filemtime($dir) < time() - 2 * 86400) {
