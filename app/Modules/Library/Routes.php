@@ -29,8 +29,10 @@ final class Routes
     {
         Pages::register($r, $app);
         Listings::register($r, $app);
+        Feeds::register($r, $app);
         $r->get('/api/videos/local/[name]', fn (Request $req, array $p) => self::local($app, $p['name'], $req));
         $r->get('/api/files/[id]/content', fn (Request $req, array $p) => self::fileContent($app, $p['id'], $req));
+        $r->post('/api/view-events', fn (Request $req) => self::viewEvent($app, $req));
         $r->post('/api/watch-progress', fn (Request $req) => self::progress($app, $req, false));
         $r->post('/api/watch-progress/mark-watched', fn (Request $req) => self::progress($app, $req, true));
         $app->hooks->on('jobs.register', function (\App\Modules\Jobs\Scheduler $s) use ($app): void {
@@ -43,6 +45,65 @@ final class Routes
                 (new Videos($app))->reconcileLocal();
             }
         });
+    }
+
+    public const VIEWS_COOKIE = 'mt_views';
+
+    /**
+     * The view beacon a series or video page fires once it has loaded. Two
+     * throttles, one per browser per item per thirty minutes: a cookie
+     * (free, so a repeat view costs no query at all) and, because a script
+     * sends no cookie, an HMAC of the caller's address checked against the
+     * recent events. A view that passes both is a ViewEvent (for trending and
+     * analytics) and one more on the item's view count.
+     */
+    private static function viewEvent(App $app, Request $req): Response
+    {
+        $data = Validator::check($req->input(), ['seriesId' => ['id', 'nullable'], 'videoId' => ['id', 'nullable']]);
+        $videoId = $data['videoId'] ?? null;
+        $seriesId = $videoId === null ? ($data['seriesId'] ?? null) : null;
+        $item = $videoId ?? $seriesId;
+        if ($item === null) {
+            throw ApiError::invalid('Say which series or video was viewed.');
+        }
+        $now = time();
+        $seen = [];
+        foreach (explode('.', (string) $req->cookie(self::VIEWS_COOKIE)) as $entry) {
+            if (preg_match('/^([a-z0-9]{8,32})-(\d{1,10})$/', $entry, $m) && (int) $m[2] > $now - ViewKey::THROTTLE_SECONDS) {
+                $seen[$m[1]] = (int) $m[2];
+            }
+        }
+        if (isset($seen[$item])) {
+            return Response::json(['ok' => true, 'counted' => false]);
+        }
+        $db = $app->db();
+        $access = ContentAccess::for($app);
+        if ($videoId !== null) {
+            $row = $db->one('SELECT * FROM {{videos}} WHERE id = ? AND deleted_at IS NULL', [$videoId]);
+            $series = $row !== null && $row['series_id'] !== null ? $db->one('SELECT * FROM {{series}} WHERE id = ?', [$row['series_id']]) : null;
+            $ok = $row !== null && $access->video($row, $series) === ContentAccess::OK;
+        } else {
+            $row = $db->one('SELECT * FROM {{series}} WHERE id = ? AND deleted_at IS NULL', [$seriesId]);
+            $ok = $row !== null && $access->series($row) === ContentAccess::OK;
+        }
+        if (!$ok) {
+            throw ApiError::notFound();
+        }
+        $key = ViewKey::viewKey($req->ip, (string) ($app->config['app_key'] ?? ''));
+        $column = $videoId !== null ? 'video_id' : 'series_id';
+        $recent = $key !== null && $db->value(
+            "SELECT 1 FROM {{view_events}} WHERE ip_hash = ? AND $column = ? AND created_at > ? LIMIT 1",
+            [$key, $item, \App\Core\Db::datetime(new \DateTimeImmutable('-' . ViewKey::THROTTLE_SECONDS . ' seconds'))],
+        ) !== null;
+        if (!$recent) {
+            $db->insert('view_events', ['id' => Id::new(), $column => $item, 'user_id' => $access->viewer()->id(), 'ip_hash' => $key]);
+            $db->run('UPDATE {{' . ($videoId !== null ? 'videos' : 'series') . '}} SET view_count = view_count + 1 WHERE id = ?', [$item]);
+        }
+        $seen[$item] = $now;
+        arsort($seen);
+        $value = implode('.', array_map(fn ($id, $at) => "$id-$at", array_keys(array_slice($seen, 0, 40, true)), array_slice($seen, 0, 40, true)));
+        return Response::json(['ok' => true, 'counted' => !$recent])
+            ->cookie(self::VIEWS_COOKIE, $value, ['maxAge' => ViewKey::THROTTLE_SECONDS, 'secure' => $req->https]);
     }
 
     /**

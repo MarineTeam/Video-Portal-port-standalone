@@ -11,6 +11,7 @@
  * @var bool $signedIn
  */
 ?>
+<div hidden data-view-event="<?= e(\App\Core\View::json(['seriesId' => $series['id']])) ?>"></div>
 <?= $v->partial('partials/library-crumbs', ['trail' => $trail]) ?>
 <?php if ($preview): ?><p class="notice warn"><?= e(t('library.preview')) ?></p><?php endif ?>
 <header class="series-head">

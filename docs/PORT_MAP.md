@@ -31,7 +31,7 @@ commit as the code it describes.
 | Core framework (Router, Db, View, Session, Csrf, Http, Hooks, Cache, Jobs, Migrator, Log, errors) | core | done | app/Core; PHPStan level 6 clean |
 | Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | partial | Installer done and covered by the smoke test; /admin/update done (maintenance, resumable migrations, signed release zips with rollback; verified end to end against a scratch install); /admin/tools backup (.sql.gz a step per request, restores exactly — BackupTest) and files in 100 MB parts done; the Next.js import pending |
 | Services registry and Admin → Services | core | partial | Registry, generated forms, signed test-then-switch at /admin/providers; auth trial-mode switch arrives with external providers |
-| Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | todo | |
+| Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | partial | Admin, providers, player, public pages, search, feeds, sitemap, JSON-LD done; share links, downloads, video feeds, home rows, chapters, comments/related (plugins) to come |
 | Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | todo | |
 | Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | partial | Branding, i18n, nav, device settings, per-device bottom bar, inbox, profile shell, data export, query monitor done; video feeds with the Library (step 3) |
 | Read API `/api/v1` | core | todo | |
@@ -381,16 +381,16 @@ commit as the code it describes.
 | `/api/v1/series` | GET | todo | |
 | `/api/v1/videos` | GET | todo | |
 | `/api/videos/outline` | PUT | todo | |
-| `/api/view-events` | POST | todo | |
+| `/api/view-events` | POST | done | 30-minute cookie (mt_views) plus the HMAC address throttle; counts only what the caller may open |
 | `/api/watch-later` | POST | todo | |
 | `/api/watch-progress/mark-watched` | POST | done | The one way to clear a completion |
 | `/api/watch-progress` | POST | done | Only ever sets completed; never clears it |
 | `/auth/guest` | GET | partial | 404s unless the switch is open and the primary provider can build a guest URL (Auth0, step 3) |
 | `/events/[slug]/event.ics` | GET | todo | |
 | `/events/calendar.ics` | GET | todo | |
-| `/feed.xml` | GET | todo | |
+| `/feed.xml` | GET | done | Built as a visitor sees the site, whoever asks |
 | `/s/[token]` | GET | todo | |
-| `/series/[slug]/podcast.xml` | GET | todo | |
+| `/series/[slug]/podcast.xml` | GET | done | Opted-in audio only; 404 for a members-only series; enclosure is /api/files/[id]/content until the Bunny public zone arrives (3.6) |
 
 ## Models (Appendix B) — 95
 
@@ -615,6 +615,8 @@ met, with the reason.
 - **Vendored browser code for video:** `public/vendor-js/tus/` (tus-js-client 4.3.1) and `public/vendor-js/hls/` (hls.js light 1.6.15), each with its LICENSE and VERSION.
 - **The player speaks each embed's postMessage protocol itself** (YouTube's widget messages, Vimeo's player API messages, Player.js for Bunny) instead of loading the YouTube IFrame API, the Vimeo Player SDK or player.js into the page: no third-party script runs in the site's origin, and the CSP needs only frame-src for them. The heartbeat is accurate wherever a protocol or a native `<video>` reports position, elapsed-time elsewhere (Google Drive preview).
 - **Host-disk video is the one exception to "video bytes never pass through PHP"**: its upload is chunked through the site (there is nowhere else for it to go) and a video not everybody may watch streams through `/api/videos/local/[name]`, offloaded by X-Sendfile / X-Accel-Redirect / X-LiteSpeed-Location where detected. Videos anybody may watch sit in `public/media/videos/` for the web server; a `local-videos` job (every five minutes) and every change above a video (category, series, viewer restriction, restore — the `library.changed` hook the library's audit fires) move files between the two, so a take-down time or a category going members-only never leaves a public copy.
+- **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
+- **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log

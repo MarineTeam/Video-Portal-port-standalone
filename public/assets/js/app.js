@@ -73,3 +73,12 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
 }
 
 MT.hooks.do('ready', document);
+
+// The view beacon: <body data-view-event='{"videoId":"…"}'> or on any element.
+// The server throttles repeats; a failure here is never the reader's problem.
+const viewed = document.querySelector('[data-view-event]');
+if (viewed) {
+  try {
+    MT.api('/api/view-events', { method: 'POST', body: JSON.parse(viewed.dataset.viewEvent) }).catch(() => {});
+  } catch { /* malformed attribute */ }
+}

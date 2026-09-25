@@ -19,6 +19,7 @@ use App\Support\Timestamp;
 
 $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
 ?>
+<div hidden data-view-event="<?= e(\App\Core\View::json(['videoId' => $video['id']])) ?>"></div>
 <?= $v->partial('partials/library-crumbs', ['trail' => $trail, 'series' => $series]) ?>
 <?php if ($preview): ?><p class="notice warn"><?= e(t('library.preview')) ?></p><?php endif ?>
 
