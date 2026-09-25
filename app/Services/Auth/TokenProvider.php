@@ -20,10 +20,12 @@ interface TokenProvider extends AuthProvider
     public function identityFromToken(string $jwt, array $organizationIds): Identity;
 
     /**
-     * What /auth/login needs to mount the provider's sign-in: its script and
-     * the settings the page script reads (nothing secret).
+     * What /auth/login needs to mount the provider's sign-in: its scripts
+     * (loaded from the provider's own CDN, in order), the settings the page
+     * script reads (nothing secret, and "kind" says which provider), and the
+     * hosts the page's CSP must allow for them.
      *
-     * @return array{script: string, config: array<string, mixed>}
+     * @return array{scripts: list<string>, config: array<string, mixed>, csp: array<string, list<string>>}
      */
     public function widget(): array;
 }

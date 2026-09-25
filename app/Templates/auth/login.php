@@ -6,7 +6,7 @@
  * @var string $returnTo
  * @var bool $magicLink
  * @var bool $selfRegistration
- * @var ?array{label: string, flow: string, widget: ?array{script: string, config: array<string, mixed>}, trial: bool} $external
+ * @var ?array{label: string, flow: string, widget: ?array{scripts: list<string>, config: array<string, mixed>, csp: array<string, list<string>>}, trial: bool} $external
  * @var bool $localOpen whether members may use the password form beside an external provider
  * @var array $shell
  */
@@ -19,7 +19,8 @@
   <?php elseif ($external['widget'] !== null): ?>
     <div id="external-sign-in" data-token-sign-in="<?= e(\App\Core\View::json($external['widget']['config'] + ['returnTo' => $returnTo, 'trial' => $external['trial']])) ?>"></div>
     <p class="error" data-token-error hidden></p>
-    <script src="<?= e($external['widget']['script']) ?>" crossorigin="anonymous" async data-token-sdk></script>
+    <?php foreach ($external['widget']['scripts'] as $src): ?><script src="<?= e($src) ?>" crossorigin="anonymous" defer data-token-sdk></script>
+    <?php endforeach ?>
     <script type="module" src="<?= e(asset('js/token-sign-in.js')) ?>"></script>
   <?php endif ?>
   <details class="card"<?= $error !== null ? ' open' : '' ?>>

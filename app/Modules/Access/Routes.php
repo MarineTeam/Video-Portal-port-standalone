@@ -117,6 +117,14 @@ final class Routes
             return ['external' => null, 'localOpen' => true];
         }
         $local = $this->local();
+        if ($primary instanceof \App\Services\Auth\TokenProvider) {
+            // The provider's scripts, APIs and frames, on this page only.
+            foreach ($primary->widget()['csp'] as $directive => $origins) {
+                foreach ($origins as $origin) {
+                    $this->app->addCspSource($directive, $origin);
+                }
+            }
+        }
         return [
             'external' => [
                 'label' => $primary instanceof \App\Services\Auth\RedirectProvider ? $primary->displayName() : $primary::label(),

@@ -53,9 +53,9 @@ commit as the code it describes.
 | auth | Local accounts (password, magic link) | done | |
 | auth | Auth0 | done | Redirect flow with PKCE; organization parameter rules; org_id from the verified ID token; /auth/guest; subs verbatim |
 | auth | OpenID Connect + presets (Google, Entra ID, Apple, Okta, Keycloak, Authentik, Zitadel, Logto, Kinde, Clerk-OIDC) | done | One RedirectProvider: discovery, PKCE, JWKS (RS256/ES256, kid rotation), Entra's per-tenant issuer, Apple's ES256 client secret and form_post |
-| auth | Clerk (native) | todo | |
+| auth | Clerk (native) | done | Token flow: ClerkJS from the Frontend API, session JWT verified against its JWKS, azp must be this site; address from a JWT template or the Backend API |
 | auth | Supabase Auth | todo | |
-| auth | Firebase Authentication | todo | |
+| auth | Firebase Authentication | done | Token flow: Firebase JS SDK (Google popup, email and password); ID token checked against Google's certificates, issuer and project |
 | video | bunny.net Stream | done | tus upload, signed embeds, CDN token, MP4 renditions, captions, library import |
 | video | YouTube | done | Links (oEmbed or Data API); upload through a resumable session the server opens with OAuth |
 | video | Vimeo | done | Links; with a token: tus upload, captions, MP4 files |
