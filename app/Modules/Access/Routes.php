@@ -46,6 +46,8 @@ final class Routes
         $r->post('/auth/magic/[token]', [$self, 'magicUse']);
         $r->get('/auth/guest', [$self, 'guest']);
         $r->get('/access-denied', [$self, 'accessDenied']);
+        $r->get('/auth/recover', [$self, 'recoverForm']);
+        $r->post('/auth/recover', [$self, 'recoverSubmit']);
         $r->post('/api/auth/registration-check', [$self, 'registrationCheck']);
     }
 
@@ -126,11 +128,15 @@ final class Routes
         return $this->finish($req, $user, 'LOGIN');
     }
 
-    /** Local sign-in is always open to ADMIN accounts; to members when it's primary or allowed. */
+    /**
+     * Local sign-in is open to ADMIN accounts unless an administrator turned
+     * that off (and always while the break-glass file exists), and to members
+     * when it is the primary provider or allowed beside another.
+     */
     private function mayUseLocal(array $user): bool
     {
         if (($user['role'] ?? '') === 'ADMIN') {
-            return true;
+            return $this->app->settings()->bool('auth.local_for_admins', true) || Access::breakGlass($this->app);
         }
         return $this->app->services()->activeId('auth') === 'local' || $this->local()->membersMayUse();
     }
@@ -362,6 +368,65 @@ final class Routes
         }
         $response = $this->page('access-denied', ['guestOpen' => $open]);
         return $response;
+    }
+
+    /**
+     * The lockout path that needs neither email nor a shell. While
+     * storage/enable-local-login exists, this page accepts a code the app
+     * writes to storage/recovery.key — readable only by somebody with the
+     * site's files, the same proof the installer asks for — and sets a new
+     * password for an administrator.
+     */
+    private function recoveryCode(): ?string
+    {
+        if (!Access::breakGlass($this->app)) {
+            return null;
+        }
+        $file = $this->app->paths->storage('recovery.key');
+        if (!is_file($file)) {
+            @file_put_contents($file, bin2hex(random_bytes(16)) . "\n");
+            @chmod($file, 0640);
+        }
+        $code = trim((string) @file_get_contents($file));
+        return $code === '' ? null : $code;
+    }
+
+    public function recoverForm(Request $req): Response
+    {
+        if ($this->recoveryCode() === null) {
+            return ErrorPage::render(404);
+        }
+        return $this->page('auth/recover', ['error' => null]);
+    }
+
+    public function recoverSubmit(Request $req): Response
+    {
+        $code = $this->recoveryCode();
+        if ($code === null) {
+            return ErrorPage::render(404);
+        }
+        $db = $this->app->db();
+        $limiter = new RateLimiter($db);
+        $bucket = RateLimiter::bucket('recover-ip', $req->ip);
+        if ($limiter->blocked($bucket) > 0) {
+            return $this->page('auth/recover', ['error' => 'Too many attempts. Wait a few minutes.'], 429);
+        }
+        $input = $req->input();
+        $email = Authorization::normalizeEmail((string) ($input['email'] ?? ''));
+        $password = (string) ($input['password'] ?? '');
+        $user = $db->one("SELECT * FROM {{users}} WHERE email = ? AND role = 'ADMIN'", [$email]);
+        if (!hash_equals($code, trim((string) ($input['code'] ?? ''))) || $user === null) {
+            $limiter->fail($bucket, free: 5);
+            return $this->page('auth/recover', ['error' => 'That code and address don’t match an administrator.'], 400);
+        }
+        if (($problem = Passwords::problem($password, $email)) !== null) {
+            return $this->page('auth/recover', ['error' => $problem], 400);
+        }
+        $db->update('users', ['password_hash' => Passwords::hash($password), 'email_verified_at' => $user['email_verified_at'] ?? Db::now()], ['id' => $user['id']]);
+        $db->delete('sessions', ['user_id' => $user['id']]);
+        @unlink($this->app->paths->storage('recovery.key'));
+        \App\Modules\Audit\Audit::log($db, $email, 'auth.recover', 'User', (string) $user['id'], 'Password set through storage/enable-local-login');
+        return $this->message(t('auth.resetTitle'), t('auth.passwordChanged') . ' Delete storage/enable-local-login once you are back in.');
     }
 
     /**

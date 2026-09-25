@@ -22,7 +22,8 @@ jobs:
           extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, zip, intl, curl
           coverage: none
       - name: php -l across the tree
-        run: find app install bin public plugins themes tests tools -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+        # tests/fixtures holds plugins that are broken on purpose.
+        run: find app install bin public plugins themes tests tools -name '*.php' -not -path 'tests/fixtures/*' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
       - name: No process functions in shipped code
         run: php tools/ci/check-banned.php
       - name: Every template output escaped

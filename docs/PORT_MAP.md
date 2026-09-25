@@ -18,7 +18,7 @@ commit as the code it describes.
 | Step | What | Status |
 |---|---|---|
 | 1 | Read the brief; write this map | done |
-| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | todo |
+| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | partial — remaining: /admin/branding, /admin/appearance, /admin/update, /admin/tools, the profile shell |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | todo |
 | 4 | Bundled plugins, simplest first | todo |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
@@ -28,16 +28,16 @@ commit as the code it describes.
 
 | Area | Kind | Status | Notes |
 |---|---|---|---|
-| Core framework (Router, Db, View, Session, Csrf, Http, Hooks, Cache, Jobs, Migrator, Log, errors) | core | todo | |
-| Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | todo | |
-| Services registry and Admin → Services | core | todo | |
+| Core framework (Router, Db, View, Session, Csrf, Http, Hooks, Cache, Jobs, Migrator, Log, errors) | core | done | app/Core; PHPStan level 6 clean |
+| Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | partial | Installer done and covered by the smoke test; /admin/update and /admin/tools pending |
+| Services registry and Admin → Services | core | partial | Registry, generated forms, signed test-then-switch at /admin/providers; auth trial-mode switch arrives with external providers |
 | Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | todo | |
 | Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | todo | |
 | Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | todo | |
 | Read API `/api/v1` | core | todo | |
-| PWA and offline shell (sw.js, offline.html, manifest) | core | todo | |
-| Plugin loader, auto-deactivation, per-category overrides | core | todo | |
-| Theme loader, default theme, customizer | core | todo | |
+| PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
+| Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
+| Theme loader, default theme, customizer | core | partial | Loader, fallback, default theme; /admin/appearance pending |
 | Member plugins (favorites … downloads, 21 of Appendix E) | plugins | todo | |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
@@ -77,9 +77,9 @@ commit as the code it describes.
 
 | Path | Status | Notes |
 |---|---|---|
-| `/` | todo | |
-| `/access-denied` | todo | |
-| `/admin` | todo | |
+| `/` | partial | Welcome page listing top-level categories; the library home (rows, hero) arrives with the Library module |
+| `/access-denied` | done | One plain sentence; guest link only while the switch is open |
+| `/admin` | partial | Dashboard with counts and setup warnings; library cards pending |
 | `/admin/access-attempts` | todo | |
 | `/admin/analytics` | todo | |
 | `/admin/announcements` | todo | |
@@ -104,7 +104,7 @@ commit as the code it describes.
 | `/admin/media-check` | todo | |
 | `/admin/people` | todo | |
 | `/admin/permissions` | todo | |
-| `/admin/plugins` | todo | |
+| `/admin/plugins` | done | Activate, per-category overrides, zip install/delete, auto-deactivation notices; never loads third-party plugins |
 | `/admin/prayer` | todo | |
 | `/admin/query-monitor` | todo | |
 | `/admin/schedules` | todo | |
@@ -240,10 +240,10 @@ commit as the code it describes.
 | `/api/admin/people` | GET POST | todo | |
 | `/api/admin/permission-groups/[id]` | PATCH DELETE | todo | |
 | `/api/admin/permission-groups` | GET POST | todo | |
-| `/api/admin/plugins/[slug]/overrides` | POST | todo | |
-| `/api/admin/plugins/[slug]` | PATCH | todo | |
-| `/api/admin/plugins/overrides/[id]` | DELETE | todo | |
-| `/api/admin/plugins` | GET | todo | |
+| `/api/admin/plugins/[slug]/overrides` | POST | done |  |
+| `/api/admin/plugins/[slug]` | PATCH | done |  |
+| `/api/admin/plugins/overrides/[id]` | DELETE | done |  |
+| `/api/admin/plugins` | GET | done | PLUGIN_META slugs plus installed packages; never the query-monitor row |
 | `/api/admin/prayer/[id]` | PATCH DELETE | todo | |
 | `/api/admin/prayer` | GET | todo | |
 | `/api/admin/query-monitor` | PATCH | todo | |
@@ -295,7 +295,7 @@ commit as the code it describes.
 | `/api/admin/videos/viewers/[id]` | DELETE | todo | |
 | `/api/admin/webhooks/[id]` | PATCH DELETE | todo | |
 | `/api/admin/webhooks` | GET POST | todo | |
-| `/api/auth/registration-check` | POST | todo | |
+| `/api/auth/registration-check` | POST | done | Bearer secret from settings, fails closed, {allowed} only, rate-limited, records SIGNUP refusals |
 | `/api/calendar-events` | GET | todo | |
 | `/api/calendar/[token]/marine-team.ics` | GET | todo | |
 | `/api/comments/[id]/report` | POST | todo | |
@@ -328,8 +328,8 @@ commit as the code it describes.
 | `/api/live/[id]/chat/[messageId]` | DELETE | todo | |
 | `/api/live/[id]/chat/mute` | POST | todo | |
 | `/api/live/[id]/chat` | GET POST | todo | |
-| `/api/locale` | POST | todo | |
-| `/api/manifest` | GET | todo | |
+| `/api/locale` | POST | done | Sets marine-locale cookie |
+| `/api/manifest` | GET | done | From branding, base-path aware |
 | `/api/notes/[id]` | PATCH DELETE | todo | |
 | `/api/notes` | GET POST | todo | |
 | `/api/offline/hymnal/[seriesId]` | GET | todo | |
@@ -385,7 +385,7 @@ commit as the code it describes.
 | `/api/watch-later` | POST | todo | |
 | `/api/watch-progress/mark-watched` | POST | todo | |
 | `/api/watch-progress` | POST | todo | |
-| `/auth/guest` | GET | todo | |
+| `/auth/guest` | GET | partial | 404s unless the switch is open and the primary provider can build a guest URL (Auth0, step 3) |
 | `/events/[slug]/event.ics` | GET | todo | |
 | `/events/calendar.ics` | GET | todo | |
 | `/feed.xml` | GET | todo | |
@@ -394,14 +394,14 @@ commit as the code it describes.
 
 ## Models (Appendix B) — 95
 
-Table names are `<prefix>` + the snake_case plural shown. Status covers the table in `0001_init.sql` and the module that owns its reads/writes.
+Table names are `<prefix>` + the snake_case plural shown. **Every model's table exists in `app/Migrations/0001_init.sql`** (applied and re-applied cleanly on MariaDB 10.11 locally; MySQL 8.0 and MariaDB 10.6 in CI). A row's status is about the module that owns its reads and writes; `todo` means the table is there and nothing uses it yet.
 
 | Model | Table | Status | Notes |
 |---|---|---|---|
-| User | `users` | todo | |
-| UserIdentity | `user_identities` | todo | |
-| CategoryEditor | `category_editors` | todo | |
-| SeriesEditor | `series_editors` | todo | |
+| User | `users` | partial | Table + local-account columns; sign-in, revocation, roles done; admin screens pending |
+| UserIdentity | `user_identities` | done | Written by SignIn::complete; sub namespaced except Auth0 |
+| CategoryEditor | `category_editors` | partial | Honoured by Permissions; admin screens pending |
+| SeriesEditor | `series_editors` | partial | Honoured by Permissions; admin screens pending |
 | Category | `categories` | todo | |
 | Series | `series` | todo | |
 | Video | `videos` | todo | |
@@ -426,11 +426,11 @@ Table names are `<prefix>` + the snake_case plural shown. Status covers the tabl
 | ReadingProgress | `reading_progresses` | todo | |
 | ReadingMark | `reading_marks` | todo | |
 | ApiKey | `api_keys` | todo | |
-| AuditLog | `audit_logs` | todo | |
-| Plugin | `plugins` | todo | |
-| PluginCategoryOverride | `plugin_category_overrides` | todo | |
-| PermissionGroup | `permission_groups` | todo | |
-| GroupAssignment | `group_assignments` | todo | |
+| AuditLog | `audit_logs` | partial | Written by Audit::log; /admin/audit pending |
+| Plugin | `plugins` | done | Plus bundled, version, deactivation columns |
+| PluginCategoryOverride | `plugin_category_overrides` | done |  |
+| PermissionGroup | `permission_groups` | partial | Honoured by Permissions; /admin/permissions pending |
+| GroupAssignment | `group_assignments` | partial | Honoured by Permissions; admin screens pending |
 | Rating | `ratings` | todo | |
 | SeriesWatchLater | `series_watch_laters` | todo | |
 | CategoryWatchLater | `category_watch_laters` | todo | |
@@ -460,11 +460,11 @@ Table names are `<prefix>` + the snake_case plural shown. Status covers the tabl
 | DownloadPolicy | `download_policies` | todo | |
 | DownloadPolicyGroup | `download_policy_groups` | todo | |
 | DownloadPolicyUser | `download_policy_users` | todo | |
-| AuthSettings | `auth_settings` | todo | |
-| AuthorizedEmail | `authorized_emails` | todo | |
-| UnauthorizedAccessAttempt | `unauthorized_access_attempts` | todo | |
+| AuthSettings | `auth_settings` | partial | Read by /auth/guest and /access-denied; admin toggle pending |
+| AuthorizedEmail | `authorized_emails` | partial | Checked on every request, bootstrap adoption; /admin/authorized-emails pending |
+| UnauthorizedAccessAttempt | `unauthorized_access_attempts` | partial | Recorded with hourly alert dedupe and 90-day prune; /admin/access-attempts pending |
 | Notification | `notifications` | todo | |
-| BrandSettings | `brand_settings` | todo | |
+| BrandSettings | `brand_settings` | partial | Loaded, normalised, painted as custom properties, set by the installer; /admin/branding pending |
 | Schedule | `schedules` | todo | |
 | ScheduleSource | `schedule_sources` | todo | |
 | Person | `people` | todo | |
@@ -500,39 +500,39 @@ Each becomes a PHPUnit test class with the original case names.
 
 | Original | Status | Notes |
 |---|---|---|
-| `lib/active-path.test.ts` | todo | |
-| `lib/admin-nav.test.ts` | todo | |
+| `lib/active-path.test.ts` | done | tests/Unit/Admin/ActivePathTest.php |
+| `lib/admin-nav.test.ts` | done | tests/Unit/Admin/AdminNavTest.php |
 | `lib/api-keys.test.ts` | todo | |
 | `lib/api-v1.test.ts` | todo | |
 | `lib/attendance.test.ts` | todo | |
-| `lib/authorization.test.ts` | todo | |
+| `lib/authorization.test.ts` | partial | tests/Unit/Access/AuthorizationTest.php; the three guest-login cases need the DB and arrive with the admin toggle |
 | `lib/book-contents.test.ts` | todo | |
-| `lib/branding.test.ts` | todo | |
+| `lib/branding.test.ts` | done | tests/Unit/Branding/BrandingTest.php |
 | `lib/broadcast.test.ts` | todo | |
 | `lib/bunny.test.ts` | todo | |
 | `lib/client-bundle.test.ts` | todo | |
 | `lib/content-language.test.ts` | todo | |
-| `lib/content.test.ts` | todo | |
+| `lib/content.test.ts` | partial | categoryChainIds cases in PermissionsTest; canAccess and sequential unlock arrive with the Library |
 | `lib/cover.test.ts` | todo | |
-| `lib/cron-guard.test.ts` | todo | |
+| `lib/cron-guard.test.ts` | done | tests/Unit/Jobs/CronGuardTest.php (no development exception: see Deviations) |
 | `lib/cron.test.ts` | todo | |
 | `lib/cross-site.test.ts` | todo | |
 | `lib/data-export.test.ts` | todo | |
-| `lib/device-settings.test.ts` | todo | |
+| `lib/device-settings.test.ts` | done | tests/js/device-settings.test.mjs |
 | `lib/directory.test.ts` | todo | |
 | `lib/download-source.test.ts` | todo | |
 | `lib/downloads.test.ts` | todo | |
 | `lib/event-series.test.ts` | todo | |
 | `lib/events.test.ts` | todo | |
-| `lib/filename.test.ts` | todo | |
+| `lib/filename.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/forms.test.ts` | todo | |
 | `lib/group-messages.test.ts` | todo | |
 | `lib/groups.test.ts` | todo | |
 | `lib/guides.test.ts` | todo | |
 | `lib/hymnal.test.ts` | todo | |
-| `lib/i18n/i18n.test.ts` | todo | |
+| `lib/i18n/i18n.test.ts` | done | tests/Unit/I18n/I18nTest.php |
 | `lib/ics.test.ts` | todo | |
-| `lib/identity-linking.test.ts` | todo | |
+| `lib/identity-linking.test.ts` | done | tests/Unit/Access/IdentityLinkingTest.php |
 | `lib/live-chat.test.ts` | todo | |
 | `lib/names.test.ts` | todo | |
 | `lib/nav-tabs.test.ts` | todo | |
@@ -540,16 +540,16 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/offline-shell.test.ts` | todo | |
 | `lib/outline.test.ts` | todo | |
 | `lib/page-offset.test.ts` | todo | |
-| `lib/permissions.test.ts` | todo | |
-| `lib/plugins.test.ts` | todo | |
+| `lib/permissions.test.ts` | done | tests/Unit/Access/PermissionsTest.php |
+| `lib/plugins.test.ts` | done | tests/Unit/Plugins/PluginStatesTest.php |
 | `lib/podcast-mirror.test.ts` | todo | |
 | `lib/prayer.test.ts` | todo | |
-| `lib/public-url.test.ts` | todo | |
-| `lib/push-endpoint.test.ts` | todo | |
+| `lib/public-url.test.ts` | done | tests/Unit/Core/PublicUrlTest.php |
+| `lib/push-endpoint.test.ts` | done | tests/Unit/Push/PushEndpointTest.php |
 | `lib/reader-cache.test.ts` | todo | |
 | `lib/reader.test.ts` | todo | |
 | `lib/recurrence.test.ts` | todo | |
-| `lib/reorder.test.ts` | todo | |
+| `lib/reorder.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/rota.test.ts` | todo | |
 | `lib/schedules/duplicates.test.ts` | todo | |
 | `lib/schedules/logic.test.ts` | todo | |
@@ -559,7 +559,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/share-password.test.ts` | todo | |
 | `lib/sheets/dates.test.ts` | todo | |
 | `lib/sheets/parse.test.ts` | todo | |
-| `lib/slug.test.ts` | todo | |
+| `lib/slug.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/sms.test.ts` | todo | |
 | `lib/toc-nav.test.ts` | todo | |
 | `lib/transcribe-worker.test.ts` | todo | |
@@ -567,12 +567,12 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/tv-feed.test.ts` | todo | |
 | `lib/tv-nav.test.ts` | todo | |
 | `lib/tv-pairing.test.ts` | todo | |
-| `lib/upload-types.test.ts` | todo | |
+| `lib/upload-types.test.ts` | done | tests/Unit/Files/UploadTypesTest.php |
 | `lib/validation/schemas.test.ts` | todo | |
 | `lib/verses.test.ts` | todo | |
 | `lib/video-feed-sync.test.ts` | todo | |
 | `lib/video-source.test.ts` | todo | |
-| `lib/view-key.test.ts` | todo | |
+| `lib/view-key.test.ts` | done | tests/Unit/Library/ViewKeyTest.php |
 
 ## Security review (route by route)
 
@@ -588,7 +588,17 @@ output escaping, SSRF). No rows yet.
 Decisions in the brief that turned out wrong or impossible against what was
 met, with the reason.
 
-- *(none yet)*
+- **Admin → Services lives at `/admin/providers`.** Appendix C gives `/admin/services` to service plans, and the compatibility contract wins; the menu still says "Services".
+- **The cron guard has no development exception.** The original stayed open with no secret outside production; the brief says fail closed, so `CronGuardTest` replaces "stays open in development" with "fails closed everywhere".
+- **SMTP is a native client, not PHPMailer.** PHPMailer is on the allowed list, not required; a ~250-line client with STARTTLS/TLS and AUTH PLAIN/LOGIN keeps the release free of vendored code for this slot. Swap in PHPMailer later without changing the provider's interface if a host needs something it lacks.
+- **The installer's Services step explains the defaults rather than testing providers.** Local sign-in and local files are set; email, video and texting are "set up later" at Admin → Services, where every provider is tested before switching. Testing inside the wizard would duplicate that screen.
+- **Bundled plugins default to active**, as the brief says of `ensurePluginsSeeded()`; FEATURES.md's "off until an admin turns it on" describes the original's UI, not its seeding.
+- **Vendored viewers stay at `/pdfjs/`, `/epubjs/`, `/tesseract/`** (Appendix H) rather than under `public/vendor-js/`: the offline shell and saved caches name those paths.
+- **`sw.js` and `offline.html` derive the base path** (from the service worker's own URL) and prefix their literal paths with it. At a domain root they behave byte-for-byte as before.
+- **Schema additions:** `users.password_hash`, `email_verified_at`, `pending_email` (local accounts); `file_assets.backend`, `storage_path` (was `bunnyPath`), `upload_pending`; `push_subscriptions.endpoint_hash` (the unique index; a push URL can outrun an index prefix); `broadcast_recipients.provider`, `provider_message_id`, `delivery_status`, `delivered_at` (SMS receipts); plus `series_tags`, `video_scripture_books`, `sessions`, `services`, `settings`, `jobs`, `email_log`, `auth_tokens`, `rate_limits`, `uploads`. Tables are plural snake_case (`watch_progresses`, `people`).
+- **`/auth/recover`** is new under `/auth/*`: with `storage/enable-local-login` present it sets an administrator's password against a code written to `storage/recovery.key` — the lockout path when email isn't set up.
+- **Browser-module tests run under `node --test`** in CI (development only; nothing Node ships).
+- **`MT_STORAGE_DIR`** overrides the storage directory for the test suite only.
 
 ## Session log
 
@@ -596,3 +606,10 @@ met, with the reason.
   prompt rather than as a committed file; it should be committed as
   `PORT_PROMPT.md` at the repository root so later sessions have the
   appendices.
+- 2026-09-25 — step 2 largely done: core framework, full schema, installer
+  (smoke-tested over HTTP), local sign-in with recovery, services registry
+  with email (none, mail(), SMTP, Resend) and local files, plugin loader with
+  every auto-deactivation path proven, theme loader, jobs and /cron/run, i18n,
+  device settings, PWA static files, CI. 185 unit, 8 integration and 15
+  browser-module tests. Next: the remaining step-2 admin pages (branding,
+  appearance, update, tools, profile shell), then step 3 (the Library).

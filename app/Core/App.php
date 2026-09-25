@@ -227,6 +227,15 @@ final class App
         } else {
             $this->themes()->boot(defaultOnly: true);
         }
+        $this->hooks->do('capabilities.register', static function (string $key, string $label, string $hint, bool $siteWideOnly = true): void {
+            \App\Modules\Access\Capabilities::register($key, $label, $hint, $siteWideOnly);
+        });
+        foreach (array_keys(\App\Modules\I18n\I18n::LOCALES) as $locale) {
+            $extra = $this->hooks->apply('lang.catalogue', [], $locale);
+            if (is_array($extra) && $extra !== []) {
+                \App\Modules\I18n\I18n::extend($locale, array_filter($extra, 'is_string'));
+            }
+        }
         $this->hooks->do('routes.register', $this->router, $this);
         $this->hooks->do('app.request', $request, $this);
 
