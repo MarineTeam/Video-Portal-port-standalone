@@ -18,6 +18,8 @@ spl_autoload_register(static function (string $class): void {
     }
 });
 
+require_once __DIR__ . '/helpers.php';
+
 $vendor = dirname(__DIR__) . '/vendor/autoload.php';
 if (is_file($vendor)) {
     require_once $vendor;

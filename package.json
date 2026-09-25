@@ -1,0 +1,9 @@
+{
+  "name": "marine-team-browser-tests",
+  "private": true,
+  "description": "Development only: runs the pure browser modules' tests with Node's built-in runner. Nothing here ships or runs on the host.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/js/*.test.mjs"
+  }
+}
