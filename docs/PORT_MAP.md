@@ -151,20 +151,20 @@ commit as the code it describes.
 | `/profile/settings` | done | This device (theme, language, autoplay, speed, reading, bottom bar), account fields by plugin, password and sign-out-elsewhere, download my data, delete account |
 | `/profile/shared-links` | todo | |
 | `/read/[fileId]` | todo | |
-| `/recently-added` | todo | |
+| `/recently-added` | done | Newest series and videos |
 | `/recently-played` | todo | |
-| `/scripture` | todo | |
-| `/scripture/[book]` | todo | |
-| `/search` | todo | |
+| `/scripture` | done | Books with a video the reader may open, in canonical order |
+| `/scripture/[book]` | done |  |
+| `/search` | done | Library\Search: ranked substring + FULLTEXT pass, fuzzy re-rank of ≤500 titles only on an empty result; category/speaker filters, newest sort; content.search_sources for plugins; 100-char cap |
 | `/series/[slug]` | done | Slug aliases 301; sequential unlock (series or its category); tags; files; BreadcrumbList |
 | `/services` | todo | |
 | `/services/[id]` | todo | |
 | `/share/unavailable` | todo | |
 | `/share/unlock/[token]` | todo | |
-| `/speakers` | todo | |
-| `/speakers/[slug]` | todo | |
+| `/speakers` | done | With counts of videos the reader may open |
+| `/speakers/[slug]` | done | Person JSON-LD |
 | `/subscriptions` | todo | |
-| `/tags/[tag]` | todo | |
+| `/tags/[tag]` | done | Series carrying the tag (series_tags) |
 | `/tv` | todo | |
 | `/videos/[slug]` | done | Aliases 301 keeping ?t=; resume from progress unless ?t=; premiere and lock placeholders; mark watched; share-at; VideoObject + BreadcrumbList JSON-LD |
 | `/watch-later` | todo | |
@@ -509,7 +509,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/book-contents.test.ts` | todo | |
 | `lib/branding.test.ts` | done | tests/Unit/Branding/BrandingTest.php |
 | `lib/broadcast.test.ts` | todo | |
-| `lib/bunny.test.ts` | todo | |
+| `lib/bunny.test.ts` | done | tests/Unit/Video/BunnyTest.php |
 | `lib/client-bundle.test.ts` | todo | |
 | `lib/content-language.test.ts` | todo | |
 | `lib/content.test.ts` | done | tests/Unit/Library/ContentTest.php; the DB-backed checks in tests/Integration/ContentAccessTest.php |

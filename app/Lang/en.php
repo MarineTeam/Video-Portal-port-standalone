@@ -172,4 +172,13 @@ return [
     'library.notes' => 'Notes',
     'library.empty' => 'Nothing here yet.',
     'library.inSeries' => 'Part of {title}',
+    'library.speakers' => 'Speakers',
+    'search.resultsFor' => 'Search: {q}',
+    'search.anyCategory' => 'Any category',
+    'search.anySpeaker' => 'Any speaker',
+    'search.sort' => 'Sort',
+    'search.relevance' => 'Best match',
+    'search.newest' => 'Newest',
+    'search.none' => 'Nothing matches “{q}”.',
+    'search.fuzzy' => 'Nothing matched exactly; these are close.',
 ];

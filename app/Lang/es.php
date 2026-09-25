@@ -170,4 +170,13 @@ return [
     'library.notes' => 'Notas',
     'library.empty' => 'Todavía no hay nada aquí.',
     'library.inSeries' => 'Parte de {title}',
+    'library.speakers' => 'Predicadores',
+    'search.resultsFor' => 'Buscar: {q}',
+    'search.anyCategory' => 'Cualquier categoría',
+    'search.anySpeaker' => 'Cualquier predicador',
+    'search.sort' => 'Ordenar',
+    'search.relevance' => 'Mejor coincidencia',
+    'search.newest' => 'Más recientes',
+    'search.none' => 'Nada coincide con «{q}».',
+    'search.fuzzy' => 'Nada coincidió exactamente; estos se parecen.',
 ];

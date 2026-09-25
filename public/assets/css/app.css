@@ -353,3 +353,7 @@ fieldset[disabled] { opacity: 0.6; }
 .video-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-block: 0.5rem 1rem; }
 .share-at { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; }
 .share-at input { width: 5.5rem; padding-block: 0.3rem; }
+.avatar-thumb { width: 56px; aspect-ratio: 1; border-radius: 50%; }
+.avatar-cover { width: min(160px, 100%); border-radius: 50%; }
+.chips.plain { list-style: none; padding: 0; }
+.search-form input[type=search] { flex: 1 1 14rem; }
