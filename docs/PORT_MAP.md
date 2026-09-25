@@ -20,7 +20,7 @@ commit as the code it describes.
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
-| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications) |
+| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications, subscriptions) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
@@ -38,7 +38,7 @@ commit as the code it describes.
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
-| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
+| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications, subscriptions in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
@@ -163,7 +163,7 @@ commit as the code it describes.
 | `/share/unlock/[token]` | done | Password first; nothing granted or counted until it’s right |
 | `/speakers` | done | With counts of videos the reader may open |
 | `/speakers/[slug]` | done | Person JSON-LD |
-| `/subscriptions` | todo | |
+| `/subscriptions` | done | plugins/subscriptions: follows with mute and unfollow |
 | `/tags/[tag]` | done | Series carrying the tag (series_tags) |
 | `/tv` | todo | |
 | `/videos/[slug]` | done | Aliases 301 keeping ?t=; resume from progress unless ?t=; premiere and lock placeholders; mark watched; share-at; VideoObject + BreadcrumbList JSON-LD |
@@ -360,7 +360,7 @@ commit as the code it describes.
 | `/api/share-links/[id]` | PATCH DELETE | done | PATCH note or revoked; DELETE revokes |
 | `/api/share-links` | GET POST | done | 20 new links an hour; private links email and inbox their recipients |
 | `/api/share-links/unlock` | POST | done | 10 wrong guesses in 15 minutes lock the link; also 30 tries per address per 15 minutes |
-| `/api/subscriptions` | POST PATCH | todo | |
+| `/api/subscriptions` | POST PATCH | done | POST `{seriesId|categoryId}` toggles → `{following}`; PATCH `{…, muted}` → `{muted}` |
 | `/api/sync/snapshot` | GET | todo | |
 | `/api/tv/approve` | POST | todo | |
 | `/api/tv/feed.json` | GET | todo | |
@@ -441,7 +441,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | Announcement | `announcements` | done | the banner through render.page_top; cached a minute per audience, forgotten on every write; dismissed per browser session |
 | LiveStream | `live_streams` | todo | |
 | HomeRow | `home_rows` | done | Library\HomeRows (seeded once, built-in order when empty or unreadable) |
-| Subscription | `subscriptions` | todo | |
+| Subscription | `subscriptions` | done | a new video reaches unmuted followers of its series and every category above it who may watch it (push + inbox) |
 | PendingNotification | `pending_notifications` | done | plugins/notifications (DAILY members with a browser signed up) |
 | Playlist | `playlists` | todo | |
 | PlaylistItem | `playlist_items` | todo | |
@@ -629,7 +629,7 @@ met, with the reason.
 - **Transcription takes one video per job run and may outlive the 20-second budget.** The budget decides whether to start another video, not how long one may take: a single speech-to-text request can't be split without an audio tool on the host. The job raises its own time limit where the host allows (`set_time_limit`), and a run the host kills leaves the video RUNNING until the half-hour sweep re-queues it. The file sent is the video's own MP4 (the smallest rendition where the provider has several), streamed through storage/tmp, and a file above the configured limit (25 MB by default, OpenAI's) is refused before anything is sent.
 - **`/admin/media-check` is defined by the port**: the brief names the route and nothing else. It reports, within the reader's part of the library, videos whose service is no longer installed, host-disk videos whose file is missing, videos failed or processing for over a day, failed transcriptions, and local files missing from storage; pasted direct and Dropbox links are checked on request, a batch at a time, through the untrusted-URL fetcher. Administrators also see host-disk video files no video (trash included) names, and may delete one unless it changed within the hour. JSON at `GET /api/admin/media-check`.
 - **The "Share at" box belongs to the Social share plugin**, as the brief describes it, so it leaves the video page when that plugin is off; the `?t=` link itself is the library's and always works.
-- **The request bodies of `/api/favorites`, `/api/watch-later`, `/api/ratings` and `/api/reactions`** are the port's (`{seriesId}`, `{videoId}`, `{categoryId}` → `{favorited}` / `{saved}`), since the brief names the routes and methods only. Each is a toggle, so a stale page can't double-add.
+- **The request bodies of `/api/favorites`, `/api/watch-later`, `/api/ratings`, `/api/reactions` and `/api/subscriptions`** are the port's (`{seriesId}`, `{videoId}`, `{categoryId}` → `{favorited}` / `{saved}`), since the brief names the routes and methods only. Each is a toggle, so a stale page can't double-add.
 - **Chapters, transcripts, trending and recommendations moved into `plugins/`** once the page hooks existed: the chapter and transcript panels are page.video.panels, and the two homepage rows are filled through the home.row filter by Recommendations and View counts. What stays in the library is the content (chapters edited on the video page, the transcript column) and the transcript's part in search, which the search asks of the plugin state. Share links and downloads, built in step 3, still live in the library gated by their plugin's state.
 - **A display name counts only while the Profiles plugin is on**; switched off, members are shown by their sign-in name again and `/directory` is gone. The account fields stay stored either way.
 - **Bundled plugins add no data-export sections of their own**: the core's export already holds every member table (favorites, ratings, reactions, watch history…), whether or not the plugin that writes them is on, since the data outlives the switch.
