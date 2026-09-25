@@ -356,6 +356,8 @@ fieldset[disabled] { opacity: 0.6; }
 .chapter-time { font-variant-numeric: tabular-nums; color: var(--sec); min-width: 4.5rem; display: inline-block; }
 .announcement { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .announcement p { margin: 0; }
+.note-sheet .gap { display: inline-block; width: 9em; max-width: 100%; padding: 0.1rem 0.3rem; margin: 0 0.15rem; border: 0; border-bottom: 2px solid var(--sec); background: transparent; font: inherit; }
+.note-sheet .gap-line { letter-spacing: 0.05em; color: var(--sec); }
 .share-buttons { display: inline-flex; flex-wrap: wrap; gap: 0.5rem; }
 .star-rating { display: inline-flex; align-items: center; gap: 0.125rem; }
 .star-rating button { background: none; border: 0; padding: 0.125rem; font-size: 1.25rem; line-height: 1; color: var(--sec); cursor: pointer; }

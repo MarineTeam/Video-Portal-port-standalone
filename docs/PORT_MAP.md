@@ -20,7 +20,7 @@ commit as the code it describes.
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
-| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications, subscriptions, playlists) |
+| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications, subscriptions, playlists, sermon-notes) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
@@ -38,7 +38,7 @@ commit as the code it describes.
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
-| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications, subscriptions, playlists in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
+| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications, subscriptions, playlists, sermon-notes in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
@@ -330,8 +330,8 @@ commit as the code it describes.
 | `/api/live/[id]/chat` | GET POST | todo | |
 | `/api/locale` | POST | done | Sets marine-locale cookie |
 | `/api/manifest` | GET | done | From branding, base-path aware |
-| `/api/notes/[id]` | PATCH DELETE | todo | |
-| `/api/notes` | GET POST | todo | |
+| `/api/notes/[id]` | PATCH DELETE | done | the member's own |
+| `/api/notes` | GET POST | done | `?videoId`; `&format=text` downloads the sheet and the notes as one text file |
 | `/api/offline/hymnal/[seriesId]` | GET | todo | |
 | `/api/offline/service/[id]` | GET | todo | |
 | `/api/people` | GET | todo | |
@@ -380,7 +380,7 @@ commit as the code it describes.
 | `/api/v1/schedules` | GET | todo | |
 | `/api/v1/series` | GET | todo | |
 | `/api/v1/videos` | GET | todo | |
-| `/api/videos/outline` | PUT | todo | |
+| `/api/videos/outline` | PUT | done | plugins/sermon-notes: `{videoId, outlineVersion, answers}`; 409 `outline_changed` against an older sheet |
 | `/api/view-events` | POST | done | 30-minute cookie (mt_views) plus the HMAC address throttle; counts only what the caller may open |
 | `/api/watch-later` | POST | done | `{categoryId|seriesId|videoId}` toggles → `{saved}` |
 | `/api/watch-progress/mark-watched` | POST | done | The one way to clear a completion |
@@ -452,8 +452,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | SeriesViewer | `series_viewers` | done | Restricted viewing, checked by ContentAccess |
 | VideoViewerGroup | `video_viewer_groups` | done | Restricted viewing, checked by ContentAccess |
 | VideoViewer | `video_viewers` | done | Restricted viewing, checked by ContentAccess |
-| SermonOutlineAnswer | `sermon_outline_answers` | todo | |
-| SermonNote | `sermon_notes` | todo | |
+| SermonOutlineAnswer | `sermon_outline_answers` | done | kept with the sheet's fingerprint; an edited sheet is reported, earlier answers shown as text |
+| SermonNote | `sermon_notes` | done | time prefilled from the player, then the member's to edit |
 | SlugAlias | `slug_aliases` | partial | Written on rename; redirects with 3.4 |
 | ShareLink | `share_links` | done | Library\Sharing |
 | ShareLinkRecipient | `share_link_recipients` | done | |
@@ -538,7 +538,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/nav-tabs.test.ts` | done | tests/js/nav-tabs.test.mjs |
 | `lib/offline-calendar.test.ts` | todo | |
 | `lib/offline-shell.test.ts` | todo | |
-| `lib/outline.test.ts` | todo | |
+| `lib/outline.test.ts` | done | tests/Unit/Plugins/OutlineTest.php (every case) and tests/Integration/SermonNotesTest.php |
 | `lib/page-offset.test.ts` | todo | |
 | `lib/permissions.test.ts` | done | tests/Unit/Access/PermissionsTest.php |
 | `lib/plugins.test.ts` | done | tests/Unit/Plugins/PluginStatesTest.php |
@@ -629,7 +629,7 @@ met, with the reason.
 - **Transcription takes one video per job run and may outlive the 20-second budget.** The budget decides whether to start another video, not how long one may take: a single speech-to-text request can't be split without an audio tool on the host. The job raises its own time limit where the host allows (`set_time_limit`), and a run the host kills leaves the video RUNNING until the half-hour sweep re-queues it. The file sent is the video's own MP4 (the smallest rendition where the provider has several), streamed through storage/tmp, and a file above the configured limit (25 MB by default, OpenAI's) is refused before anything is sent.
 - **`/admin/media-check` is defined by the port**: the brief names the route and nothing else. It reports, within the reader's part of the library, videos whose service is no longer installed, host-disk videos whose file is missing, videos failed or processing for over a day, failed transcriptions, and local files missing from storage; pasted direct and Dropbox links are checked on request, a batch at a time, through the untrusted-URL fetcher. Administrators also see host-disk video files no video (trash included) names, and may delete one unless it changed within the hour. JSON at `GET /api/admin/media-check`.
 - **The "Share at" box belongs to the Social share plugin**, as the brief describes it, so it leaves the video page when that plugin is off; the `?t=` link itself is the library's and always works.
-- **The request bodies of `/api/favorites`, `/api/watch-later`, `/api/ratings`, `/api/reactions`, `/api/subscriptions` and `/api/playlists/*`** are the port's (`{seriesId}`, `{videoId}`, `{categoryId}` → `{favorited}` / `{saved}`), since the brief names the routes and methods only. Each is a toggle, so a stale page can't double-add.
+- **The request bodies of `/api/favorites`, `/api/watch-later`, `/api/ratings`, `/api/reactions`, `/api/subscriptions`, `/api/playlists/*` and `/api/notes`** are the port's (`{seriesId}`, `{videoId}`, `{categoryId}` → `{favorited}` / `{saved}`), since the brief names the routes and methods only. Each is a toggle, so a stale page can't double-add.
 - **Chapters, transcripts, trending and recommendations moved into `plugins/`** once the page hooks existed: the chapter and transcript panels are page.video.panels, and the two homepage rows are filled through the home.row filter by Recommendations and View counts. What stays in the library is the content (chapters edited on the video page, the transcript column) and the transcript's part in search, which the search asks of the plugin state. Share links and downloads, built in step 3, still live in the library gated by their plugin's state.
 - **A display name counts only while the Profiles plugin is on**; switched off, members are shown by their sign-in name again and `/directory` is gone. The account fields stay stored either way.
 - **Bundled plugins add no data-export sections of their own**: the core's export already holds every member table (favorites, ratings, reactions, watch history…), whether or not the plugin that writes them is on, since the data outlives the switch.
