@@ -6,7 +6,7 @@ namespace Tests\Unit\Video;
 
 use App\Services\Video\ArchiveProvider;
 use App\Services\Video\Links;
-use App\Services\Video\SigV4;
+use App\Support\SigV4;
 use PHPUnit\Framework\TestCase;
 
 /** Every shape of pasted link a volunteer might bring, and the S3 signer. */

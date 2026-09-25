@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services\Video;
+namespace App\Support;
 
 /**
  * AWS Signature Version 4 for S3-compatible storage, in pure PHP: presigned

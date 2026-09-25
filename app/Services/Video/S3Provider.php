@@ -7,6 +7,7 @@ namespace App\Services\Video;
 use App\Core\Http;
 use App\Core\HttpException;
 use App\Core\Url;
+use App\Support\SigV4;
 use App\Services\TestContext;
 use App\Services\TestResult;
 

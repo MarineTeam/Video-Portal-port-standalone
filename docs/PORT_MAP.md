@@ -50,7 +50,7 @@ commit as the code it describes.
 
 | Slot | Provider | Status | Notes |
 |---|---|---|---|
-| auth | Local accounts (password, magic link) | todo | |
+| auth | Local accounts (password, magic link) | done | |
 | auth | Auth0 | todo | |
 | auth | OpenID Connect + presets (Google, Entra ID, Apple, Okta, Keycloak, Authentik, Zitadel, Logto, Kinde, Clerk-OIDC) | todo | |
 | auth | Clerk (native) | todo | |
@@ -66,10 +66,10 @@ commit as the code it describes.
 | video | S3-compatible | done | Presigned PUT, multipart over 100 MB, SigV4 (AWS test vectors), CORS rule shown |
 | video | Direct link | done | HEAD through the untrusted-URL fetcher |
 | video | Host disk | done | Chunked upload; private files stream via /api/videos/local/[name], public ones move to public/media/videos |
-| email | SMTP (PHPMailer, presets) | todo | |
-| email | PHP mail() | todo | |
-| email | Resend, Mailgun, SendGrid, Postmark, Amazon SES, Brevo, Microsoft Graph | todo | |
-| files | Local disk | todo | |
+| email | SMTP (PHPMailer, presets) | done | Native client (see Deviations) |
+| email | PHP mail() | done | |
+| email | Resend, Mailgun, SendGrid, Postmark, Amazon SES, Brevo, Microsoft Graph | done | One HttpEmailProvider base: the key is checked before a test message goes out; SES signed with the shared App\Support\SigV4 |
+| files | Local disk | done | |
 | files | Bunny Storage | todo | |
 | sms | Twilio, Vonage, MessageBird, Plivo, Sinch, Telnyx, Amazon SNS, ClickSend, Textlocal, BulkSMS, JSON webhook | todo | |
 
