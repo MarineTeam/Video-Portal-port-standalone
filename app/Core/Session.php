@@ -70,6 +70,12 @@ final class Session
         return $this->rawId;
     }
 
+    /** What the sessions table keys this session by (never the cookie itself). */
+    public function idHash(): string
+    {
+        return $this->rawId === null ? '' : hash('sha256', $this->rawId);
+    }
+
     public function userId(): ?string
     {
         return $this->userId;

@@ -350,8 +350,8 @@ final class App
         return Response::html($this->view()->page($template, $vars, $layout), $status);
     }
 
-    /** @return array<string, mixed> */
-    private function shell(): array
+    /** @return array<string, mixed> what every page's templates get as \$shell */
+    public function shell(): array
     {
         $current = $this->currentUser();
         $user = $current->user();
@@ -364,9 +364,24 @@ final class App
         ];
         $nav = (array) $this->hooks->apply('nav.sections', $nav, $user);
         $tabs = (array) $this->hooks->apply('nav.tabs', array_slice($nav, 0, 4), $user);
+        // Every destination a member may put in the bottom bar on this device
+        // (Profile → Settings → Bottom bar): the sections, Profile, Admin.
+        $tabOptions = $nav;
         if ($user !== null) {
-            $tabs[] = ['href' => '/profile', 'label' => t('nav.profile'), 'icon' => 'person'];
+            $profile = ['href' => '/profile', 'label' => t('nav.profile'), 'icon' => 'person', 'badge' => \App\Modules\Profile\Inbox::unreadCount($this->db(), (string) $user['id'])];
+            $tabs[] = $profile;
+            $tabOptions[] = $profile;
+            if ($current->isStaff()) {
+                $tabOptions[] = ['href' => '/admin', 'label' => t('nav.admin'), 'icon' => 'shield'];
+            }
         }
+        $seen = [];
+        $tabOptions = array_values(array_filter($tabOptions, function ($o) use (&$seen) {
+            if (!is_array($o) || !is_string($o['href'] ?? null) || isset($seen[$o['href']])) {
+                return false;
+            }
+            return $seen[$o['href']] = true;
+        }));
         return [
             'branding' => $branding,
             'brandingCss' => $look['css'],
@@ -384,6 +399,7 @@ final class App
             'locale' => \App\Modules\I18n\I18n::locale(),
             'nav' => $nav,
             'tabs' => $tabs,
+            'tabOptions' => $tabOptions,
             'theme' => $this->themes()->assets(),
             'path' => $this->request()->path,
             'notices' => $isAdmin ? $this->plugins()->notices() : [],

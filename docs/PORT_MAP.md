@@ -18,7 +18,7 @@ commit as the code it describes.
 | Step | What | Status |
 |---|---|---|
 | 1 | Read the brief; write this map | done |
-| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | partial — remaining: the profile shell (and the Next.js import, tracked under Areas) |
+| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | todo |
 | 4 | Bundled plugins, simplest first | todo |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
@@ -33,7 +33,7 @@ commit as the code it describes.
 | Services registry and Admin → Services | core | partial | Registry, generated forms, signed test-then-switch at /admin/providers; auth trial-mode switch arrives with external providers |
 | Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | todo | |
 | Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | todo | |
-| Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | todo | |
+| Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | partial | Branding, i18n, nav, device settings, per-device bottom bar, inbox, profile shell, data export done; video feeds with the Library (step 3); query monitor pending |
 | Read API `/api/v1` | core | todo | |
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
@@ -141,14 +141,14 @@ commit as the code it describes.
 | `/playlists/[id]` | todo | |
 | `/prayer` | todo | |
 | `/present/[fileId]` | todo | |
-| `/profile` | todo | |
+| `/profile` | done | Overview: unread count and plugin cards (profile.overview) |
 | `/profile/devices` | todo | |
 | `/profile/downloads` | todo | |
 | `/profile/events` | todo | |
 | `/profile/groups` | todo | |
-| `/profile/inbox` | todo | |
+| `/profile/inbox` | done | Mark one/all read, open, delete one/all; push toggle slot for the notifications plugin |
 | `/profile/rota` | todo | |
-| `/profile/settings` | todo | |
+| `/profile/settings` | done | This device (theme, language, autoplay, speed, reading, bottom bar), account fields by plugin, password and sign-out-elsewhere, download my data, delete account |
 | `/profile/shared-links` | todo | |
 | `/read/[fileId]` | todo | |
 | `/recently-added` | todo | |
@@ -324,7 +324,7 @@ commit as the code it describes.
 | `/api/groups` | GET | todo | |
 | `/api/hymnals/search` | GET | todo | |
 | `/api/hymns/lookup` | POST | todo | |
-| `/api/inbox` | GET PATCH DELETE | todo | |
+| `/api/inbox` | GET PATCH DELETE | done | `{notifications, hasMore, unreadCount}`; PATCH/DELETE take `{ids}` or `{all: true}` |
 | `/api/live/[id]/chat/[messageId]` | DELETE | todo | |
 | `/api/live/[id]/chat/mute` | POST | todo | |
 | `/api/live/[id]/chat` | GET POST | todo | |
@@ -345,8 +345,8 @@ commit as the code it describes.
 | `/api/profile/calendar` | POST DELETE | todo | |
 | `/api/profile/devices/[id]` | DELETE | todo | |
 | `/api/profile/devices` | GET | todo | |
-| `/api/profile/export` | GET | todo | |
-| `/api/profile` | PATCH DELETE | todo | |
+| `/api/profile/export` | GET | done | Every member-keyed table, scoped queries, assertExportSafe, 2/min from the audit log |
+| `/api/profile` | PATCH DELETE | done | PATCH: fields owned by active plugins only; DELETE `{confirm: email}`, never the last admin |
 | `/api/push/subscribe` | POST | todo | |
 | `/api/push/unsubscribe` | POST | todo | |
 | `/api/ratings` | GET POST | todo | |
@@ -463,7 +463,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | AuthSettings | `auth_settings` | done | Guest-login switch (GuestLogin), read by /auth/guest and /access-denied |
 | AuthorizedEmail | `authorized_emails` | done | Checked on every request, bootstrap adoption, /admin/authorized-emails |
 | UnauthorizedAccessAttempt | `unauthorized_access_attempts` | done | Hourly alert dedupe, 90-day prune, /admin/access-attempts |
-| Notification | `notifications` | todo | |
+| Notification | `notifications` | done | Inbox::add for plugins; /profile/inbox and /api/inbox |
 | BrandSettings | `brand_settings` | done | Painted as custom properties; /admin/branding |
 | Schedule | `schedules` | todo | |
 | ScheduleSource | `schedule_sources` | todo | |
@@ -517,7 +517,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/cron-guard.test.ts` | done | tests/Unit/Jobs/CronGuardTest.php (no development exception: see Deviations) |
 | `lib/cron.test.ts` | todo | |
 | `lib/cross-site.test.ts` | todo | |
-| `lib/data-export.test.ts` | todo | |
+| `lib/data-export.test.ts` | done | tests/Unit/Profile/DataExportTest.php (+ a schema completeness check) and tests/Integration/DataExportTest.php |
 | `lib/device-settings.test.ts` | done | tests/js/device-settings.test.mjs |
 | `lib/directory.test.ts` | todo | |
 | `lib/download-source.test.ts` | todo | |
@@ -535,7 +535,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/identity-linking.test.ts` | done | tests/Unit/Access/IdentityLinkingTest.php |
 | `lib/live-chat.test.ts` | todo | |
 | `lib/names.test.ts` | todo | |
-| `lib/nav-tabs.test.ts` | todo | |
+| `lib/nav-tabs.test.ts` | done | tests/js/nav-tabs.test.mjs |
 | `lib/offline-calendar.test.ts` | todo | |
 | `lib/offline-shell.test.ts` | todo | |
 | `lib/outline.test.ts` | todo | |
@@ -602,6 +602,7 @@ met, with the reason.
 - **A release is signed through its manifest.** The brief signs "the archive's checksum"; a zip can't carry its own checksum, so the build signs `MANIFEST.json` (Ed25519, `MANIFEST.sig` beside it) and the manifest lists every file's SHA-256. One upload is then self-contained, and the check is the same: nothing is unpacked until the signature verifies, and every unpacked file must match. The installed `MANIFEST.json` stays at the root so the next release can remove what it drops. The public key is `app/release-key.pub`, empty until the maintainers generate one (`tools/release/keygen.php`); without it the page says to upload by FTP.
 - **The site closes itself when its files are newer than its database** (`app.version` differs from `App::VERSION`), not only while `storage/maintenance` exists, so an FTP upload never serves new code against the old schema to visitors. Administrators still get through, with a notice pointing to /admin/update.
 - **The backup is a multi-member gzip**: each request appends its own member, which is valid gzip (RFC 1952) and what `gunzip`, `zcat` and phpMyAdmin (zlib's `gzread`) read as one stream — PHP's `gzdecode()` alone stops after the first. Rows of `sessions`, `rate_limits` and `uploads` are left out (their tables are kept): they are throwaway state.
+- **Two profile routes the port adds for local accounts:** `POST /api/profile/password` (current + new; ends every other session) and `DELETE /api/profile/sessions` ("sign out everywhere else"), which the brief puts on /profile/settings without naming routes. The inbox API's JSON shape is the port's own (`{notifications, hasMore, unreadCount}`), since the brief names the route but not its body.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log

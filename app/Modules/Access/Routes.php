@@ -132,13 +132,12 @@ final class Routes
      * Local sign-in is open to ADMIN accounts unless an administrator turned
      * that off (and always while the break-glass file exists), and to members
      * when it is the primary provider or allowed beside another.
+     *
+     * @param array<string, mixed> $user
      */
     private function mayUseLocal(array $user): bool
     {
-        if (($user['role'] ?? '') === 'ADMIN') {
-            return $this->app->settings()->bool('auth.local_for_admins', true) || Access::breakGlass($this->app);
-        }
-        return $this->app->services()->activeId('auth') === 'local' || $this->local()->membersMayUse();
+        return Access::mayUseLocal($this->app, $user);
     }
 
     /** @param array<string, mixed> $user */

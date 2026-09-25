@@ -39,6 +39,23 @@ final class Access
     }
 
     /** The break-glass file: local sign-in for ADMIN accounts, whatever else is configured. */
+    /**
+     * Whether this person may sign in with a local password: administrators
+     * always (unless turned off, and then still with the break-glass file);
+     * members when local accounts are the sign-in service or allowed beside it.
+     *
+     * @param array<string, mixed> $user
+     */
+    public static function mayUseLocal(App $app, array $user): bool
+    {
+        if (($user['role'] ?? '') === 'ADMIN') {
+            return $app->settings()->bool('auth.local_for_admins', true) || self::breakGlass($app);
+        }
+        $local = $app->services()->get('auth', 'local');
+        return $app->services()->activeId('auth') === 'local'
+            || ($local instanceof \App\Services\Auth\LocalProvider && $local->membersMayUse());
+    }
+
     public static function breakGlass(App $app): bool
     {
         return is_file($app->paths->storage('enable-local-login'));

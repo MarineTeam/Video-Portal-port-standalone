@@ -20,6 +20,7 @@ final class Modules
         \App\Modules\Themes\AdminRoutes::class,
         \App\Modules\Update\Routes::class,
         \App\Modules\Tools\Routes::class,
+        \App\Modules\Profile\Routes::class,
         \App\Modules\Admin\Routes::class,
         \App\Modules\Jobs\Routes::class,
         \App\Modules\Uploads\Uploads::class,

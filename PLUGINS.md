@@ -122,6 +122,17 @@ value and returns it (changed or not). Lower priority runs first.
 | `auth.refused` | action | `array{email, provider, reason}` | after a refused sign-in |
 | `template.resolve` | filter | `?string $file, string $name` | return a file to render instead of a template |
 | `template.<name>.vars` | filter | `array $vars` | the variables a template receives (`<name>` with `/` as `.`) |
+| `profile.sections` | filter | `array $items, array $user` | links in the profile's own navigation: `['href' => '/profile/…', 'label']` |
+| `profile.overview` | filter | `array $cards, array $user` | cards on /profile: `['title', 'body'?, 'href'?, 'count'?]` |
+| `profile.inbox.top` | action | `App, array $user` | echo above the inbox (the push permission toggle) |
+| `profile.settings` | action | `App, array $user` | echo a settings group into the Account card |
+| `profile.fields` | filter | `array $fields, array $user` | extra keys `PATCH /api/profile` accepts (`key => true`); save them on `profile.updated` |
+| `profile.updated` | action | `string $userId, array $input` | after `PATCH /api/profile` |
+| `profile.export` | filter | `array $doc, string $userId` | add a section to "Download my data" (it is checked for credentials after you) |
+
+To put something in a member's inbox — the record kept whether or not push
+or email reached them — call `App\Modules\Profile\Inbox::add($db, $userId,
+$title, $body, $url)`.
 
 ### Arriving with the modules that fire them
 
@@ -130,7 +141,7 @@ modules as they are ported (see `docs/PORT_MAP.md`): `content.can_view`,
 `series.saved`, `video.saved`, `file.saved`, `*.published`, `*.trashed`,
 `*.restored`, `*.purged`, `content.search_sources`, `home.rows`,
 `related.items`, `page.video.panels`, `page.series.panels`,
-`profile.sections`, `profile.settings`, `admin.menu`, `settings.register`,
+`admin.menu`, `settings.register`,
 `plugin.category_override`.
 
 ## What a plugin may and may not do

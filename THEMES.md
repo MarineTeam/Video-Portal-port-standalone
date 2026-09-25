@@ -86,12 +86,13 @@ the build lists so every use is visible to a reviewer.
 | `nonce` | this response's script nonce |
 | `locale` | `en`, `es`, … |
 | `nav` | sidebar items: `href`, `label`, `icon` |
-| `tabs` | bottom-bar items: `href`, `label`, `icon` |
+| `tabs` | bottom-bar items: `href`, `label`, `icon`, optional `badge` (the Profile tab's unread count) |
 | `path` | the current path, without the base path |
 | `theme` | `css` and `js` lists of this theme's asset URLs |
 | `notices`, `themeNotice`, `breakGlass` | administrator notices |
 | `adminNav` | the admin sections this person can use |
 | `head`, `bodyEnd` | what plugins added through `render.head` / `render.body_end` |
+| `tabOptions` | every destination this viewer may choose for the bottom bar (a per-device choice is drawn from these) |
 | `themeSettings` | the active theme's customizer values, `key => value` |
 | `themeClasses` | the classes the layouts put on `<html>` for toggles and selects |
 
@@ -114,9 +115,13 @@ the build lists so every use is visible to a reviewer.
 | `auth/reset` | `$token`, `$error` |
 | `auth/magic` | `$token`, `$email` |
 | `auth/recover` | `$error` |
+| `partials/tab` | `$tab` (`href`, `label`, `icon`, `badge`), `$path` |
+| `partials/profile-nav` | `$shell`, `$sections` (`href`, `label`, `badge`) |
+| `profile/overview` | `$sections`, `$name`, `$unread`, `$cards` (`title`, `body`, `href`, `count`) |
+| `profile/inbox` | `$sections`, `$notifications` (`id`, `title`, `body`, `url`, `readAt`, `createdAt`), `$hasMore`, `$unread`, `$pushPanel` |
+| `profile/settings` | `$sections`, `$fields` (the account settings the active plugins offer), `$email`, `$hasPassword`, `$otherSessions`, `$extra` |
 
-Library, profile and plugin templates are listed here as their modules are
-ported. A plugin can let a theme change a template's variables through the
+Library and plugin templates are listed here as their modules are ported. A plugin can let a theme change a template's variables through the
 `template.<name>.vars` filter.
 
 ## Customizer settings

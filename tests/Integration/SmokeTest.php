@@ -132,7 +132,7 @@ final class SmokeTest extends DatabaseTestCase
         self::assertSame(403, self::http('POST', '/auth/login', ['email' => 'admin@smoke.test', 'password' => 'correct horse battery'])['status']);
         $r = self::http('POST', '/auth/login', ['_csrf' => self::csrf('/auth/login'), 'email' => 'admin@smoke.test', 'password' => 'correct horse battery']);
         self::assertSame(303, $r['status']);
-        foreach (['/admin', '/admin/plugins', '/admin/providers', '/admin/jobs', '/admin/system', '/admin/logs'] as $path) {
+        foreach (['/admin', '/admin/plugins', '/admin/providers', '/admin/jobs', '/admin/system', '/admin/logs', '/admin/users', '/admin/authorized-emails', '/admin/access-attempts', '/admin/permissions', '/admin/audit', '/admin/branding', '/admin/appearance', '/admin/update', '/admin/tools', '/admin/email', '/profile', '/profile/inbox', '/profile/settings'] as $path) {
             self::assertSame(200, self::http('GET', $path)['status'], $path);
         }
     }

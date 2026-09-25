@@ -61,11 +61,15 @@ $tabs = $shell['tabs'];
 </div>
 <nav class="tabbar<?= count($tabs) > 5 ? ' scrolls' : '' ?>" aria-label="<?= e(t('nav.primary')) ?>" data-tabbar data-tabs="<?= e(\App\Core\View::json(array_map(fn ($t) => ['href' => $t['href'], 'label' => $t['label'], 'icon' => $t['icon'] ?? 'folder'], $tabs))) ?>">
   <?php foreach ($tabs as $tab): ?>
-    <a href="<?= e(url($tab['href'])) ?>" class="<?= Shell::isActivePath($tab['href'], $shell['path']) ? 'active' : '' ?>">
-      <?= $v->raw(Icons::svg($tab['icon'] ?? 'folder')) ?><span><?= e($tab['label']) ?></span>
-    </a>
+    <?= $v->partial('partials/tab', ['tab' => $tab, 'path' => $shell['path']]) ?>
   <?php endforeach ?>
 </nav>
+<?php /* Every destination this viewer may choose for the bar, for a per-device choice to draw from. */ ?>
+<template data-tab-options>
+  <?php foreach ($shell['tabOptions'] as $tab): ?>
+    <?= $v->partial('partials/tab', ['tab' => $tab, 'path' => $shell['path']]) ?>
+  <?php endforeach ?>
+</template>
 <script type="module" src="<?= e(asset('js/app.js')) ?>"></script>
 <?php foreach ($shell['theme']['js'] as $src): ?>
 <script type="module" src="<?= e($src) ?>"></script>
