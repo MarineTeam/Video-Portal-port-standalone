@@ -10,6 +10,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
 use App\Core\Url;
+use App\Modules\Plugins\PluginStates;
 use App\Support\Timestamp;
 
 /**
@@ -194,8 +195,14 @@ final class Pages
         $crumbs[] = [$video['title'], '/videos/' . $video['slug']];
         $speaker = $video['speaker_id'] !== null ? $this->app->db()->one('SELECT id, name, slug FROM {{speakers}} WHERE id = ?', [$video['speaker_id']]) : null;
         $player = ($locked || $premiere || $video['status'] !== 'READY') ? null : Player::spec($this->app, $video, $start ?? 0);
+        $plugins = PluginStates::forCategory($this->app->db(), $categoryId !== null ? (string) $categoryId : null);
+        $chapters = $player !== null && ($plugins['chapters'] ?? false)
+            ? $this->app->db()->all('SELECT title, timestamp_seconds FROM {{chapters}} WHERE video_id = ? ORDER BY timestamp_seconds, position', [$video['id']])
+            : [];
         return $this->app->page('library/video', [
             'title' => $video['title'],
+            'chapters' => $chapters,
+            'transcript' => !$locked && ($plugins['transcripts'] ?? false) && trim((string) ($video['transcript'] ?? '')) !== '' ? (string) $video['transcript'] : null,
             'description' => self::excerpt($video['description'] ?? null),
             'video' => $decorated,
             'series' => $series,

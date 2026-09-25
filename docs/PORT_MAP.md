@@ -279,7 +279,7 @@ commit as the code it describes.
 | `/api/admin/video-feeds/[id]/sync` | POST | done | Forces a full pass |
 | `/api/admin/video-feeds` | GET POST | done |  |
 | `/api/admin/videos/[id]/captions` | GET POST DELETE | done | Provider captions (Bunny, Vimeo) or a WebVTT sidecar in storage/media/captions; SRT converted |
-| `/api/admin/videos/[id]/chapters` | GET POST | todo | |
+| `/api/admin/videos/[id]/chapters` | GET POST | done | Library\Admin\ChaptersAdmin; time as timestampSeconds or "timestamp" (12:03, 1:02:03, 95) |
 | `/api/admin/videos/[id]` | PATCH DELETE | done | PATCH also takes `move` |
 | `/api/admin/videos/[id]/sync-status` | POST | done | Takes the browser's upload report (upload id, ETags, the service's id) |
 | `/api/admin/videos/[id]/thumbnail` | POST | done | Bunny is told to fetch it; host disk, S3, links keep it as the poster |
@@ -288,7 +288,7 @@ commit as the code it describes.
 | `/api/admin/videos/[id]/viewers` | GET POST | done | Same module as series |
 | `/api/admin/videos/bulk` | POST | done | publish, unpublish, delete, move, schedule, expire |
 | `/api/admin/videos/bunny-library` | GET | done | Only videos not already here |
-| `/api/admin/videos/chapters/[id]` | PATCH DELETE | todo | |
+| `/api/admin/videos/chapters/[id]` | PATCH DELETE | done | checked against the video's scope |
 | `/api/admin/videos/import` | POST | done |  |
 | `/api/admin/videos` | GET POST | done | POST `mode`: link or upload; upload answers the ticket |
 | `/api/admin/videos/viewer-groups/[id]` | DELETE | done |  |
@@ -405,7 +405,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | Category | `categories` | partial | Admin CRUD, tree, trash; public pages with 3.4 |
 | Series | `series` | partial | Admin CRUD, drafts, tags (series_tags), aliases, viewers; public pages with 3.4 |
 | Video | `videos` | todo | |
-| Chapter | `chapters` | todo | |
+| Chapter | `chapters` | done | listed in time order; editor on /admin/videos/[id]; the video page's list (Chapters plugin) seeks the player and copies a ?t= link |
 | Speaker | `speakers` | partial | Admin CRUD; public pages with 3.4 |
 | SeriesFavorite | `series_favorites` | todo | |
 | VideoFavorite | `video_favorites` | todo | |
@@ -623,6 +623,7 @@ met, with the reason.
 - **OpenID Connect subs are prefixed with the preset** (`google|…`, `entra|…`, `oidc|…` for a custom issuer) rather than one "oidc" prefix, so two issuers' subjects can never meet; Auth0's stay verbatim.
 - **Apple's form_post** arrives cross-site without the Lax session cookie, so /auth/callback answers such a POST with a same-origin page that re-posts it once; the spent-once state is that route's CSRF protection.
 - **Callback failures from any provider are recorded with the reason `AUTH0_CALLBACK_ERROR`**, the original's name, so existing reports keep working.
+- **Chapters seek the player in place** (native currentTime, or each embed's postMessage seek) instead of reloading the iframe with a new start time; each chapter's link is still the `?t=` address, so a shared link behaves as before.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.

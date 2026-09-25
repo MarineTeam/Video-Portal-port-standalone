@@ -11,6 +11,7 @@
  * @var string $thumbnail
  * @var bool $hasCaptionOps
  * @var ?array<string, mixed> $player
+ * @var list<array<string, mixed>> $chapters in time order
  */
 $api = '/api/admin/videos/' . $video['id'];
 ?>
@@ -99,6 +100,27 @@ $api = '/api/admin/videos/' . $video['id'];
     </div>
     <label>File (.vtt or .srt)<input type="file" name="file" accept=".vtt,.srt,text/vtt" required></label>
     <div><button class="button small" type="submit">Add captions</button></div>
+    <p class="error" data-error hidden></p>
+  </form>
+</div>
+
+<h2>Chapters</h2>
+<div class="card stack">
+  <p class="small muted">Named moments listed under the player when the Chapters plugin is on. Each one jumps the player there and has its own share link.</p>
+  <?php foreach ($chapters as $ch): ?>
+    <form class="row" data-api="/api/admin/videos/chapters/<?= e($ch['id']) ?>" data-method="PATCH">
+      <input name="timestamp" aria-label="Starts at" value="<?= e(\App\Support\Timestamp::format((int) $ch['timestampSeconds'])) ?>" size="8" required pattern="[0-9:hms]+">
+      <input name="title" aria-label="Chapter title" value="<?= e($ch['title']) ?>" required maxlength="255">
+      <button class="button small" type="submit">Save</button>
+      <button type="button" class="button small danger" data-api="/api/admin/videos/chapters/<?= e($ch['id']) ?>" data-method="DELETE" data-confirm="Remove the chapter “<?= e($ch['title']) ?>”?">Remove</button>
+      <p class="error" data-error hidden></p>
+    </form>
+  <?php endforeach ?>
+  <form class="row" data-api="<?= e($api) ?>/chapters" data-method="POST">
+    <label>Starts at<input name="timestamp" size="8" required pattern="[0-9:hms]+" placeholder="12:03" data-chapter-time></label>
+    <?php if ($player !== null): ?><button type="button" class="button small" data-chapter-now>Now</button><?php endif ?>
+    <label>Title<input name="title" required maxlength="255" placeholder="The sermon"></label>
+    <button class="button small primary" type="submit">Add chapter</button>
     <p class="error" data-error hidden></p>
   </form>
 </div>

@@ -159,6 +159,7 @@ final class VideosAdmin
             'viewers' => (new ViewersAdmin($this->app, $this->catalog))->listFor('videos', (string) $video['id']),
             'groups' => $this->db()->all('SELECT id, name FROM {{permission_groups}} ORDER BY name'),
             'thumbnail' => \App\Modules\Library\VideoSource::thumbnailUrl($video),
+            'chapters' => ChaptersAdmin::forVideo($this->db(), (string) $video['id']),
             'hasCaptionOps' => $this->videos->providerFor($video)->capabilities()->captions,
             'player' => $video['status'] === 'READY' ? \App\Modules\Library\Player::spec($this->app, $video) : null,
         ], 200, 'layouts/admin');

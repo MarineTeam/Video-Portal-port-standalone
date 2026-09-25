@@ -376,3 +376,15 @@ if (storage) {
     }
   });
 }
+
+// A new chapter at the preview player's current position.
+document.querySelector('[data-chapter-now]')?.addEventListener('click', (event) => {
+  const player = document.querySelector('[data-player]')?.mtPlayer;
+  const input = event.target.form?.querySelector('[data-chapter-time]');
+  if (!player || !input) return;
+  const s = Math.floor(player.position());
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = String(s % 60).padStart(2, '0');
+  input.value = h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
+});

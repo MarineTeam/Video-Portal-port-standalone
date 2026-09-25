@@ -351,6 +351,9 @@ fieldset[disabled] { opacity: 0.6; }
 @media (max-width: 600px) { .video-thumb { width: 112px; } .tile-thumb { width: 72px; } }
 .hero, .hero:hover, .hero-title { color: #fff; }
 .video-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-block: 0.5rem 1rem; }
+.chapter-list { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: 0.25rem; }
+.chapter-list li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.chapter-time { font-variant-numeric: tabular-nums; color: var(--sec); min-width: 4.5rem; display: inline-block; }
 .share-at { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; }
 .share-at input { width: 5.5rem; padding-block: 0.3rem; }
 .avatar-thumb { width: 56px; aspect-ratio: 1; border-radius: 50%; }

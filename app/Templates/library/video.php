@@ -16,6 +16,8 @@
  * @var bool $signedIn
  * @var ?array<string, mixed> $share
  * @var bool $download
+ * @var list<array{title: string, timestamp_seconds: int|string}> $chapters shown when the Chapters plugin is on
+ * @var ?string $transcript shown when the Transcripts plugin is on
  */
 use App\Support\Timestamp;
 
@@ -77,11 +79,29 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
   </p>
 <?php endif ?>
 
+<?php if ($chapters !== []): ?>
+  <section aria-labelledby="chapters-h">
+    <h2 id="chapters-h"><?= e(t('library.chapters')) ?></h2>
+    <ol class="chapter-list">
+      <?php foreach ($chapters as $ch): ?>
+        <?php $at = (int) $ch['timestamp_seconds']; $link = \App\Core\Url::absolute('/videos/' . $video['slug']) . ($at > 0 ? '?t=' . $at : ''); ?>
+        <li>
+          <a href="<?= e($link) ?>" data-seek="<?= e((string) $at) ?>"><span class="chapter-time"><?= e(Timestamp::format($at)) ?></span> <?= e($ch['title']) ?></a>
+          <button type="button" class="button small" data-copy-link="<?= e($link) ?>" data-copied-label="<?= e(t('library.copied')) ?>" aria-label="<?= e(t('library.copyChapterLink', ['title' => $ch['title']])) ?>">🔗</button>
+        </li>
+      <?php endforeach ?>
+    </ol>
+  </section>
+<?php endif ?>
+
 <?php if (!empty($video['description'])): ?><div class="prose"><?= $v->raw(nl2br(e((string) $video['description']))) ?></div><?php endif ?>
 <?php if (!empty($video['note_outline'])): ?>
   <details class="card"><summary><?= e(t('library.notes')) ?></summary><div class="prose"><?= $v->raw(nl2br(e((string) $video['note_outline']))) ?></div></details>
 <?php endif ?>
 
+<?php if ($transcript !== null): ?>
+  <details class="card"><summary><?= e(t('library.transcript')) ?></summary><div class="prose"><?= $v->raw(nl2br(e($transcript))) ?></div></details>
+<?php endif ?>
 <?php if ($share !== null): ?><?= $v->partial('partials/share-panel', ['share' => $share]) ?><?php endif ?>
 <?php if ($previous !== null || $next !== null): ?>
   <nav class="row prev-next" aria-label="<?= e($series['title'] ?? '') ?>">
