@@ -77,7 +77,7 @@ commit as the code it describes.
 
 | Path | Status | Notes |
 |---|---|---|
-| `/` | partial | Welcome page listing top-level categories; the library home (rows, hero) arrives with the Library module |
+| `/` | partial | Library\Pages: hero (featured, else newest series), Continue watching, browse tiles, Recently added; configurable home rows with /admin/home-rows |
 | `/access-denied` | done | One plain sentence; guest link only while the switch is open |
 | `/admin` | partial | Dashboard with counts and setup warnings; library cards pending |
 | `/admin/access-attempts` | done | Filter by address, reason, date and unreviewed; mark reviewed; prune past 90 days |
@@ -123,7 +123,7 @@ commit as the code it describes.
 | `/admin/webhooks` | todo | |
 | `/books/[fileId]` | todo | |
 | `/calendar` | todo | |
-| `/categories/[slug]` | todo | |
+| `/categories/[slug]` | done | Children, series, standalone videos and files; generic title + sign-in page (401) for a members-only one |
 | `/directory` | todo | |
 | `/events` | todo | |
 | `/events/[slug]` | todo | |
@@ -156,7 +156,7 @@ commit as the code it describes.
 | `/scripture` | todo | |
 | `/scripture/[book]` | todo | |
 | `/search` | todo | |
-| `/series/[slug]` | todo | |
+| `/series/[slug]` | done | Slug aliases 301; sequential unlock (series or its category); tags; files; BreadcrumbList |
 | `/services` | todo | |
 | `/services/[id]` | todo | |
 | `/share/unavailable` | todo | |
@@ -166,7 +166,7 @@ commit as the code it describes.
 | `/subscriptions` | todo | |
 | `/tags/[tag]` | todo | |
 | `/tv` | todo | |
-| `/videos/[slug]` | todo | |
+| `/videos/[slug]` | done | Aliases 301 keeping ?t=; resume from progress unless ?t=; premiere and lock placeholders; mark watched; share-at; VideoObject + BreadcrumbList JSON-LD |
 | `/watch-later` | todo | |
 
 ## Routes (Appendix C.2) — 218

@@ -213,3 +213,37 @@ document.addEventListener('click', (event) => {
   event.preventDefault();
   player.seek(t);
 });
+
+// "Share at": a link back to a moment, ?t=<seconds>. Prefilled with where
+// playback is when the box is focused.
+for (const form of document.querySelectorAll('form[data-share-at]')) {
+  const input = form.querySelector('[data-share-time]');
+  input?.addEventListener('focus', () => {
+    const player = document.querySelector('[data-player]')?.mtPlayer;
+    if (player && !input.value) {
+      const s = Math.floor(player.position());
+      input.value = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+  });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const text = (input?.value || '').trim();
+    const parts = text.split(':').map(Number);
+    const seconds = parts.some(Number.isNaN) ? 0 : parts.reduce((total, n) => total * 60 + n, 0);
+    const link = seconds > 0 ? `${form.dataset.shareAt}?t=${seconds}` : form.dataset.shareAt;
+    try {
+      await navigator.clipboard.writeText(link);
+      const done = form.querySelector('[data-share-done]');
+      if (done) done.hidden = false;
+    } catch {
+      window.prompt('', link);
+    }
+  });
+}
+
+// Times shown in the reader's own zone.
+for (const el of document.querySelectorAll('time[data-local-time], time[data-local-date]')) {
+  const d = new Date(el.getAttribute('datetime'));
+  if (Number.isNaN(d.getTime())) continue;
+  el.textContent = 'localTime' in el.dataset ? d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : d.toLocaleDateString([], { dateStyle: 'medium' });
+}

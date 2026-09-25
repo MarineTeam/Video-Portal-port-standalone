@@ -16,7 +16,6 @@ final class Routes
 {
     public static function register(Router $r, App $app): void
     {
-        $r->get('/', fn (Request $req) => self::home($app, $req));
         $r->get('/api/manifest', function () use ($app): Response {
             $response = Response::json(Branding::manifest(\App\Modules\Themes\Appearance::forPage($app)['branding'], Url::basePath()));
             $response->header('Content-Type', 'application/manifest+json; charset=utf-8');
@@ -38,18 +37,5 @@ final class Routes
             ]);
             return $response;
         });
-    }
-
-    /** The library's home page arrives with the Library module; until then, a plain welcome. */
-    private static function home(App $app, Request $req): Response
-    {
-        $branding = \App\Modules\Themes\Appearance::forPage($app)['branding'];
-        return $app->page('home', [
-            'title' => $branding['name'],
-            'branding' => $branding,
-            'categories' => $app->db()->all(
-                'SELECT name, slug FROM {{categories}} WHERE parent_id IS NULL AND deleted_at IS NULL AND published = 1 AND hidden = 0 ORDER BY pinned DESC, position, name LIMIT 100',
-            ),
-        ]);
     }
 }

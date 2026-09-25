@@ -27,6 +27,7 @@ final class Routes
 {
     public static function register(Router $r, App $app): void
     {
+        Pages::register($r, $app);
         $r->get('/api/videos/local/[name]', fn (Request $req, array $p) => self::local($app, $p['name'], $req));
         $r->get('/api/files/[id]/content', fn (Request $req, array $p) => self::fileContent($app, $p['id'], $req));
         $r->post('/api/watch-progress', fn (Request $req) => self::progress($app, $req, false));
