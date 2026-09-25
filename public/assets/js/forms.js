@@ -60,6 +60,8 @@ for (const form of document.querySelectorAll('form[data-chunked-upload]')) {
 // Forms and buttons that talk to the JSON API directly:
 //   <form data-api="/api/admin/authorized-emails" data-method="POST">
 //   <button data-api="/api/admin/users/ID" data-method="PATCH" data-body='{"role":"ADMIN"}'>
+//   <button data-api="/api/favorites" data-body='{"videoId":"…"}' data-toggle="favorited"
+//           data-label-on="Saved" data-label-off="Save" aria-pressed="false">  (no reload)
 // A field's data-type says how to send it: bool (a checkbox), int, json,
 // list (comma or newline separated) — otherwise a string; data-null sends an
 // empty value as null. On success the page reloads (or follows data-redirect);
@@ -122,6 +124,15 @@ async function send(element, body) {
       }
       scope?.querySelector('[data-error]')?.setAttribute('hidden', '');
       if (element instanceof HTMLFormElement) element.reset();
+    }
+    if (element.dataset.toggle && result && typeof result[element.dataset.toggle] === 'boolean') {
+      // A toggle (favorite, watch later, follow): the answer says which way it went.
+      const on = result[element.dataset.toggle];
+      element.setAttribute('aria-pressed', String(on));
+      const label = on ? element.dataset.labelOn : element.dataset.labelOff;
+      if (label) element.textContent = label;
+      MT.hooks.do('toggle.changed', element, on, result);
+      return;
     }
     if ('follow' in element.dataset && result && typeof result.redirect === 'string') {
       // The server names where to go next (a share link's content, once unlocked).

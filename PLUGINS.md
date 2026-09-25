@@ -129,6 +129,17 @@ value and returns it (changed or not). Lower priority runs first.
 | `profile.fields` | filter | `array $fields, array $user` | extra keys `PATCH /api/profile` accepts (`key => true`); save them on `profile.updated` |
 | `profile.updated` | action | `string $userId, array $input` | after `PATCH /api/profile` |
 | `profile.export` | filter | `array $doc, string $userId` | add a section to "Download my data" (it is checked for credentials after you) |
+| `page.category.panels` | filter | `array $panels, array $context` | add to a category page; `$context`: `category`, `categoryId`, `viewer` (`Library\Viewer`), `plugins` (slug ⇒ on, resolved for this category), `app` |
+| `page.series.panels` | filter | `array $panels, array $context` | add to a series page; `$context`: `series`, `videos`, `categoryId`, `viewer`, `plugins`, `app` |
+| `page.video.panels` | filter | `array $panels, array $context` | add to a video page; `$context`: `video`, `series`, `siblings`, `categoryId`, `viewer`, `locked`, `player`, `plugins`, `app` |
+
+A panel is `['area' => 'actions' | 'below', 'html' => string, 'order' => int]`:
+`actions` is the row of buttons under the title, `below` sits under the
+page's own content. The html is yours, so escape what you put in it —
+render it from your own template (below) and it is. Check
+`$context['plugins']['your-slug']` before adding anything: that is the
+plugin's state for this page's category, so a category that switches you
+off loses your panel.
 
 To put something in a member's inbox — the record kept whether or not push
 or email reached them — call `App\Modules\Profile\Inbox::add($db, $userId,
@@ -138,16 +149,17 @@ $title, $body, $url)`.
 
 These are part of the API and will fire from the library, access and profile
 modules as they are ported (see `docs/PORT_MAP.md`): `content.can_view`,
-`series.saved`, `video.saved`, `file.saved`, `*.published`, `*.trashed`,
-`*.restored`, `*.purged`, `content.search_sources`, `home.rows`,
-`related.items`, `page.video.panels`, `page.series.panels`,
-`admin.menu`, `settings.register`,
-`plugin.category_override`.
+`home.rows`, `related.items`, `admin.menu`, `settings.register`,
+`plugin.category_override`. (`series.saved`, `video.saved`, `file.saved`,
+`*.published`, `*.trashed`, `*.restored`, `*.purged` and
+`content.search_sources` fire already.)
 
 ## What a plugin may and may not do
 
 - **Tables:** its own, named with its own prefix (`p_<slug>_…`), created by
-  its migrations. Migrations are numbered files (`0001_….sql` or `.php`),
+  its migrations. (The bundled plugins use the tables the original schema
+  already had — `series_favorites`, `ratings` and so on — which the core's
+  `0001_init.sql` creates.) Migrations are numbered files (`0001_….sql` or `.php`),
   applied one per request with the same resumable runner as the core, and
   must be safe to re-run (`CREATE TABLE IF NOT EXISTS {{p_notes_items}}`).
 - **Core data:** through the module classes (`App\Modules\…`), never by
@@ -155,6 +167,18 @@ modules as they are ported (see `docs/PORT_MAP.md`): `content.can_view`,
 - **Templates:** render through `$app->page('my-plugin/name', $vars)`; add
   the plugin's `templates/` folder to the view with the `template.resolve`
   filter. Output is escaped with `e()`; `$v->raw()` is the only exception.
+- **BasePlugin helpers:** `$this->useTemplates($hooks)` serves
+  `templates/<name>.php` as `<slug>/<name>`, so
+  `$app->view()->partial('my-plugin/button', $vars)` and
+  `$app->page('my-plugin/page', $vars)` find them; `$this->asset('app.js')`
+  is the address of `assets/app.js` with a cache-busting version.
+- **Translations:** return `key => text` from the `lang.catalogue` filter
+  (the bundled plugins keep them in `lang/en.php`, `lang/es.php`).
+- **A toggle button without writing JavaScript:**
+  `<button data-api="/api/…" data-body='{"videoId":"…"}' data-toggle="favorited"
+  data-label-on="Saved" data-label-off="Save" aria-pressed="false">` posts the
+  body, and flips `aria-pressed` and the label from the boolean the answer
+  carries under that key — no reload.
 - **Browser code:** plain ES modules under `assets/`, loaded from
   `/plugins/<slug>/assets/…` (nothing executable or hidden is ever served
   from there). `window.MT` offers `MT.hooks`, `MT.api` (fetch with the CSRF

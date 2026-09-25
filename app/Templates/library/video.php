@@ -18,6 +18,7 @@
  * @var bool $download
  * @var list<array{title: string, timestamp_seconds: int|string}> $chapters shown when the Chapters plugin is on
  * @var ?string $transcript shown when the Transcripts plugin is on
+ * @var array{actions: list<string>, below: list<string>} $panels from plugins (page.video.panels)
  */
 use App\Support\Timestamp;
 
@@ -68,6 +69,7 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
       <span class="small" data-share-done hidden><?= e(t('library.copied')) ?></span>
     </form>
   <?php endif ?>
+  <?php foreach ($panels['actions'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>
 </div>
 
 <?php if ($scripture !== []): ?>
@@ -102,6 +104,7 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
 <?php if ($transcript !== null): ?>
   <details class="card"><summary><?= e(t('library.transcript')) ?></summary><div class="prose"><?= $v->raw(nl2br(e($transcript))) ?></div></details>
 <?php endif ?>
+<?php foreach ($panels['below'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>
 <?php if ($share !== null): ?><?= $v->partial('partials/share-panel', ['share' => $share]) ?><?php endif ?>
 <?php if ($previous !== null || $next !== null): ?>
   <nav class="row prev-next" aria-label="<?= e($series['title'] ?? '') ?>">

@@ -14,87 +14,21 @@ use PHPUnit\Framework\Attributes\TestDox;
  * CI runs the full version against Apache with the banned functions disabled;
  * this one runs anywhere PHP's built-in server does.
  */
-final class SmokeTest extends DatabaseTestCase
+final class SmokeTest extends ServerTestCase
 {
     private const PREFIX = 'smk_';
 
-    /** @var resource|null */
-    private static $server = null;
-    private static string $base = '';
-    private static string $storage = '';
-    private static string $jar = '';
-
-    public static function setUpBeforeClass(): void
+    protected static function prefix(): string
     {
-        if (!function_exists('proc_open') || !function_exists('curl_init')) {
-            self::markTestSkipped('proc_open and curl are needed to run the server.');
-        }
-        $db = self::connect(self::PREFIX);
-        self::dropPrefix($db, self::PREFIX);
-        self::$storage = sys_get_temp_dir() . '/mt-smoke-' . bin2hex(random_bytes(4));
-        mkdir(self::$storage, 0775, true);
-        self::$jar = self::$storage . '.cookies';
-        $port = 18000 + random_int(0, 999);
-        self::$base = "http://127.0.0.1:$port";
-        $root = dirname(__DIR__, 2);
-        $env = array_merge(getenv(), ['MT_STORAGE_DIR' => self::$storage, 'PHP_CLI_SERVER_WORKERS' => '4']);
-        self::$server = proc_open(
-            [PHP_BINARY, '-d', 'memory_limit=128M', '-d', 'max_execution_time=30', '-S', "127.0.0.1:$port", '-t', "$root/public", "$root/tools/dev/router.php"],
-            [0 => ['pipe', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
-            $pipes,
-            $root,
-            $env,
-        );
-        for ($i = 0; $i < 50; $i++) {
-            if (@fsockopen('127.0.0.1', $port) !== false) {
-                break;
-            }
-            usleep(100_000);
-        }
+        return self::PREFIX;
     }
 
     public static function tearDownAfterClass(): void
     {
-        if (is_resource(self::$server)) {
-            proc_terminate(self::$server);
-        }
         foreach (['throws-on-load', 'parse-error', 'exhausts-memory', 'good-plugin', 'throws-in-hook'] as $slug) {
             \App\Modules\Plugins\PackageInstaller::removeTree(dirname(__DIR__, 2) . "/plugins/$slug");
         }
-        if (self::$storage !== '') {
-            \App\Modules\Plugins\PackageInstaller::removeTree(self::$storage);
-            @unlink(self::$jar);
-        }
-    }
-
-    /** @return array{status: int, body: string, location: ?string} */
-    private static function http(string $method, string $path, array $form = []): array
-    {
-        $ch = curl_init(self::$base . $path);
-        curl_setopt_array($ch, [
-            CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_COOKIEJAR => self::$jar,
-            CURLOPT_COOKIEFILE => self::$jar,
-            CURLOPT_TIMEOUT => 60,
-            CURLOPT_HEADER => true,
-        ]);
-        if ($form !== []) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($form));
-        }
-        $raw = (string) curl_exec($ch);
-        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
-        $headers = substr($raw, 0, $headerSize);
-        preg_match('/^Location:\s*(\S+)/mi', $headers, $m);
-        return ['status' => $status, 'body' => substr($raw, $headerSize), 'location' => $m[1] ?? null];
-    }
-
-    private static function csrf(string $path): string
-    {
-        preg_match('/name="_csrf" value="([^"]+)"/', self::http('GET', $path)['body'], $m);
-        return $m[1] ?? '';
+        parent::tearDownAfterClass();
     }
 
     #[TestDox('installs by HTTP alone, refusing a wrong install key, and closes /install afterwards')]

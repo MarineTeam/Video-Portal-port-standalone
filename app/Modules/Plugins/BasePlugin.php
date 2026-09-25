@@ -30,6 +30,36 @@ abstract class BasePlugin implements Plugin
     {
     }
 
+    /** The folder name, which is the slug. */
+    protected function slug(): string
+    {
+        return basename($this->dir);
+    }
+
+    /**
+     * Serves templates/<name>.php as "<slug>/<name>", so the plugin renders
+     * with $app->view()->partial('<slug>/button', …) or $app->page(…).
+     */
+    protected function useTemplates(Hooks $hooks): void
+    {
+        $prefix = $this->slug() . '/';
+        $dir = $this->dir . '/templates/';
+        $hooks->filter('template.resolve', function (?string $file, string $name) use ($prefix, $dir): ?string {
+            if ($file === null && str_starts_with($name, $prefix)) {
+                $candidate = $dir . substr($name, strlen($prefix)) . '.php';
+                return is_file($candidate) ? $candidate : null;
+            }
+            return $file;
+        });
+    }
+
+    /** The address of assets/<path>, with its modification time to bust caches. */
+    protected function asset(string $path): string
+    {
+        $file = $this->dir . '/assets/' . $path;
+        return \App\Core\Url::to('/plugins/' . $this->slug() . '/assets/' . $path) . (is_file($file) ? '?v=' . filemtime($file) : '');
+    }
+
     public function migrations(): ?string
     {
         $dir = $this->dir . '/migrations';

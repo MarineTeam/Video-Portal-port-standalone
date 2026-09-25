@@ -10,6 +10,7 @@
  * @var list<string> $tags
  * @var bool $signedIn
  * @var ?array<string, mixed> $share
+ * @var array{actions: list<string>, below: list<string>} $panels from plugins (page.series.panels)
  */
 ?>
 <div hidden data-view-event="<?= e(\App\Core\View::json(['seriesId' => $series['id']])) ?>"></div>
@@ -25,6 +26,7 @@
         <?php foreach ($tags as $tag): ?><a class="chip" href="<?= e(url('/tags/' . rawurlencode(mb_strtolower($tag)))) ?>"><?= e($tag) ?></a><?php endforeach ?>
       </p>
     <?php endif ?>
+    <?php if ($panels['actions'] !== []): ?><div class="video-actions"><?php foreach ($panels['actions'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?></div><?php endif ?>
   </div>
 </header>
 <?php if ($videos === [] && $files === []): ?>
@@ -38,3 +40,4 @@
   <h2><?= e(t('library.downloads')) ?></h2>
   <?= $v->partial('partials/library-files', ['files' => $files]) ?>
 <?php endif ?>
+<?php foreach ($panels['below'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>

@@ -5,10 +5,14 @@ parameters:
         - app
         - install
         - bin
+        # Bundled plugins, held to the same standard as the core.
+        - plugins
     excludePaths:
         # Templates are included into the View's scope, which PHPStan can't
         # see; tools/ci/check-templates.php checks their output instead.
         - app/Templates
+        - plugins/*/templates
+        - plugins/*/lang
     bootstrapFiles:
         - app/autoload.php
     treatPhpDocTypesAsCertain: false

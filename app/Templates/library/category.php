@@ -8,12 +8,14 @@
  * @var list<array<string, mixed>> $series
  * @var list<array<string, mixed>> $videos
  * @var list<array<string, mixed>> $files
+ * @var array{actions: list<string>, below: list<string>} $panels from plugins (page.category.panels)
  */
 ?>
 <?= $v->partial('partials/library-crumbs', ['trail' => $trail]) ?>
 <?php if ($preview): ?><p class="notice warn"><?= e(t('library.preview')) ?></p><?php endif ?>
 <h1><?= e($category['name']) ?></h1>
 <?php if (!empty($category['description'])): ?><div class="prose"><?= $v->raw(nl2br(e((string) $category['description']))) ?></div><?php endif ?>
+<?php if ($panels['actions'] !== []): ?><div class="video-actions"><?php foreach ($panels['actions'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?></div><?php endif ?>
 <?php if ($children === [] && $series === [] && $videos === [] && $files === []): ?>
   <p class="muted"><?= e(t('library.empty')) ?></p>
 <?php endif ?>
@@ -28,3 +30,4 @@
   <h2><?= e(t('library.downloads')) ?></h2>
   <?= $v->partial('partials/library-files', ['files' => $files]) ?>
 <?php endif ?>
+<?php foreach ($panels['below'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>

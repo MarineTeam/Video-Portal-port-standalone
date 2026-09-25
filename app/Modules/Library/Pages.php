@@ -93,8 +93,15 @@ final class Pages
         }
         $id = (string) $category['id'];
         $trail = $browse->trail($id);
+        $panels = Panels::collect($this->app, 'page.category.panels', [
+            'category' => $category,
+            'categoryId' => $id,
+            'viewer' => $browse->access()->viewer(),
+            'plugins' => PluginStates::forCategory($this->app->db(), $id),
+        ]);
         return $this->app->page('library/category', [
             'title' => $category['name'],
+            'panels' => $panels,
             'description' => self::excerpt($category['description'] ?? null),
             'category' => $category,
             'trail' => array_slice($trail, 0, -1),
@@ -127,8 +134,17 @@ final class Pages
         $videos = $browse->videos((string) $series['id']);
         $trail = $browse->trail($series['category_id'] !== null ? (string) $series['category_id'] : null);
         $crumbs = [...array_map(fn ($c) => [$c['name'], '/categories/' . $c['slug']], $trail), [$series['title'], '/series/' . $series['slug']]];
+        $categoryId = $series['category_id'] !== null ? (string) $series['category_id'] : null;
+        $panels = Panels::collect($this->app, 'page.series.panels', [
+            'series' => $series,
+            'videos' => $videos,
+            'categoryId' => $categoryId,
+            'viewer' => $browse->access()->viewer(),
+            'plugins' => PluginStates::forCategory($this->app->db(), $categoryId),
+        ]);
         return $this->app->page('library/series', [
             'title' => $series['title'],
+            'panels' => $panels,
             'description' => self::excerpt($series['description'] ?? null),
             'series' => $series,
             'trail' => $trail,
@@ -199,8 +215,19 @@ final class Pages
         $chapters = $player !== null && ($plugins['chapters'] ?? false)
             ? $this->app->db()->all('SELECT title, timestamp_seconds FROM {{chapters}} WHERE video_id = ? ORDER BY timestamp_seconds, position', [$video['id']])
             : [];
+        $panels = Panels::collect($this->app, 'page.video.panels', [
+            'video' => $decorated,
+            'series' => $series,
+            'siblings' => $siblings,
+            'categoryId' => $categoryId !== null ? (string) $categoryId : null,
+            'viewer' => $access->viewer(),
+            'locked' => $locked,
+            'player' => $player,
+            'plugins' => $plugins,
+        ]);
         return $this->app->page('library/video', [
             'title' => $video['title'],
+            'panels' => $panels,
             'chapters' => $chapters,
             'transcript' => !$locked && ($plugins['transcripts'] ?? false) && trim((string) ($video['transcript'] ?? '')) !== '' ? (string) $video['transcript'] : null,
             'description' => self::excerpt($video['description'] ?? null),
