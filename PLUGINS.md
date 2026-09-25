@@ -144,6 +144,11 @@ render it from your own template (below) and it is. Check
 plugin's state for this page's category, so a category that switches you
 off loses your panel.
 
+To send a Web Push notification, call `App\Modules\Push\Push::send($app,
+$userIds, ['title' => …, 'body' => …, 'url' => …])` — it does nothing until the
+Web Push keys are set under Admin → Services, and forgets browsers whose push
+service says they are gone.
+
 To put something in a member's inbox — the record kept whether or not push
 or email reached them — call `App\Modules\Profile\Inbox::add($db, $userId,
 $title, $body, $url)`.

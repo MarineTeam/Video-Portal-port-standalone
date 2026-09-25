@@ -10,6 +10,7 @@
  * @var bool $saved
  * @var ?array{ok: bool, message: string, steps: list<string>} $result
  * @var ?string $flash
+ * @var bool $canGenerate
  */
 ?>
 <p><a href="<?= e(url('/admin/providers')) ?>">← Services</a></p>
@@ -30,6 +31,13 @@
     <button type="submit" name="action" value="save" class="button primary">Save</button>
   </div>
 </form>
+<?php if ($canGenerate): ?>
+  <form method="post" action="<?= e(url('/admin/integrations/' . $id)) ?>" class="stack narrow">
+    <?= $v->raw(csrf_field()) ?>
+    <input type="hidden" name="subject" value="<?= e((string) ($values['subject'] ?? '')) ?>">
+    <button type="submit" name="action" value="generate" class="button" data-confirm="<?= e($saved ? 'Replace the saved key pair? Browsers signed up with it will need to turn notifications on again.' : '') ?>">Generate a new key pair and save it</button>
+  </form>
+<?php endif ?>
 <?php if ($saved): ?>
   <form method="post" action="<?= e(url('/admin/integrations/' . $id)) ?>" class="stack narrow">
     <?= $v->raw(csrf_field()) ?>

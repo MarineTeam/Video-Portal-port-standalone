@@ -20,7 +20,7 @@ commit as the code it describes.
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
-| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks) |
+| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
@@ -38,7 +38,7 @@ commit as the code it describes.
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
-| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
+| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
@@ -303,7 +303,7 @@ commit as the code it describes.
 | `/api/comments` | GET POST | todo | |
 | `/api/cron/broadcasts` | GET | todo | |
 | `/api/cron/extend-events` | GET | todo | |
-| `/api/cron/notification-digest` | GET | todo | |
+| `/api/cron/notification-digest` | GET | done | Job `notification-digest`, daily at 13:00 UTC (plugins/notifications) |
 | `/api/cron/schedule-reminders` | GET | todo | |
 | `/api/cron/sync-schedules` | GET POST | todo | |
 | `/api/cron/sync-video-feeds` | GET | done | Job `sync-video-feeds`, daily at 07:15 UTC as before |
@@ -347,8 +347,8 @@ commit as the code it describes.
 | `/api/profile/devices` | GET | todo | |
 | `/api/profile/export` | GET | done | Every member-keyed table, scoped queries, assertExportSafe, 2/min from the audit log |
 | `/api/profile` | PATCH DELETE | done | PATCH: fields owned by active plugins only; DELETE `{confirm: email}`, never the last admin |
-| `/api/push/subscribe` | POST | todo | |
-| `/api/push/unsubscribe` | POST | todo | |
+| `/api/push/subscribe` | POST | done | App\Modules\Push: push services only, eight per member, 409 until Web Push is set up |
+| `/api/push/unsubscribe` | POST | done | |
 | `/api/ratings` | GET POST | done | plugins/ratings: `?seriesId`/`?videoId` → `{average, count, mine}`; POST `{…, value: 1–5 or null}` (members) |
 | `/api/reactions` | GET POST | done | plugins/likes-dislikes: → `{likes, dislikes, mine}`; POST `{…, type: LIKE, DISLIKE or null}` (members) |
 | `/api/reading/marks/[id]` | PATCH DELETE | todo | |
@@ -435,14 +435,14 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | SeriesWatchLater | `series_watch_laters` | done | plugins/watch-later |
 | CategoryWatchLater | `category_watch_laters` | done | plugins/watch-later |
 | VideoWatchLater | `video_watch_laters` | done | plugins/watch-later |
-| PushSubscription | `push_subscriptions` | todo | |
+| PushSubscription | `push_subscriptions` | done | forgotten when a push service answers 404/410 |
 | DraftRevision | `draft_revisions` | done | Series drafts |
 | Webhook | `webhooks` | done | series.published / video.published → JSON POST through fetchUntrusted, X-Webhook-Signature (hex HMAC-SHA256), sent after the response where the host allows |
 | Announcement | `announcements` | done | the banner through render.page_top; cached a minute per audience, forgotten on every write; dismissed per browser session |
 | LiveStream | `live_streams` | todo | |
 | HomeRow | `home_rows` | done | Library\HomeRows (seeded once, built-in order when empty or unreadable) |
 | Subscription | `subscriptions` | todo | |
-| PendingNotification | `pending_notifications` | todo | |
+| PendingNotification | `pending_notifications` | done | plugins/notifications (DAILY members with a browser signed up) |
 | Playlist | `playlists` | todo | |
 | PlaylistItem | `playlist_items` | todo | |
 | Reaction | `reactions` | done | plugins/likes-dislikes |
@@ -634,6 +634,8 @@ met, with the reason.
 - **A display name counts only while the Profiles plugin is on**; switched off, members are shown by their sign-in name again and `/directory` is gone. The account fields stay stored either way.
 - **Bundled plugins add no data-export sections of their own**: the core's export already holds every member table (favorites, ratings, reactions, watch history…), whether or not the plugin that writes them is on, since the data outlives the switch.
 - **The webhook payload is the port's**: `{event, id, title, slug, url, memberOnly, publishedAt}` (the brief names the event and the signature, not the body). Secrets are stored encrypted under app_key rather than in plain text; a delivery that fails is logged, not retried, as before.
+- **Web Push is native, not minishlink/web-push**: `App\Support\WebPush` does VAPID (ES256, through the JWT code the sign-in providers use) and RFC 8291 aes128gcm encryption with OpenSSL's P-256 key agreement, `hash_hkdf` and AES-128-GCM — so neither bcmath/gmp nor a vendored dependency tree is needed. A unit test decrypts as a browser would. Keys keep the `web-push generate-vapid-keys` format, so the old site's pair carries over. The sender and `/api/push/*` are core (Live streaming and Broadcasts push too); the Web Push keys are an integration under Admin → Services, where "Generate" saves a new pair at once rather than carrying a secret back through the form.
+- **Publishing notifies after the response** (where the host has `fastcgi_finish_request`), checking each member's access to the video — a viewer restriction keeps a video out of the inboxes of people who can't watch it. A daily-digest notification for a member with no browser signed up is dropped rather than queued forever.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.

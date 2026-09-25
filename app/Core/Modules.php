@@ -28,6 +28,7 @@ final class Modules
         \App\Modules\Admin\QueryMonitor::class,
         \App\Modules\Jobs\Routes::class,
         \App\Modules\Uploads\Uploads::class,
+        \App\Modules\Push\Push::class,
     ];
 
     public static function register(App $app): void

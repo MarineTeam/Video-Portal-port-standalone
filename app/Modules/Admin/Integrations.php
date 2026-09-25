@@ -27,11 +27,18 @@ use App\Services\TestResult;
 final class Integrations
 {
     /**
-     * @return array<string, array{label: string, description: string, fields: list<array<string, mixed>>, test: callable(App, array<string, mixed>): TestResult}>
+     * @return array<string, array{label: string, description: string, fields: list<array<string, mixed>>, test: callable(App, array<string, mixed>): TestResult, generate?: callable(): array<string, string>}>
      */
     public static function groups(): array
     {
         return [
+            'webpush' => [
+                'label' => 'Web Push',
+                'description' => 'Notifications on members’ phones and computers, for the plugins that send them (Notifications, Live streaming, Broadcasts). A VAPID key pair: generate one here, or paste the pair the old site used so existing browsers keep receiving.',
+                'fields' => \App\Modules\Push\Push::FIELDS,
+                'test' => fn (App $app, array $config) => \App\Modules\Push\Push::test($config),
+                'generate' => fn () => \App\Modules\Push\Push::generate(),
+            ],
             'transcription' => [
                 'label' => 'Transcription',
                 'description' => 'Writes a video’s transcript for you: any speech-to-text service that takes a multipart POST with a “file” field and answers {"text": …} — OpenAI’s, Groq’s, or a Whisper server of your own. A queued video is sent by the transcription job, one at a time.',
@@ -66,13 +73,27 @@ final class Integrations
         $r->post('/admin/integrations/[group]', fn (Request $req, array $p) => self::submit($app, $req, $p['group']), [$admin]);
     }
 
-    /** @return array{label: string, description: string, fields: list<array<string, mixed>>, test: callable} */
+    /** @return array{label: string, description: string, fields: list<array<string, mixed>>, test: callable, generate?: callable} */
     private static function group(string $id): array
     {
         return self::groups()[$id] ?? throw ApiError::notFound('No such integration.');
     }
 
     /** @param array<string, mixed>|null $result */
+    /**
+     * @param array{fields: list<array<string, mixed>>} $group
+     * @param array<string, mixed> $config
+     */
+    private static function store(App $app, array $group, string $id, array $config): void
+    {
+        $stored = [];
+        foreach ($group['fields'] as $field) {
+            $value = $config[$field['key']] ?? null;
+            $stored[$field['key']] = !empty($field['secret']) && is_string($value) && $value !== '' ? ['secret' => Crypto::encrypt($value)] : $value;
+        }
+        $app->settings()->set('integration.' . $id, $stored);
+    }
+
     private static function page(App $app, string $id, array $values, ?array $result, ?string $flash = null, int $status = 200): Response
     {
         $group = self::group($id);
@@ -84,6 +105,7 @@ final class Integrations
             'saved' => $app->settings()->has('integration.' . $id),
             'result' => $result,
             'flash' => $flash,
+            'canGenerate' => isset($group['generate']),
         ], $status, 'layouts/admin');
         $response->header('Cache-Control', 'no-store');
         return $response;
@@ -108,18 +130,21 @@ final class Integrations
             return Response::redirect(Url::to('/admin/integrations/' . $id));
         }
         $config = Registry::mergeFields($group['fields'], self::config($app, $id), $input);
+        if ($action === 'generate' && isset($group['generate'])) {
+            // A new pair, saved at once: a secret half is never sent back to the form to carry.
+            $config = ($group['generate'])() + $config;
+            self::store($app, $group, $id, $config);
+            Audit::log($app->db(), $actor, 'integration.generate', 'Integration', $id);
+            $app->session()->set('flash', 'A new key pair is saved. Browsers signed up with an earlier pair need to turn notifications on again.');
+            return Response::redirect(Url::to('/admin/integrations/' . $id));
+        }
         foreach ($group['fields'] as $field) {
             if (!empty($field['required']) && ($config[$field['key']] ?? '') === '') {
                 return self::page($app, $id, $config, ['ok' => false, 'message' => $field['label'] . ' is required.', 'steps' => []], null, 400);
             }
         }
         if ($action === 'save') {
-            $stored = [];
-            foreach ($group['fields'] as $field) {
-                $value = $config[$field['key']] ?? null;
-                $stored[$field['key']] = !empty($field['secret']) && is_string($value) && $value !== '' ? ['secret' => Crypto::encrypt($value)] : $value;
-            }
-            $app->settings()->set('integration.' . $id, $stored);
+            self::store($app, $group, $id, $config);
             Audit::log($app->db(), $actor, 'integration.save', 'Integration', $id);
             $app->session()->set('flash', $group['label'] . ' settings saved.');
             return Response::redirect(Url::to('/admin/integrations/' . $id));

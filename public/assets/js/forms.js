@@ -150,6 +150,12 @@ async function send(element, body) {
 
 document.addEventListener('submit', (event) => {
   const form = event.target;
+  // A plain form's button may ask first: <button data-confirm="…">.
+  const question = event.submitter?.dataset?.confirm;
+  if (form instanceof HTMLFormElement && !form.dataset.api && question && !window.confirm(question)) {
+    event.preventDefault();
+    return;
+  }
   if (!(form instanceof HTMLFormElement) || !form.dataset.api) return;
   event.preventDefault();
   send(form, formToJson(form));

@@ -52,6 +52,20 @@ final class Viewer
         });
     }
 
+    /**
+     * Another member, as the site would see them signed in — their groups and
+     * their share grants by address — for deciding what to tell them.
+     *
+     * @param array<string, mixed> $user
+     */
+    public static function forUser(App $app, array $user): self
+    {
+        $db = $app->db();
+        $groups = array_values(array_unique(array_map('strval', $db->column('SELECT DISTINCT group_id FROM {{group_assignments}} WHERE user_id = ?', [$user['id']]))));
+        $grants = ShareAccess::grants($db, [], (string) $user['email']);
+        return new self($user, ($user['role'] ?? null) === 'ADMIN', $groups, $grants);
+    }
+
     public function signedIn(): bool
     {
         return $this->user !== null;
