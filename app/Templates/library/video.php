@@ -61,14 +61,6 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
   <?php if ($download): ?>
     <button type="button" class="button small" data-download-video="<?= e($video['id']) ?>" data-saved-label="<?= e(t('downloads.saved')) ?>">⬇ <?= e(t('downloads.button')) ?></button>
   <?php endif ?>
-  <?php if ($player !== null): ?>
-    <form class="share-at small" data-share-at="<?= e(\App\Core\Url::absolute('/videos/' . $video['slug'])) ?>">
-      <label for="share-t"><?= e(t('library.shareAt')) ?></label>
-      <input id="share-t" name="t" size="6" placeholder="0:00" pattern="[0-9:hms]+" data-share-time>
-      <button type="submit" class="button small"><?= e(t('library.copyLink')) ?></button>
-      <span class="small" data-share-done hidden><?= e(t('library.copied')) ?></span>
-    </form>
-  <?php endif ?>
   <?php foreach ($panels['actions'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>
 </div>
 

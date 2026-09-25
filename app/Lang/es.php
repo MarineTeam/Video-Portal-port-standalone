@@ -170,7 +170,6 @@ return [
     'library.tags' => 'Etiquetas',
     'library.open' => 'Abrir',
     'library.download' => 'Descargar',
-    'library.shareAt' => 'Compartir en',
     'library.copyLink' => 'Copiar enlace',
     'library.copied' => 'Copiado',
     'library.resume' => 'Continuando en {time}',

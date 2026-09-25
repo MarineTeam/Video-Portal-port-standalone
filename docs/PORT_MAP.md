@@ -20,7 +20,7 @@ commit as the code it describes.
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
-| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later) |
+| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
@@ -38,7 +38,7 @@ commit as the code it describes.
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
-| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
+| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
@@ -349,8 +349,8 @@ commit as the code it describes.
 | `/api/profile` | PATCH DELETE | done | PATCH: fields owned by active plugins only; DELETE `{confirm: email}`, never the last admin |
 | `/api/push/subscribe` | POST | todo | |
 | `/api/push/unsubscribe` | POST | todo | |
-| `/api/ratings` | GET POST | todo | |
-| `/api/reactions` | GET POST | todo | |
+| `/api/ratings` | GET POST | done | plugins/ratings: `?seriesId`/`?videoId` → `{average, count, mine}`; POST `{…, value: 1–5 or null}` (members) |
+| `/api/reactions` | GET POST | done | plugins/likes-dislikes: → `{likes, dislikes, mine}`; POST `{…, type: LIKE, DISLIKE or null}` (members) |
 | `/api/reading/marks/[id]` | PATCH DELETE | todo | |
 | `/api/reading/marks` | GET POST | todo | |
 | `/api/reading/progress` | POST | todo | |
@@ -431,7 +431,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | PluginCategoryOverride | `plugin_category_overrides` | done |  |
 | PermissionGroup | `permission_groups` | done | Honoured by Permissions; managed at /admin/permissions |
 | GroupAssignment | `group_assignments` | done | Honoured by Permissions; managed at /admin/permissions |
-| Rating | `ratings` | todo | |
+| Rating | `ratings` | done | plugins/ratings |
 | SeriesWatchLater | `series_watch_laters` | done | plugins/watch-later |
 | CategoryWatchLater | `category_watch_laters` | done | plugins/watch-later |
 | VideoWatchLater | `video_watch_laters` | done | plugins/watch-later |
@@ -445,7 +445,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | PendingNotification | `pending_notifications` | todo | |
 | Playlist | `playlists` | todo | |
 | PlaylistItem | `playlist_items` | todo | |
-| Reaction | `reactions` | todo | |
+| Reaction | `reactions` | done | plugins/likes-dislikes |
 | ViewEvent | `view_events` | todo | |
 | HymnLookup | `hymn_lookups` | todo | |
 | SeriesViewerGroup | `series_viewer_groups` | done | Restricted viewing, checked by ContentAccess |
@@ -628,7 +628,8 @@ met, with the reason.
 - **A transcription server must be at a public address.** The brief allows "a Whisper server on a machine in the office", but the transcription URL is typed by an admin, and the untrusted-URL rule (no loopback, private or link-local addresses, on any hop) wins over that convenience. Such a server needs a public address (a port forward or a tunnel). The request is pinned to the address the check resolved and follows no redirects.
 - **Transcription takes one video per job run and may outlive the 20-second budget.** The budget decides whether to start another video, not how long one may take: a single speech-to-text request can't be split without an audio tool on the host. The job raises its own time limit where the host allows (`set_time_limit`), and a run the host kills leaves the video RUNNING until the half-hour sweep re-queues it. The file sent is the video's own MP4 (the smallest rendition where the provider has several), streamed through storage/tmp, and a file above the configured limit (25 MB by default, OpenAI's) is refused before anything is sent.
 - **`/admin/media-check` is defined by the port**: the brief names the route and nothing else. It reports, within the reader's part of the library, videos whose service is no longer installed, host-disk videos whose file is missing, videos failed or processing for over a day, failed transcriptions, and local files missing from storage; pasted direct and Dropbox links are checked on request, a batch at a time, through the untrusted-URL fetcher. Administrators also see host-disk video files no video (trash included) names, and may delete one unless it changed within the hour. JSON at `GET /api/admin/media-check`.
-- **The request bodies of `/api/favorites` and `/api/watch-later`** are the port's (`{seriesId}`, `{videoId}`, `{categoryId}` → `{favorited}` / `{saved}`), since the brief names the routes and methods only. Each is a toggle, so a stale page can't double-add.
+- **The "Share at" box belongs to the Social share plugin**, as the brief describes it, so it leaves the video page when that plugin is off; the `?t=` link itself is the library's and always works.
+- **The request bodies of `/api/favorites`, `/api/watch-later`, `/api/ratings` and `/api/reactions`** are the port's (`{seriesId}`, `{videoId}`, `{categoryId}` → `{favorited}` / `{saved}`), since the brief names the routes and methods only. Each is a toggle, so a stale page can't double-add.
 - **Share links, downloads, chapters, transcripts, trending and recommendations were built in the library (step 3) and gated on their plugin's state**, before the page hooks existed; they move into `plugins/` with the rest of step 4.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.

@@ -8,5 +8,4 @@ return [
     'watchLater.series' => 'Series and categories',
     'watchLater.videos' => 'Videos',
     'watchLater.empty' => 'Nothing queued. Use Watch later on a video, series or category to keep it here.',
-    'watchLater.off' => 'Watch later is switched off here.',
 ];

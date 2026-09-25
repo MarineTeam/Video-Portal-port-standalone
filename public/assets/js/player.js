@@ -248,18 +248,3 @@ for (const el of document.querySelectorAll('time[data-local-time], time[data-loc
   el.textContent = 'localTime' in el.dataset ? d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : d.toLocaleDateString([], { dateStyle: 'medium' });
 }
 
-// A chapter's own link: copied, with the page's fallback where the
-// clipboard is refused.
-document.addEventListener('click', async (event) => {
-  const button = event.target.closest?.('[data-copy-link]');
-  if (!button) return;
-  event.preventDefault();
-  try {
-    await navigator.clipboard.writeText(button.dataset.copyLink);
-    const before = button.textContent;
-    button.textContent = button.dataset.copiedLabel || '✓';
-    setTimeout(() => { button.textContent = before; }, 1500);
-  } catch {
-    window.prompt('', button.dataset.copyLink);
-  }
-});

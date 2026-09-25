@@ -8,5 +8,4 @@ return [
     'favorites.series' => 'Series',
     'favorites.videos' => 'Vídeos',
     'favorites.empty' => 'Aún no hay nada. Usa Favorito en una serie o un vídeo para guardarlo aquí.',
-    'favorites.off' => 'Los favoritos están desactivados aquí.',
 ];

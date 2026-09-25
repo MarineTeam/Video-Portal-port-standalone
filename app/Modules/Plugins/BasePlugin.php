@@ -53,6 +53,16 @@ abstract class BasePlugin implements Plugin
         });
     }
 
+    /** Adds lang/<locale>.php (lang/en.php where a language has none) to the catalogue. */
+    protected function useLang(Hooks $hooks): void
+    {
+        $dir = $this->dir . '/lang/';
+        $hooks->filter('lang.catalogue', function (array $strings, string $locale) use ($dir): array {
+            $file = is_file($dir . $locale . '.php') ? $dir . $locale . '.php' : $dir . 'en.php';
+            return is_file($file) ? $strings + (array) require $file : $strings;
+        });
+    }
+
     /** The address of assets/<path>, with its modification time to bust caches. */
     protected function asset(string $path): string
     {

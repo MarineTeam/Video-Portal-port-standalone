@@ -161,3 +161,19 @@ document.addEventListener('click', (event) => {
   event.preventDefault();
   send(button, button.dataset.body ? JSON.parse(button.dataset.body) : undefined);
 });
+
+// <button data-copy-link="…">: copies the address (a chapter's, a share
+// button's), prompting with it where the clipboard is refused.
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest?.('[data-copy-link]');
+  if (!button) return;
+  event.preventDefault();
+  try {
+    await navigator.clipboard.writeText(button.dataset.copyLink);
+    const before = button.textContent;
+    button.textContent = button.dataset.copiedLabel || '✓';
+    setTimeout(() => { button.textContent = before; }, 1500);
+  } catch {
+    window.prompt('', button.dataset.copyLink);
+  }
+});

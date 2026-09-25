@@ -354,6 +354,10 @@ fieldset[disabled] { opacity: 0.6; }
 .chapter-list { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: 0.25rem; }
 .chapter-list li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .chapter-time { font-variant-numeric: tabular-nums; color: var(--sec); min-width: 4.5rem; display: inline-block; }
+.share-buttons { display: inline-flex; flex-wrap: wrap; gap: 0.5rem; }
+.star-rating { display: inline-flex; align-items: center; gap: 0.125rem; }
+.star-rating button { background: none; border: 0; padding: 0.125rem; font-size: 1.25rem; line-height: 1; color: var(--sec); cursor: pointer; }
+.star-rating button[aria-pressed="true"], .star-rating .star-on { color: #d97706; }
 .share-at { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; }
 .share-at input { width: 5.5rem; padding-block: 0.3rem; }
 .avatar-thumb { width: 56px; aspect-ratio: 1; border-radius: 50%; }

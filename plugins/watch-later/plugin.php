@@ -12,7 +12,6 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiError;
 use App\Core\App;
 use App\Core\Hooks;
 use App\Core\Id;
@@ -20,13 +19,12 @@ use App\Core\Middleware;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
-use App\Core\Validator;
 use App\Modules\Library\Browse;
 use App\Modules\Library\ContentAccess;
+use App\Modules\Library\ContentTarget;
 use App\Modules\Library\Viewer;
 use App\Modules\Library\Visibility;
 use App\Modules\Plugins\BasePlugin;
-use App\Modules\Plugins\PluginStates;
 
 /**
  * A member's queue, separate from Favorites: a button on each category,
@@ -44,11 +42,7 @@ return new class (__DIR__) extends BasePlugin {
     public function boot(Hooks $hooks, App $app): void
     {
         $this->useTemplates($hooks);
-        $dir = $this->dir;
-        $hooks->filter('lang.catalogue', function (array $strings, string $locale) use ($dir): array {
-            $file = $dir . '/lang/' . (is_file($dir . '/lang/' . $locale . '.php') ? $locale : 'en') . '.php';
-            return $strings + (array) require $file;
-        });
+        $this->useLang($hooks);
         $hooks->on('routes.register', function (Router $r) use ($app): void {
             $r->post('/api/watch-later', fn (Request $req) => $this->toggle($app, $req), [Middleware::member($app)]);
             $r->get('/watch-later', fn () => $this->page($app), [Middleware::member($app)]);
@@ -91,39 +85,14 @@ return new class (__DIR__) extends BasePlugin {
 
     private function toggle(App $app, Request $req): Response
     {
-        $data = Validator::check($req->input(), ['categoryId' => ['id', 'nullable'], 'seriesId' => ['id', 'nullable'], 'videoId' => ['id', 'nullable']]);
-        $kind = isset($data['videoId']) ? 'video' : (isset($data['seriesId']) ? 'series' : (isset($data['categoryId']) ? 'category' : throw ApiError::invalid('Say which category, series or video.')));
-        $id = (string) $data[$kind . 'Id'];
+        $target = ContentTarget::from($app, $req->input(), ['category', 'series', 'video'], 'watch-later');
+        [$table, $column] = self::TABLES[$target->kind];
         $db = $app->db();
-        $access = new ContentAccess($app, Viewer::current($app));
-        $categoryId = null;
-        $ok = false;
-        if ($kind === 'category') {
-            $row = $db->one('SELECT * FROM {{categories}} WHERE id = ? AND deleted_at IS NULL', [$id]);
-            $ok = $row !== null && Visibility::isVisible($row, $access->now()) && $access->category($row) === ContentAccess::OK;
-            $categoryId = $id;
-        } elseif ($kind === 'series') {
-            $row = $db->one('SELECT * FROM {{series}} WHERE id = ? AND deleted_at IS NULL', [$id]);
-            $ok = $row !== null && $access->series($row) === ContentAccess::OK;
-            $categoryId = $row['category_id'] ?? null;
-        } else {
-            $row = $db->one('SELECT * FROM {{videos}} WHERE id = ? AND deleted_at IS NULL', [$id]);
-            $series = $row !== null && $row['series_id'] !== null ? $db->one('SELECT * FROM {{series}} WHERE id = ?', [$row['series_id']]) : null;
-            $ok = $row !== null && $access->video($row, $series) === ContentAccess::OK;
-            $categoryId = $row['category_id'] ?? ($series['category_id'] ?? null);
-        }
-        if (!$ok) {
-            throw ApiError::notFound();
-        }
-        if (!PluginStates::enabled($db, 'watch-later', $categoryId !== null ? (string) $categoryId : null)) {
-            throw new ApiError(t('watchLater.off'), 403, 'plugin_disabled');
-        }
-        [$table, $column] = self::TABLES[$kind];
         $userId = (string) $app->currentUser()->id();
-        if ($db->run("DELETE FROM {{{$table}}} WHERE user_id = ? AND $column = ?", [$userId, $id])->rowCount() > 0) {
+        if ($db->run("DELETE FROM {{{$table}}} WHERE user_id = ? AND $column = ?", [$userId, $target->id])->rowCount() > 0) {
             return Response::json(['saved' => false]);
         }
-        $db->run("INSERT IGNORE INTO {{{$table}}} (id, user_id, $column) VALUES (?, ?, ?)", [Id::new(), $userId, $id]);
+        $db->run("INSERT IGNORE INTO {{{$table}}} (id, user_id, $column) VALUES (?, ?, ?)", [Id::new(), $userId, $target->id]);
         return Response::json(['saved' => true]);
     }
 

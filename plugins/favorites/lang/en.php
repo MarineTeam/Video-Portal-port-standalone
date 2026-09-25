@@ -8,5 +8,4 @@ return [
     'favorites.series' => 'Series',
     'favorites.videos' => 'Videos',
     'favorites.empty' => 'Nothing yet. Use Favorite on a series or video to keep it here.',
-    'favorites.off' => 'Favorites are switched off here.',
 ];

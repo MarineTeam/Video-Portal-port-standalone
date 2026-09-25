@@ -172,6 +172,13 @@ modules as they are ported (see `docs/PORT_MAP.md`): `content.can_view`,
   `$app->view()->partial('my-plugin/button', $vars)` and
   `$app->page('my-plugin/page', $vars)` find them; `$this->asset('app.js')`
   is the address of `assets/app.js` with a cache-busting version.
+- **The item a member acts on:** `App\Modules\Library\ContentTarget::from($app,
+  $input, ['series', 'video'], 'my-slug')` reads `{seriesId}` / `{videoId}` /
+  `{categoryId}`, answers 404 for anything the reader can't open and 403
+  `plugin_disabled` where your plugin is off for its category, and gives you
+  the row, its kind and its category.
+- **Browser scripts in a panel:** read `window.MT` when you use it, not when
+  your module loads — the core's module may run after yours.
 - **Translations:** return `key => text` from the `lang.catalogue` filter
   (the bundled plugins keep them in `lang/en.php`, `lang/es.php`).
 - **A toggle button without writing JavaScript:**

@@ -8,5 +8,4 @@ return [
     'watchLater.series' => 'Series y categorías',
     'watchLater.videos' => 'Vídeos',
     'watchLater.empty' => 'No hay nada en la cola. Usa Ver más tarde en un vídeo, una serie o una categoría para guardarlo aquí.',
-    'watchLater.off' => 'Ver más tarde está desactivado aquí.',
 ];

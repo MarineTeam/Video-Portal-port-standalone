@@ -172,7 +172,6 @@ return [
     'library.tags' => 'Tags',
     'library.open' => 'Open',
     'library.download' => 'Download',
-    'library.shareAt' => 'Share at',
     'library.copyLink' => 'Copy link',
     'library.copied' => 'Copied',
     'library.resume' => 'Resuming at {time}',
