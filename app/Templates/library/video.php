@@ -14,8 +14,6 @@
  * @var ?array<string, mixed> $speaker
  * @var list<string> $scripture
  * @var bool $signedIn
- * @var ?array<string, mixed> $share
- * @var bool $download
  * @var array{actions: list<string>, top: list<string>, below: list<string>} $panels from plugins (page.video.panels)
  */
 use App\Support\Timestamp;
@@ -56,9 +54,6 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
     <button type="button" class="button small" data-api="/api/watch-progress/mark-watched" data-method="POST"
       data-body="<?= e(\App\Core\View::json(['videoId' => $video['id'], 'completed' => !$video['watched']])) ?>"><?= e(t($video['watched'] ? 'library.markUnwatched' : 'library.markWatched')) ?></button>
   <?php endif ?>
-  <?php if ($download): ?>
-    <button type="button" class="button small" data-download-video="<?= e($video['id']) ?>" data-saved-label="<?= e(t('downloads.saved')) ?>">⬇ <?= e(t('downloads.button')) ?></button>
-  <?php endif ?>
   <?php foreach ($panels['actions'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>
 </div>
 
@@ -79,13 +74,10 @@ $book = fn (string $ref) => \App\Modules\Library\Videos::scriptureBook($ref);
 <?php endif ?>
 
 <?php foreach ($panels['below'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>
-<?php if ($share !== null): ?><?= $v->partial('partials/share-panel', ['share' => $share]) ?><?php endif ?>
 <?php if ($previous !== null || $next !== null): ?>
   <nav class="row prev-next" aria-label="<?= e($series['title'] ?? '') ?>">
     <?php if ($previous !== null): ?><a class="button" rel="prev" href="<?= e(url('/videos/' . $previous['slug'])) ?>">← <?= e(t('library.previous')) ?>: <?= e($previous['title']) ?></a><?php endif ?>
     <?php if ($next !== null): ?><a class="button" rel="next" href="<?= e(url('/videos/' . $next['slug'])) ?>"><?= e(t('library.next')) ?>: <?= e($next['title']) ?> →</a><?php endif ?>
   </nav>
 <?php endif ?>
-<p class="small error" data-download-status hidden></p>
 <script type="module" src="<?= e(asset('js/player.js')) ?>"></script>
-<?php if ($download): ?><script type="module" src="<?= e(asset('js/downloads.js')) ?>"></script><?php endif ?>

@@ -9,7 +9,6 @@
  * @var list<array<string, mixed>> $files
  * @var list<string> $tags
  * @var bool $signedIn
- * @var ?array<string, mixed> $share
  * @var array{actions: list<string>, top: list<string>, below: list<string>} $panels from plugins (page.series.panels)
  */
 ?>
@@ -36,7 +35,6 @@
 <?php if ($videos !== []): ?>
   <?= $v->partial('partials/library-videos', ['videos' => $videos, 'locked' => $locked]) ?>
 <?php endif ?>
-<?php if ($share !== null): ?><?= $v->partial('partials/share-panel', ['share' => $share]) ?><?php endif ?>
 <?php if ($files !== []): ?>
   <h2><?= e(t('library.downloads')) ?></h2>
   <?= $v->partial('partials/library-files', ['files' => $files]) ?>
