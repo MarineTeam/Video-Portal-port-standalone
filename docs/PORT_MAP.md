@@ -307,7 +307,7 @@ commit as the code it describes.
 | `/api/cron/schedule-reminders` | GET | todo | |
 | `/api/cron/sync-schedules` | GET POST | todo | |
 | `/api/cron/sync-video-feeds` | GET | todo | |
-| `/api/cron/sync-video-status` | GET | todo | |
+| `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min through /cron/run; abandoned upload placeholders marked FAILED after a day |
 | `/api/cron/transcribe` | GET | todo | |
 | `/api/downloads/[videoId]` | GET | todo | |
 | `/api/events/[slug]/register` | POST DELETE | todo | |
@@ -383,8 +383,8 @@ commit as the code it describes.
 | `/api/videos/outline` | PUT | todo | |
 | `/api/view-events` | POST | todo | |
 | `/api/watch-later` | POST | todo | |
-| `/api/watch-progress/mark-watched` | POST | todo | |
-| `/api/watch-progress` | POST | todo | |
+| `/api/watch-progress/mark-watched` | POST | done | The one way to clear a completion |
+| `/api/watch-progress` | POST | done | Only ever sets completed; never clears it |
 | `/auth/guest` | GET | partial | 404s unless the switch is open and the primary provider can build a guest URL (Auth0, step 3) |
 | `/events/[slug]/event.ics` | GET | todo | |
 | `/events/calendar.ics` | GET | todo | |
@@ -613,6 +613,8 @@ met, with the reason.
 - **The admin video editor is a page, `/admin/videos/[id]`** (the port's), like the series editor, rather than a dialog on the list.
 - **Captions for providers without caption APIs are WebVTT sidecars** in `storage/media/captions/<random>.vtt`, listed in `provider_data.tracks`; like every /media file their names are random, so members-only captions are as private as an unguessable address.
 - **Vendored browser code for video:** `public/vendor-js/tus/` (tus-js-client 4.3.1) and `public/vendor-js/hls/` (hls.js light 1.6.15), each with its LICENSE and VERSION.
+- **The player speaks each embed's postMessage protocol itself** (YouTube's widget messages, Vimeo's player API messages, Player.js for Bunny) instead of loading the YouTube IFrame API, the Vimeo Player SDK or player.js into the page: no third-party script runs in the site's origin, and the CSP needs only frame-src for them. The heartbeat is accurate wherever a protocol or a native `<video>` reports position, elapsed-time elsewhere (Google Drive preview).
+- **Host-disk video is the one exception to "video bytes never pass through PHP"**: its upload is chunked through the site (there is nowhere else for it to go) and a video not everybody may watch streams through `/api/videos/local/[name]`, offloaded by X-Sendfile / X-Accel-Redirect / X-LiteSpeed-Location where detected. Videos anybody may watch sit in `public/media/videos/` for the web server; a `local-videos` job (every five minutes) and every change above a video (category, series, viewer restriction, restore — the `library.changed` hook the library's audit fires) move files between the two, so a take-down time or a category going members-only never leaves a public copy.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log
@@ -638,3 +640,8 @@ met, with the reason.
   own protocol (tus, presigned PUT/multipart, resumable session, chunked),
   status sync, thumbnails, captions, bulk actions, Bunny import. Verified in
   Chromium against the host-disk provider and a YouTube link.
+- 2026-09-25 — /admin/files and /api/files/[id]/content; the player module
+  (native with hls.js, iframe with the YouTube/Vimeo/Player.js protocols,
+  verified against stub embeds since the sandbox can't load YouTube), the
+  watch-progress heartbeat and mark-watched, and the sync-video-status and
+  local-videos jobs.

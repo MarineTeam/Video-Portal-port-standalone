@@ -74,7 +74,7 @@ final class ProvidersTest extends TestCase
     public function test_youtube_player_and_limits(): void
     {
         $p = (new YouTubeProvider([]))->player(new VideoRef('dQw4w9WgXcQ'), new PlayerOptions(90));
-        $this->assertSame(['iframe', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&start=90'], [$p->kind, $p->src]);
+        $this->assertSame(['iframe', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&enablejsapi=1&origin=https%3A%2F%2Fchurch.example.org&start=90'], [$p->kind, $p->src]);
         $this->assertFalse((new YouTubeProvider([]))->capabilities()->upload, 'no upload without OAuth');
         $this->assertFalse((new YouTubeProvider([]))->owns(new VideoRef('dQw4w9WgXcQ')), 'a pasted link isn’t ours to delete');
     }
@@ -97,7 +97,7 @@ final class ProvidersTest extends TestCase
         $this->fake(['GET https://vimeo.com/api/oembed.json' => self::json(['title' => 'Harvest', 'duration' => 600, 'thumbnail_url' => 'https://i.vimeocdn.com/video/1_640'])]);
         $v = (new VimeoProvider([]))->resolveLink('https://vimeo.com/76979871/abcdef1234');
         $this->assertSame(['76979871', 'Harvest', 600, 'abcdef1234'], [$v->id, $v->title, $v->durationSeconds, $v->data['hash']]);
-        $this->assertSame('https://player.vimeo.com/video/76979871?dnt=1&h=abcdef1234#t=5s', (new VimeoProvider([]))->player(new VideoRef('76979871', ['hash' => 'abcdef1234']), new PlayerOptions(5))->src);
+        $this->assertSame('https://player.vimeo.com/video/76979871?dnt=1&api=1&h=abcdef1234#t=5s', (new VimeoProvider([]))->player(new VideoRef('76979871', ['hash' => 'abcdef1234']), new PlayerOptions(5))->src);
 
         $this->fake(['POST https://api.vimeo.com/me/videos' => self::json(['uri' => '/videos/123456', 'upload' => ['upload_link' => 'https://us-files.tus.vimeo.com/files/abc']])]);
         $ticket = (new VimeoProvider(['token' => 't']))->createUpload('Harvest', new UploadHints('h.mp4', 5000, 'video/mp4', true));

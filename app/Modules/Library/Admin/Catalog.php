@@ -51,9 +51,14 @@ final class Catalog
         return (string) $this->app->currentUser()->email();
     }
 
+    /**
+     * Records a library change, and fires library.changed($action, $type,
+     * $id) for whatever depends on the tree as a whole (who may see what).
+     */
     public function audit(string $action, string $type, string $id, ?string $detail = null): void
     {
         Audit::log($this->db(), $this->actor(), $action, self::TYPES[$type]['entity'], $id, $detail);
+        $this->app->hooks->do('library.changed', $action, $type, $id, $this->app);
     }
 
     /** @return array<string, mixed> */

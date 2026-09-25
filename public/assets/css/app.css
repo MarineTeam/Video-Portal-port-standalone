@@ -310,3 +310,8 @@ ul.plain { list-style: none; padding: 0; margin: 0; display: flex; flex-directio
 fieldset { border: 1px solid var(--sep); border-radius: var(--radius-sm); padding: 0.75rem 1rem; }
 fieldset legend { font-weight: 600; padding: 0 0.25rem; }
 fieldset[disabled] { opacity: 0.6; }
+
+/* The video player: the frame holds 16:9 whichever kind fills it. */
+.player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: var(--radius-sm); overflow: hidden; margin-block: 1rem; }
+.player > video, .player > iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.thumb-preview { max-width: 320px; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius-sm); }

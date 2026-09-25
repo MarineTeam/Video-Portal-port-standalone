@@ -236,7 +236,7 @@ final class Videos
         }
         $access = new ContentAccess($this->app, Viewer::guest());
         $series = $row['series_id'] !== null ? $this->db()->one('SELECT * FROM {{series}} WHERE id = ?', [$row['series_id']]) : null;
-        $public = $access->video($row, $series) === ContentAccess::OK && Visibility::isVisible($row, $access->now());
+        $public = $row['deleted_at'] === null && $access->video($row, $series) === ContentAccess::OK && Visibility::isVisible($row, $access->now());
         try {
             $data = $provider->publish(VideoRef::fromRow($row), $public);
         } catch (VideoProviderException $e) {
@@ -246,6 +246,25 @@ final class Videos
         $this->db()->update('videos', ['provider_data' => $data], ['id' => $row['id']]);
         $row['provider_data'] = json_encode($data);
         return $row;
+    }
+
+    /**
+     * Re-decides every host-disk video's place (public/media or storage):
+     * after a change above it (a category or series going members-only, a
+     * viewer restriction) and on a schedule, since publish and take-down
+     * times pass without anybody saving.
+     *
+     * @return int how many moved
+     */
+    public function reconcileLocal(): int
+    {
+        $moved = 0;
+        foreach ($this->db()->all("SELECT * FROM {{videos}} WHERE provider = 'local'") as $row) {
+            $before = (VideoRef::fromRow($row)->data['public'] ?? false) === true;
+            $after = (VideoRef::fromRow($this->afterSave($row))->data['public'] ?? false) === true;
+            $moved += $before !== $after ? 1 : 0;
+        }
+        return $moved;
     }
 
     /**

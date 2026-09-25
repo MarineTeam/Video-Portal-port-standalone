@@ -87,10 +87,10 @@ final class VimeoProvider extends BaseVideoProvider
     public function player(VideoRef $video, PlayerOptions $options): PlayerSpec
     {
         $hash = $video->data['hash'] ?? null;
-        return PlayerSpec::iframe('https://player.vimeo.com/video/' . rawurlencode($video->id) . '?dnt=1'
+        return PlayerSpec::iframe('https://player.vimeo.com/video/' . rawurlencode($video->id) . '?dnt=1&api=1'
             . (is_string($hash) && $hash !== '' ? '&h=' . rawurlencode($hash) : '')
             . ($options->autoplay ? '&autoplay=1' : '')
-            . ($options->startSeconds > 0 ? '#t=' . $options->startSeconds . 's' : ''));
+            . ($options->startSeconds > 0 ? '#t=' . $options->startSeconds . 's' : ''), 'vimeo');
     }
 
     public function thumbnailUrl(VideoRef $video, ?string $file): ?string

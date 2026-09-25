@@ -101,7 +101,9 @@ final class YouTubeProvider extends BaseVideoProvider
 
     public function player(VideoRef $video, PlayerOptions $options): PlayerSpec
     {
-        return PlayerSpec::iframe('https://www.youtube-nocookie.com/embed/' . rawurlencode($video->id) . '?rel=0' . ($options->startSeconds > 0 ? '&start=' . $options->startSeconds : '') . ($options->autoplay ? '&autoplay=1' : ''));
+        // enablejsapi + origin let the page hear the position and seek over postMessage.
+        return PlayerSpec::iframe('https://www.youtube-nocookie.com/embed/' . rawurlencode($video->id) . '?rel=0&enablejsapi=1&origin=' . rawurlencode(\App\Core\Url::origin())
+            . ($options->startSeconds > 0 ? '&start=' . $options->startSeconds : '') . ($options->autoplay ? '&autoplay=1' : ''), 'youtube');
     }
 
     public function thumbnailUrl(VideoRef $video, ?string $file): ?string

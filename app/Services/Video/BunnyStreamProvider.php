@@ -128,7 +128,7 @@ final class BunnyStreamProvider extends BaseVideoProvider
 
     public function player(VideoRef $video, PlayerOptions $options): PlayerSpec
     {
-        return PlayerSpec::iframe($this->embedUrl($video->id, $options->startSeconds, $options->autoplay));
+        return PlayerSpec::iframe($this->embedUrl($video->id, $options->startSeconds, $options->autoplay), 'playerjs');
     }
 
     /** The iframe, signed per request when embed token authentication is on. */

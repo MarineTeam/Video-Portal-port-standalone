@@ -10,6 +10,7 @@
  * @var list<array{id: string, name: string}> $groups
  * @var string $thumbnail
  * @var bool $hasCaptionOps
+ * @var ?array<string, mixed> $player
  */
 $api = '/api/admin/videos/' . $video['id'];
 ?>
@@ -23,6 +24,9 @@ $api = '/api/admin/videos/' . $video['id'];
   <button type="button" class="link" data-api="<?= e($api) ?>/sync-status" data-method="POST">Check with <?= e($video['providerLabel']) ?></button>
 </p>
 
+<?php if ($player !== null): ?>
+  <div class="player narrow" data-player="<?= e(\App\Core\View::json($player)) ?>" data-title="<?= e($video['title']) ?>"></div>
+<?php endif ?>
 <form class="card stack narrow" data-api="<?= e($api) ?>" data-method="PATCH" data-done="Saved." data-no-reload>
   <label>Title<input name="title" value="<?= e($video['title']) ?>" required maxlength="255"></label>
   <label>Address<input name="slug" value="<?= e($video['slug']) ?>" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80"></label>
@@ -102,3 +106,4 @@ $api = '/api/admin/videos/' . $video['id'];
 <?= $v->partial('partials/admin-viewers', ['path' => 'videos', 'id' => $video['id'], 'noun' => 'video', 'viewers' => $viewers, 'groups' => $groups]) ?>
 <p><button type="button" class="button danger" data-api="<?= e($api) ?>" data-method="DELETE" data-redirect="/admin/videos" data-confirm="Move this video to the trash?">Delete video</button></p>
 <script type="module" src="<?= e(asset('js/library-admin.js')) ?>"></script>
+<script type="module" src="<?= e(asset('js/player.js')) ?>"></script>

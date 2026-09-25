@@ -160,6 +160,7 @@ final class VideosAdmin
             'groups' => $this->db()->all('SELECT id, name FROM {{permission_groups}} ORDER BY name'),
             'thumbnail' => \App\Modules\Library\VideoSource::thumbnailUrl($video),
             'hasCaptionOps' => $this->videos->providerFor($video)->capabilities()->captions,
+            'player' => $video['status'] === 'READY' ? \App\Modules\Library\Player::spec($this->app, $video) : null,
         ], 200, 'layouts/admin');
     }
 
