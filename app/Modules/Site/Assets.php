@@ -14,6 +14,10 @@ use App\Services\Files\RangeStreamer;
  * /plugins/<slug>/assets/* and /themes/<slug>/assets/*: a plugin's or theme's
  * static files, with long cache headers. Nothing executable and nothing
  * hidden is ever served, and a path can't leave the assets directory.
+ *
+ * /media/*: images an administrator uploaded (the logo, category artwork),
+ * kept in storage/media because storage/ is the only place the site writes.
+ * Their names are random and never reused, so they cache forever.
  */
 final class Assets
 {
@@ -29,6 +33,35 @@ final class Assets
     {
         $r->get('/plugins/[slug]/assets/[...path]', fn (Request $req, array $p) => self::serve($app->paths->plugins, $p['slug'], $p['path'], $req));
         $r->get('/themes/[slug]/assets/[...path]', fn (Request $req, array $p) => self::serve($app->paths->themes, $p['slug'], $p['path'], $req));
+        $r->get('/media/[...path]', fn (Request $req, array $p) => self::media($app->paths->storage('media'), $p['path'], $req));
+    }
+
+    /** A stored image, or null. Only images; only names this site generated. */
+    public static function resolveMedia(string $root, string $path): ?string
+    {
+        if (!preg_match('~^[a-z0-9-]{1,40}/[a-f0-9]{16,64}\.(png|jpg|gif|webp)$~', $path)) {
+            return null;
+        }
+        $file = realpath("$root/$path");
+        $base = realpath($root);
+        if ($base === false || $file === false || !str_starts_with($file, $base . DIRECTORY_SEPARATOR) || !is_file($file)) {
+            return null;
+        }
+        return $file;
+    }
+
+    private static function media(string $root, string $path, Request $req): Response
+    {
+        $file = self::resolveMedia($root, $path);
+        if ($file === null) {
+            return Response::text('Not found', 404);
+        }
+        return RangeStreamer::serve($file, $req, [
+            'Content-Type' => self::TYPES[strtolower(pathinfo($file, PATHINFO_EXTENSION))],
+            'Cache-Control' => 'public, max-age=31536000, immutable',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+        ]);
     }
 
     public static function resolve(string $root, string $slug, string $path): ?string

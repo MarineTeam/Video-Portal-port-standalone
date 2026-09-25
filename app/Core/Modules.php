@@ -15,6 +15,8 @@ final class Modules
         \App\Modules\Site\Routes::class,
         \App\Modules\Site\Assets::class,
         \App\Modules\Access\Routes::class,
+        \App\Modules\Access\AdminRoutes::class,
+        \App\Modules\Branding\AdminRoutes::class,
         \App\Modules\Admin\Routes::class,
         \App\Modules\Jobs\Routes::class,
         \App\Modules\Uploads\Uploads::class,

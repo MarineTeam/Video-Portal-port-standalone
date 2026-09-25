@@ -32,7 +32,8 @@ foreach ($dirs as $dir) {
                     continue;
                 }
                 // Ternaries that choose between two literal strings are safe.
-                if (preg_match('/^[^?]+\?\s*\'[^\'<>"]*\'\s*:\s*\'[^\'<>"]*\'$/', $expr) || preg_match('/^\'[^\'<>"]*\'$/', $expr)) {
+                // Only the two branches reach the page, whatever the condition is.
+                if (preg_match('/\?\s*\'[^\'<>"]*\'\s*:\s*\'[^\'<>"]*\'$/', $expr) && !str_contains($expr, '<?') || preg_match('/^\'[^\'<>"]*\'$/', $expr)) {
                     continue;
                 }
                 $failures[] = "$where  $expr";

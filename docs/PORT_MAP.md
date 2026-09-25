@@ -18,7 +18,7 @@ commit as the code it describes.
 | Step | What | Status |
 |---|---|---|
 | 1 | Read the brief; write this map | done |
-| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | partial — remaining: /admin/branding, /admin/appearance, /admin/update, /admin/tools, the profile shell |
+| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | partial — remaining: /admin/appearance, /admin/update, /admin/tools, the profile shell |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | todo |
 | 4 | Bundled plugins, simplest first | todo |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
@@ -80,13 +80,13 @@ commit as the code it describes.
 | `/` | partial | Welcome page listing top-level categories; the library home (rows, hero) arrives with the Library module |
 | `/access-denied` | done | One plain sentence; guest link only while the switch is open |
 | `/admin` | partial | Dashboard with counts and setup warnings; library cards pending |
-| `/admin/access-attempts` | todo | |
+| `/admin/access-attempts` | done | Filter by address, reason, date and unreviewed; mark reviewed; prune past 90 days |
 | `/admin/analytics` | todo | |
 | `/admin/announcements` | todo | |
 | `/admin/api-keys` | todo | |
-| `/admin/audit` | todo | |
-| `/admin/authorized-emails` | todo | |
-| `/admin/branding` | todo | |
+| `/admin/audit` | done | Paged, filterable; CSV/JSON export streamed, cells that start with = + - @ are quoted |
+| `/admin/authorized-emails` | done | Allowlist with search and status filter; never suspends or removes the last active entry; organisation exemption per address; guest-login switch |
+| `/admin/branding` | done | Name, short name, three colours with live preview, logo by URL or upload (re-encoded by GD, served from storage/media) |
 | `/admin/broadcasts` | todo | |
 | `/admin/categories` | todo | |
 | `/admin/categories/[id]` | todo | |
@@ -103,7 +103,7 @@ commit as the code it describes.
 | `/admin/live` | todo | |
 | `/admin/media-check` | todo | |
 | `/admin/people` | todo | |
-| `/admin/permissions` | todo | |
+| `/admin/permissions` | done | Groups (capabilities sanitised to the known list), assignments site-wide or scoped to a category/series, category and series editors |
 | `/admin/plugins` | done | Activate, per-category overrides, zip install/delete, auto-deactivation notices; never loads third-party plugins |
 | `/admin/prayer` | todo | |
 | `/admin/query-monitor` | todo | |
@@ -117,7 +117,7 @@ commit as the code it describes.
 | `/admin/speakers` | todo | |
 | `/admin/teams` | todo | |
 | `/admin/trash` | todo | |
-| `/admin/users` | todo | |
+| `/admin/users` | done | Roles (ADMIN only, never the last admin), pre-authorise by email, revoke; changing a role signs the person out |
 | `/admin/video-feeds` | todo | |
 | `/admin/videos` | todo | |
 | `/admin/webhooks` | todo | |
@@ -173,18 +173,18 @@ commit as the code it describes.
 
 | Path | Methods | Status | Notes |
 |---|---|---|---|
-| `/api/admin/access-attempts` | GET POST | todo | |
+| `/api/admin/access-attempts` | GET POST | done | Filters as the page; POST {action: review|prune} |
 | `/api/admin/analytics/export` | GET | todo | |
 | `/api/admin/announcements/[id]` | PATCH DELETE | todo | |
 | `/api/admin/announcements` | GET POST | todo | |
 | `/api/admin/api-keys/[id]` | DELETE | todo | |
 | `/api/admin/api-keys` | GET POST | todo | |
 | `/api/admin/assignments` | POST DELETE | todo | |
-| `/api/admin/audit/export` | GET | todo | |
-| `/api/admin/audit` | GET | todo | |
-| `/api/admin/authorized-emails/[id]` | PATCH DELETE | todo | |
-| `/api/admin/authorized-emails` | GET POST | todo | |
-| `/api/admin/branding` | GET PUT DELETE | todo | |
+| `/api/admin/audit/export` | GET | done | ?format=csv|json, streamed |
+| `/api/admin/audit` | GET | done | Paged, filter by actor/action/entity/date |
+| `/api/admin/authorized-emails/[id]` | PATCH DELETE | done | Last-active guard |
+| `/api/admin/authorized-emails` | GET POST | done | 409 on a duplicate address |
+| `/api/admin/branding` | GET PUT DELETE | done | javascript:/data: logos refused |
 | `/api/admin/broadcasts/[id]` | GET DELETE | todo | |
 | `/api/admin/broadcasts/[id]/send` | POST | todo | |
 | `/api/admin/broadcasts/[id]/test` | POST | todo | |
@@ -196,11 +196,11 @@ commit as the code it describes.
 | `/api/admin/comments/[id]` | PATCH | todo | |
 | `/api/admin/comments` | GET | todo | |
 | `/api/admin/downloads` | GET PATCH | todo | |
-| `/api/admin/editors/category/[id]` | DELETE | todo | |
-| `/api/admin/editors/category` | POST | todo | |
-| `/api/admin/editors` | GET | todo | |
-| `/api/admin/editors/series/[id]` | DELETE | todo | |
-| `/api/admin/editors/series` | POST | todo | |
+| `/api/admin/editors/category/[id]` | DELETE | done |  |
+| `/api/admin/editors/category` | POST | done | By email |
+| `/api/admin/editors` | GET | done |  |
+| `/api/admin/editors/series/[id]` | DELETE | done |  |
+| `/api/admin/editors/series` | POST | done | By email |
 | `/api/admin/events/[id]/registrations/[registrationId]` | DELETE | todo | |
 | `/api/admin/events/[id]/registrations` | GET | todo | |
 | `/api/admin/events/[id]` | PATCH DELETE | todo | |
@@ -222,13 +222,13 @@ commit as the code it describes.
 | `/api/admin/forms/[id]/submissions/[submissionId]` | PATCH DELETE | todo | |
 | `/api/admin/forms/[id]/submissions` | GET | todo | |
 | `/api/admin/forms` | GET POST | todo | |
-| `/api/admin/group-assignments/[id]` | DELETE | todo | |
-| `/api/admin/group-assignments` | GET POST | todo | |
+| `/api/admin/group-assignments/[id]` | DELETE | done |  |
+| `/api/admin/group-assignments` | GET POST | done | By userId or email; category xor series scope |
 | `/api/admin/groups/[id]/members/[memberId]` | DELETE | todo | |
 | `/api/admin/groups/[id]/members` | POST | todo | |
 | `/api/admin/groups/[id]` | GET PATCH DELETE | todo | |
 | `/api/admin/groups` | GET POST | todo | |
-| `/api/admin/guest-login` | GET PATCH | todo | |
+| `/api/admin/guest-login` | GET PATCH | done |  |
 | `/api/admin/guides/[id]` | GET PATCH DELETE | todo | |
 | `/api/admin/guides` | GET POST | todo | |
 | `/api/admin/home-rows/[id]` | PATCH DELETE | todo | |
@@ -238,8 +238,8 @@ commit as the code it describes.
 | `/api/admin/people/[id]` | PATCH DELETE | todo | |
 | `/api/admin/people/merge` | POST | todo | |
 | `/api/admin/people` | GET POST | todo | |
-| `/api/admin/permission-groups/[id]` | PATCH DELETE | todo | |
-| `/api/admin/permission-groups` | GET POST | todo | |
+| `/api/admin/permission-groups/[id]` | PATCH DELETE | done | A group with scoped assignments can’t gain site-wide-only capabilities |
+| `/api/admin/permission-groups` | GET POST | done | Returns the capability list with the groups |
 | `/api/admin/plugins/[slug]/overrides` | POST | done |  |
 | `/api/admin/plugins/[slug]` | PATCH | done |  |
 | `/api/admin/plugins/overrides/[id]` | DELETE | done |  |
@@ -273,8 +273,8 @@ commit as the code it describes.
 | `/api/admin/teams` | GET POST | todo | |
 | `/api/admin/trash/[type]/[id]` | POST DELETE | todo | |
 | `/api/admin/trash` | GET | todo | |
-| `/api/admin/users/[id]` | PATCH DELETE | todo | |
-| `/api/admin/users` | GET POST | todo | |
+| `/api/admin/users/[id]` | PATCH DELETE | done | Last-admin guard; role change deletes sessions |
+| `/api/admin/users` | GET POST | done |  |
 | `/api/admin/video-feeds/[id]` | PATCH DELETE | todo | |
 | `/api/admin/video-feeds/[id]/sync` | POST | todo | |
 | `/api/admin/video-feeds` | GET POST | todo | |
@@ -400,8 +400,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 |---|---|---|---|
 | User | `users` | partial | Table + local-account columns; sign-in, revocation, roles done; admin screens pending |
 | UserIdentity | `user_identities` | done | Written by SignIn::complete; sub namespaced except Auth0 |
-| CategoryEditor | `category_editors` | partial | Honoured by Permissions; admin screens pending |
-| SeriesEditor | `series_editors` | partial | Honoured by Permissions; admin screens pending |
+| CategoryEditor | `category_editors` | done | Honoured by Permissions; managed at /admin/permissions |
+| SeriesEditor | `series_editors` | done | Honoured by Permissions; managed at /admin/permissions |
 | Category | `categories` | todo | |
 | Series | `series` | todo | |
 | Video | `videos` | todo | |
@@ -426,11 +426,11 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | ReadingProgress | `reading_progresses` | todo | |
 | ReadingMark | `reading_marks` | todo | |
 | ApiKey | `api_keys` | todo | |
-| AuditLog | `audit_logs` | partial | Written by Audit::log; /admin/audit pending |
+| AuditLog | `audit_logs` | done | Audit::log; /admin/audit with export |
 | Plugin | `plugins` | done | Plus bundled, version, deactivation columns |
 | PluginCategoryOverride | `plugin_category_overrides` | done |  |
-| PermissionGroup | `permission_groups` | partial | Honoured by Permissions; /admin/permissions pending |
-| GroupAssignment | `group_assignments` | partial | Honoured by Permissions; admin screens pending |
+| PermissionGroup | `permission_groups` | done | Honoured by Permissions; managed at /admin/permissions |
+| GroupAssignment | `group_assignments` | done | Honoured by Permissions; managed at /admin/permissions |
 | Rating | `ratings` | todo | |
 | SeriesWatchLater | `series_watch_laters` | todo | |
 | CategoryWatchLater | `category_watch_laters` | todo | |
@@ -460,11 +460,11 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | DownloadPolicy | `download_policies` | todo | |
 | DownloadPolicyGroup | `download_policy_groups` | todo | |
 | DownloadPolicyUser | `download_policy_users` | todo | |
-| AuthSettings | `auth_settings` | partial | Read by /auth/guest and /access-denied; admin toggle pending |
-| AuthorizedEmail | `authorized_emails` | partial | Checked on every request, bootstrap adoption; /admin/authorized-emails pending |
-| UnauthorizedAccessAttempt | `unauthorized_access_attempts` | partial | Recorded with hourly alert dedupe and 90-day prune; /admin/access-attempts pending |
+| AuthSettings | `auth_settings` | done | Guest-login switch (GuestLogin), read by /auth/guest and /access-denied |
+| AuthorizedEmail | `authorized_emails` | done | Checked on every request, bootstrap adoption, /admin/authorized-emails |
+| UnauthorizedAccessAttempt | `unauthorized_access_attempts` | done | Hourly alert dedupe, 90-day prune, /admin/access-attempts |
 | Notification | `notifications` | todo | |
-| BrandSettings | `brand_settings` | partial | Loaded, normalised, painted as custom properties, set by the installer; /admin/branding pending |
+| BrandSettings | `brand_settings` | done | Painted as custom properties; /admin/branding |
 | Schedule | `schedules` | todo | |
 | ScheduleSource | `schedule_sources` | todo | |
 | Person | `people` | todo | |
@@ -505,7 +505,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/api-keys.test.ts` | todo | |
 | `lib/api-v1.test.ts` | todo | |
 | `lib/attendance.test.ts` | todo | |
-| `lib/authorization.test.ts` | partial | tests/Unit/Access/AuthorizationTest.php; the three guest-login cases need the DB and arrive with the admin toggle |
+| `lib/authorization.test.ts` | done | tests/Unit/Access/AuthorizationTest.php; the guest-login cases in tests/Integration/GuestLoginTest.php |
 | `lib/book-contents.test.ts` | todo | |
 | `lib/branding.test.ts` | done | tests/Unit/Branding/BrandingTest.php |
 | `lib/broadcast.test.ts` | todo | |
@@ -599,13 +599,13 @@ met, with the reason.
 - **`/auth/recover`** is new under `/auth/*`: with `storage/enable-local-login` present it sets an administrator's password against a code written to `storage/recovery.key` — the lockout path when email isn't set up.
 - **Browser-module tests run under `node --test`** in CI (development only; nothing Node ships).
 - **`MT_STORAGE_DIR`** overrides the storage directory for the test suite only.
+- **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log
 
-- 2026-09-25 — step 1: this map. The brief itself arrived as the session
-  prompt rather than as a committed file; it should be committed as
-  `PORT_PROMPT.md` at the repository root so later sessions have the
-  appendices.
+- 2026-09-25 — step 1: this map. The brief arrived as the session prompt;
+  it is now committed verbatim as `PORT_PROMPT.md` at the repository root, as
+  it asks, so later sessions have the appendices.
 - 2026-09-25 — step 2 largely done: core framework, full schema, installer
   (smoke-tested over HTTP), local sign-in with recovery, services registry
   with email (none, mail(), SMTP, Resend) and local files, plugin loader with
@@ -613,3 +613,8 @@ met, with the reason.
   device settings, PWA static files, CI. 185 unit, 8 integration and 15
   browser-module tests. Next: the remaining step-2 admin pages (branding,
   appearance, update, tools, profile shell), then step 3 (the Library).
+- 2026-09-25 — the Access admin area (users, allowlist, access attempts,
+  permissions, audit with export) and branding with logo upload, all over the
+  JSON API from Appendix C through one `data-api` form handler; `Json::row`
+  presents rows with the original's field names and types, read from the
+  schema. 195 unit, 11 integration, 15 browser-module tests.

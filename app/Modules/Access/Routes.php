@@ -351,7 +351,7 @@ final class Routes
      */
     public function guest(Request $req): Response
     {
-        $open = (bool) $this->app->db()->value('SELECT guest_login_enabled FROM {{auth_settings}} WHERE id = ?', ['singleton']);
+        $open = GuestLogin::enabled($this->app->db());
         $primary = $this->app->services()->active('auth');
         if (!$open || !$primary instanceof \App\Services\Auth\AuthProvider || !method_exists($primary, 'guestLoginUrl')) {
             return ErrorPage::render(404);
@@ -363,7 +363,7 @@ final class Routes
     {
         $open = false;
         try {
-            $open = (bool) $this->app->db()->value('SELECT guest_login_enabled FROM {{auth_settings}} WHERE id = ?', ['singleton']);
+            $open = GuestLogin::enabled($this->app->db());
         } catch (\Throwable) {
         }
         $response = $this->page('access-denied', ['guestOpen' => $open]);
