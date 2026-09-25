@@ -21,6 +21,7 @@ final class Modules
         \App\Modules\Update\Routes::class,
         \App\Modules\Tools\Routes::class,
         \App\Modules\Profile\Routes::class,
+        \App\Modules\Library\Admin\Routes::class,
         \App\Modules\Admin\Routes::class,
         \App\Modules\Admin\QueryMonitor::class,
         \App\Modules\Jobs\Routes::class,

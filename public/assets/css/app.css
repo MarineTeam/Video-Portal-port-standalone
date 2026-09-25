@@ -300,3 +300,13 @@ fieldset.row legend { font-weight: 600; margin-bottom: 0.35rem; }
 .qm-bar .qm-ms { text-align: right; white-space: nowrap; }
 .qm-bar code { background: none; color: inherit; white-space: pre-wrap; word-break: break-word; }
 @media (max-width: 800px) { .qm-bar { bottom: calc(var(--tabbar) + env(safe-area-inset-bottom)); } }
+
+/* Library admin ----------------------------------------------------------- */
+.thumb { width: 6rem; height: 3.5rem; object-fit: cover; border-radius: var(--radius-sm); background: var(--chip); }
+.image-field .button input[type=file] { display: none; }
+.busy { opacity: 0.6; pointer-events: none; }
+.bulk .row { align-items: center; margin-bottom: 0.5rem; }
+ul.plain { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+fieldset { border: 1px solid var(--sep); border-radius: var(--radius-sm); padding: 0.75rem 1rem; }
+fieldset legend { font-weight: 600; padding: 0 0.25rem; }
+fieldset[disabled] { opacity: 0.6; }

@@ -88,8 +88,8 @@ commit as the code it describes.
 | `/admin/authorized-emails` | done | Allowlist with search and status filter; never suspends or removes the last active entry; organisation exemption per address; guest-login switch |
 | `/admin/branding` | done | Name, short name, three colours with live preview, logo by URL or upload (re-encoded by GD, served from storage/media) |
 | `/admin/broadcasts` | todo | |
-| `/admin/categories` | todo | |
-| `/admin/categories/[id]` | todo | |
+| `/admin/categories` | done | Tree to any depth, ↑↓ among siblings, trash; administrators only (admin-nav) |
+| `/admin/categories/[id]` | done | Every field incl. parent (cycle-guarded), cover upload, three-way downloads |
 | `/admin/comments` | todo | |
 | `/admin/downloads` | todo | |
 | `/admin/events` | todo | |
@@ -109,14 +109,14 @@ commit as the code it describes.
 | `/admin/query-monitor` | done | Reports the storage/config.php flag, toggles the bar (plugins row "query-monitor", fail-open) |
 | `/admin/schedules` | todo | |
 | `/admin/schedules/[id]` | todo | |
-| `/admin/series` | todo | |
-| `/admin/series/[id]` | todo | |
+| `/admin/series` | done | Scoped to the editor’s part of the library; filter, bulk publish/unpublish/move/delete, ↑↓ |
+| `/admin/series/[id]` | done | Publish now / Save as draft / Load draft, tags, slug rename leaves an alias, restricted viewing |
 | `/admin/services` | todo | |
 | `/admin/services/report` | todo | |
 | `/admin/share-links` | todo | |
-| `/admin/speakers` | todo | |
+| `/admin/speakers` | done |  |
 | `/admin/teams` | todo | |
-| `/admin/trash` | todo | |
+| `/admin/trash` | done | Restore; delete for good removes the provider asset first |
 | `/admin/users` | done | Roles (ADMIN only, never the last admin), pre-authorise by email, revoke; changing a role signs the person out |
 | `/admin/video-feeds` | todo | |
 | `/admin/videos` | todo | |
@@ -191,8 +191,8 @@ commit as the code it describes.
 | `/api/admin/broadcasts` | GET POST | todo | |
 | `/api/admin/bunny-audit` | GET | todo | |
 | `/api/admin/calendar-events/[id]` | GET PATCH DELETE | todo | |
-| `/api/admin/categories/[id]` | PATCH DELETE | todo | |
-| `/api/admin/categories` | GET POST | todo | |
+| `/api/admin/categories/[id]` | PATCH DELETE | done | `{move: up|down|n}` reorders; DELETE trashes |
+| `/api/admin/categories` | GET POST | done | Top-level creation for administrators only |
 | `/api/admin/comments/[id]` | PATCH | todo | |
 | `/api/admin/comments` | GET | todo | |
 | `/api/admin/downloads` | GET PATCH | todo | |
@@ -253,13 +253,13 @@ commit as the code it describes.
 | `/api/admin/schedules/[id]/validate` | POST | todo | |
 | `/api/admin/schedules/reorder` | POST | todo | |
 | `/api/admin/schedules` | GET POST | todo | |
-| `/api/admin/series/[id]/draft` | GET PUT DELETE | todo | |
-| `/api/admin/series/[id]` | GET PATCH DELETE | todo | |
-| `/api/admin/series/[id]/viewer-groups` | GET POST | todo | |
-| `/api/admin/series/[id]/viewers` | GET POST | todo | |
-| `/api/admin/series` | GET POST | todo | |
-| `/api/admin/series/viewer-groups/[id]` | DELETE | todo | |
-| `/api/admin/series/viewers/[id]` | DELETE | todo | |
+| `/api/admin/series/[id]/draft` | GET PUT DELETE | done | One staged DraftRevision; any publish clears it |
+| `/api/admin/series/[id]` | GET PATCH DELETE | done | publish fields need publish_content; moving needs the capability in both places |
+| `/api/admin/series/[id]/viewer-groups` | GET POST | done |  |
+| `/api/admin/series/[id]/viewers` | GET POST | done | By email of an existing member |
+| `/api/admin/series` | GET POST | done | ?q, ?categoryId, ?page; scoped |
+| `/api/admin/series/viewer-groups/[id]` | DELETE | done |  |
+| `/api/admin/series/viewers/[id]` | DELETE | done |  |
 | `/api/admin/services/[id]/rota` | GET | todo | |
 | `/api/admin/services/[id]` | PATCH DELETE | todo | |
 | `/api/admin/services/report` | GET | todo | |
@@ -267,12 +267,12 @@ commit as the code it describes.
 | `/api/admin/share-links/[id]` | PATCH DELETE | todo | |
 | `/api/admin/share-links` | GET POST | todo | |
 | `/api/admin/sheets/tabs` | GET | todo | |
-| `/api/admin/speakers/[id]` | PATCH DELETE | todo | |
-| `/api/admin/speakers` | GET POST | todo | |
+| `/api/admin/speakers/[id]` | PATCH DELETE | done | Videos keep playing without a speaker |
+| `/api/admin/speakers` | GET POST | done |  |
 | `/api/admin/teams/[id]` | PATCH DELETE | todo | |
 | `/api/admin/teams` | GET POST | todo | |
-| `/api/admin/trash/[type]/[id]` | POST DELETE | todo | |
-| `/api/admin/trash` | GET | todo | |
+| `/api/admin/trash/[type]/[id]` | POST DELETE | done | POST restores; DELETE purges |
+| `/api/admin/trash` | GET | done | Only the kinds the reader manages site-wide |
 | `/api/admin/users/[id]` | PATCH DELETE | done | Last-admin guard; role change deletes sessions |
 | `/api/admin/users` | GET POST | done |  |
 | `/api/admin/video-feeds/[id]` | PATCH DELETE | todo | |
@@ -284,15 +284,15 @@ commit as the code it describes.
 | `/api/admin/videos/[id]/sync-status` | POST | todo | |
 | `/api/admin/videos/[id]/thumbnail` | POST | todo | |
 | `/api/admin/videos/[id]/transcribe` | POST | todo | |
-| `/api/admin/videos/[id]/viewer-groups` | GET POST | todo | |
-| `/api/admin/videos/[id]/viewers` | GET POST | todo | |
+| `/api/admin/videos/[id]/viewer-groups` | GET POST | done |  |
+| `/api/admin/videos/[id]/viewers` | GET POST | done | Same module as series |
 | `/api/admin/videos/bulk` | POST | todo | |
 | `/api/admin/videos/bunny-library` | GET | todo | |
 | `/api/admin/videos/chapters/[id]` | PATCH DELETE | todo | |
 | `/api/admin/videos/import` | POST | todo | |
 | `/api/admin/videos` | GET POST | todo | |
-| `/api/admin/videos/viewer-groups/[id]` | DELETE | todo | |
-| `/api/admin/videos/viewers/[id]` | DELETE | todo | |
+| `/api/admin/videos/viewer-groups/[id]` | DELETE | done |  |
+| `/api/admin/videos/viewers/[id]` | DELETE | done |  |
 | `/api/admin/webhooks/[id]` | PATCH DELETE | todo | |
 | `/api/admin/webhooks` | GET POST | todo | |
 | `/api/auth/registration-check` | POST | done | Bearer secret from settings, fails closed, {allowed} only, rate-limited, records SIGNUP refusals |
@@ -402,11 +402,11 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | UserIdentity | `user_identities` | done | Written by SignIn::complete; sub namespaced except Auth0 |
 | CategoryEditor | `category_editors` | done | Honoured by Permissions; managed at /admin/permissions |
 | SeriesEditor | `series_editors` | done | Honoured by Permissions; managed at /admin/permissions |
-| Category | `categories` | todo | |
-| Series | `series` | todo | |
+| Category | `categories` | partial | Admin CRUD, tree, trash; public pages with 3.4 |
+| Series | `series` | partial | Admin CRUD, drafts, tags (series_tags), aliases, viewers; public pages with 3.4 |
 | Video | `videos` | todo | |
 | Chapter | `chapters` | todo | |
-| Speaker | `speakers` | todo | |
+| Speaker | `speakers` | partial | Admin CRUD; public pages with 3.4 |
 | SeriesFavorite | `series_favorites` | todo | |
 | VideoFavorite | `video_favorites` | todo | |
 | BookHymn | `book_hymns` | todo | |
@@ -436,7 +436,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | CategoryWatchLater | `category_watch_laters` | todo | |
 | VideoWatchLater | `video_watch_laters` | todo | |
 | PushSubscription | `push_subscriptions` | todo | |
-| DraftRevision | `draft_revisions` | todo | |
+| DraftRevision | `draft_revisions` | done | Series drafts |
 | Webhook | `webhooks` | todo | |
 | Announcement | `announcements` | todo | |
 | LiveStream | `live_streams` | todo | |
@@ -448,13 +448,13 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | Reaction | `reactions` | todo | |
 | ViewEvent | `view_events` | todo | |
 | HymnLookup | `hymn_lookups` | todo | |
-| SeriesViewerGroup | `series_viewer_groups` | todo | |
-| SeriesViewer | `series_viewers` | todo | |
-| VideoViewerGroup | `video_viewer_groups` | todo | |
-| VideoViewer | `video_viewers` | todo | |
+| SeriesViewerGroup | `series_viewer_groups` | done | Restricted viewing, checked by ContentAccess |
+| SeriesViewer | `series_viewers` | done | Restricted viewing, checked by ContentAccess |
+| VideoViewerGroup | `video_viewer_groups` | done | Restricted viewing, checked by ContentAccess |
+| VideoViewer | `video_viewers` | done | Restricted viewing, checked by ContentAccess |
 | SermonOutlineAnswer | `sermon_outline_answers` | todo | |
 | SermonNote | `sermon_notes` | todo | |
-| SlugAlias | `slug_aliases` | todo | |
+| SlugAlias | `slug_aliases` | partial | Written on rename; redirects with 3.4 |
 | ShareLink | `share_links` | todo | |
 | ShareLinkRecipient | `share_link_recipients` | todo | |
 | DownloadPolicy | `download_policies` | todo | |
@@ -607,6 +607,7 @@ met, with the reason.
 - **Videos store `provider` + `external_id`** (with `provider_data` for a provider's own bookkeeping) instead of `source` + `bunnyVideoId` + `externalId`, since the port has ten providers rather than three. `Library\Presenter::video()` sends the original fields back — `source` (BUNNY/YOUTUBE/VIMEO, or the port's provider name), `bunnyVideoId`, `externalId` — so every JSON shape is unchanged for the original three.
 - **Members-only is inherited down the tree**: a series, video or file is members-only when it, its series, or any category above it says so (the original read the item's own flag, and its series' for files). A category marked members-only now means everything in it, which is what an admin ticking it expects. Viewer restrictions and share grants decide as before.
 - **Member-only content stays out of the sitemap too**, following "a guest browsing the site never sees that the content exists" rather than the older README line that listed member-only categories and series there.
+- **`POST /api/admin/media`** (the port's) stores a cover, speaker photo or thumbnail uploaded through the chunked uploader as a redrawn image under storage/media and answers its address; the original put these in Bunny Storage.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log
