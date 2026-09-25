@@ -18,7 +18,7 @@ commit as the code it describes.
 | Step | What | Status |
 |---|---|---|
 | 1 | Read the brief; write this map | done |
-| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | partial — remaining: /admin/update, /admin/tools, the profile shell |
+| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | partial — remaining: /admin/tools, the profile shell |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | todo |
 | 4 | Bundled plugins, simplest first | todo |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
@@ -29,7 +29,7 @@ commit as the code it describes.
 | Area | Kind | Status | Notes |
 |---|---|---|---|
 | Core framework (Router, Db, View, Session, Csrf, Http, Hooks, Cache, Jobs, Migrator, Log, errors) | core | done | app/Core; PHPStan level 6 clean |
-| Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | partial | Installer done and covered by the smoke test; /admin/update and /admin/tools pending |
+| Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | partial | Installer done and covered by the smoke test; /admin/update done (maintenance, resumable migrations, signed release zips with rollback; verified end to end against a scratch install); /admin/tools pending |
 | Services registry and Admin → Services | core | partial | Registry, generated forms, signed test-then-switch at /admin/providers; auth trial-mode switch arrives with external providers |
 | Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | todo | |
 | Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | todo | |
@@ -599,6 +599,8 @@ met, with the reason.
 - **`/auth/recover`** is new under `/auth/*`: with `storage/enable-local-login` present it sets an administrator's password against a code written to `storage/recovery.key` — the lockout path when email isn't set up.
 - **Browser-module tests run under `node --test`** in CI (development only; nothing Node ships).
 - **`MT_STORAGE_DIR`** overrides the storage directory for the test suite only.
+- **A release is signed through its manifest.** The brief signs "the archive's checksum"; a zip can't carry its own checksum, so the build signs `MANIFEST.json` (Ed25519, `MANIFEST.sig` beside it) and the manifest lists every file's SHA-256. One upload is then self-contained, and the check is the same: nothing is unpacked until the signature verifies, and every unpacked file must match. The installed `MANIFEST.json` stays at the root so the next release can remove what it drops. The public key is `app/release-key.pub`, empty until the maintainers generate one (`tools/release/keygen.php`); without it the page says to upload by FTP.
+- **The site closes itself when its files are newer than its database** (`app.version` differs from `App::VERSION`), not only while `storage/maintenance` exists, so an FTP upload never serves new code against the old schema to visitors. Administrators still get through, with a notice pointing to /admin/update.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
 
 ## Session log

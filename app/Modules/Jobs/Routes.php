@@ -50,6 +50,9 @@ final class Routes
     {
         try {
             $settings = $app->settings();
+            if (is_file($app->paths->maintenance()) || \App\Modules\Update\Updater::behind($settings)) {
+                return;
+            }
             $token = $settings->string('cron.token');
             if ($token === '') {
                 return;

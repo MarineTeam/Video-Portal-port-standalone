@@ -18,6 +18,7 @@ final class Modules
         \App\Modules\Access\AdminRoutes::class,
         \App\Modules\Branding\AdminRoutes::class,
         \App\Modules\Themes\AdminRoutes::class,
+        \App\Modules\Update\Routes::class,
         \App\Modules\Admin\Routes::class,
         \App\Modules\Jobs\Routes::class,
         \App\Modules\Uploads\Uploads::class,

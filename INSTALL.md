@@ -9,7 +9,8 @@ later.
 - **PHP 8.2, 8.3 or 8.4.** Most control panels let you pick the version per
   site (cPanel: *Select PHP Version* or *MultiPHP Manager*).
 - **PHP extensions:** `pdo_mysql`, `mbstring`, `json`, `openssl`, `ctype`,
-  `fileinfo`. Nice to have: `curl`, `zip` (install plugins from a zip), `gd`
+  `fileinfo`. Nice to have: `curl`, `zip` (install plugins and updates from a
+  zip), `sodium` (check an update's signature), `gd`
   (clean up uploaded images), `intl`, and `bcmath` or `gmp` (push
   notifications). The installer checks all of these and says what's missing.
 - **A MySQL 8.0+ or MariaDB 10.6+ database** and a user with all privileges on
@@ -159,6 +160,29 @@ FTP.
 
 **A theme broke the site?** Same: a theme that fails is switched back to the
 default automatically. Deleting its folder from `themes/` also works.
+
+## Updating to a new version
+
+Either way, your settings, uploads, installed plugins and themes are kept, and
+the site shows visitors a maintenance page only while the update runs.
+
+**With a release zip (hosts with the zip extension).** Admin → Update →
+*Upload a release*. The zip's signature is checked against the key built into
+the site before anything is unpacked — a zip that wasn't built by the
+maintainers, or was changed after, is refused. Press *Continue*: the files
+are unpacked and every one checked, the old files are moved aside and the new
+ones moved in, then the database is brought up to date one step at a time.
+Until the last step, *Roll back the files* puts the previous version back.
+
+**By FTP.** Admin → Update → *Turn on maintenance mode* (you keep using the
+site; visitors see the maintenance page). Unzip the release on your computer
+and upload everything in it over the old files — except `storage/`, which is
+yours. Then open Admin → Update and press *Finish the update*. Until you do,
+visitors keep seeing the maintenance page: the site notices that its files
+are newer than its database and waits for you.
+
+If a step fails, the page says why; fix that and press the button again — it
+carries on from where it stopped.
 
 ## Where things are kept
 

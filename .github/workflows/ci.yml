@@ -19,7 +19,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, zip, intl, curl
+          extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, zip, intl, curl, sodium
           coverage: none
       - name: php -l across the tree
         # tests/fixtures holds plugins that are broken on purpose.
@@ -37,7 +37,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, zip, intl, curl
+          extensions: pdo_mysql, mbstring, openssl, fileinfo, gd, zip, intl, curl, sodium
           tools: composer
           coverage: none
       - run: composer install --no-interaction --no-progress
@@ -87,3 +87,26 @@ jobs:
           coverage: none
       - run: composer install --no-interaction --no-progress
       - run: vendor/bin/phpunit --testsuite integration
+
+  release:
+    name: Release zip
+    runs-on: ubuntu-latest
+    needs: [lint, unit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip, sodium
+          tools: composer
+          coverage: none
+      - run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+      - name: Build (signed when the RELEASE_SIGNING_KEY secret is set)
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: php tools/release/build.php --out build/marine-team.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: marine-team-release
+          path: build/marine-team.zip
+          retention-days: 14

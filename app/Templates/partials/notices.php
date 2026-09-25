@@ -8,6 +8,11 @@
  * @var array $shell
  */
 ?>
+<?php if ($shell['updateWaiting'] && $shell['path'] !== '/admin/update'): ?>
+<div class="notice warn" role="status">New files are in place but the update isn’t finished, so visitors see the maintenance page. <a href="<?= e(url('/admin/update')) ?>">Finish the update</a>.</div>
+<?php elseif (is_array($shell['maintenance']) && $shell['path'] !== '/admin/update'): ?>
+<div class="notice warn" role="status">The site is in maintenance mode: visitors see the maintenance page. <a href="<?= e(url('/admin/update')) ?>">Admin → Update</a> turns it off.</div>
+<?php endif ?>
 <?php if ($shell['breakGlass']): ?>
 <div class="notice warn" role="status">Local sign-in for administrators is forced on by <code>storage/enable-local-login</code>. Delete that file once you are back in.</div>
 <?php endif ?>

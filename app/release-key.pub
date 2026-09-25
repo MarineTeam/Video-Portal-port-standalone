@@ -1,0 +1,6 @@
+# The maintainers' Ed25519 public key (base64, one line below these comments).
+# /admin/update applies a release zip only when its MANIFEST.sig verifies
+# against this key. Empty in a development checkout: generate a pair with
+#   php tools/release/keygen.php
+# keep the secret half out of the repository (CI reads it from the
+# RELEASE_SIGNING_KEY secret), and put the public half here.

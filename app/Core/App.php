@@ -205,8 +205,10 @@ final class App
             return ErrorPage::render(404);
         }
 
-        if (is_file($this->paths->maintenance()) && !$this->maintenanceBypass($request)) {
-            return $request->wantsJson() ? Response::error('Down for maintenance', 503, 'maintenance') : ErrorPage::render(503);
+        if ($this->closedForMaintenance($request)) {
+            $response = $request->wantsJson() ? Response::error('Down for maintenance', 503, 'maintenance') : ErrorPage::render(503);
+            $response->header('Retry-After', '300');
+            return $response;
         }
 
         \App\Modules\I18n\I18n::configure($this->paths->app() . '/Lang');
@@ -251,12 +253,28 @@ final class App
         return $response;
     }
 
-    private function maintenanceBypass(Request $request): bool
+    /**
+     * Closed while storage/maintenance exists, or while the files are a newer
+     * version than the database has been brought up to (new files uploaded,
+     * /admin/update not yet finished) — except for whoever Updater lets by.
+     */
+    private function closedForMaintenance(Request $request): bool
     {
-        // The admin performing the update keeps working; nobody else does.
-        return str_starts_with($request->path, '/admin/update')
-            || str_starts_with($request->path, '/auth/login')
-            || ($this->currentUser()->user()['role'] ?? null) === 'ADMIN';
+        $maintenance = \App\Modules\Update\Updater::readMaintenance($this->paths->maintenance());
+        if ($maintenance === null && !\App\Modules\Update\Updater::behind($this->settings())) {
+            return false;
+        }
+        $user = null;
+        try {
+            $user = $this->currentUser()->user();
+        } catch (\Throwable) {
+        }
+        return !\App\Modules\Update\Updater::bypasses(
+            $request->path,
+            $maintenance,
+            is_array($user) ? (string) $user['id'] : null,
+            is_array($user) && ($user['role'] ?? null) === 'ADMIN',
+        ) && !($maintenance === null && is_array($user) && ($user['role'] ?? null) === 'ADMIN');
     }
 
     public function viewerIsAdmin(): bool
@@ -370,6 +388,8 @@ final class App
             'path' => $this->request()->path,
             'notices' => $isAdmin ? $this->plugins()->notices() : [],
             'themeNotice' => $isAdmin ? $this->settings()->get('theme.notice') : null,
+            'maintenance' => $isAdmin ? \App\Modules\Update\Updater::readMaintenance($this->paths->maintenance()) : null,
+            'updateWaiting' => $isAdmin && \App\Modules\Update\Updater::behind($this->settings()),
             'breakGlass' => $isAdmin && is_file($this->paths->storage('enable-local-login')),
             'adminNav' => $user !== null && $current->isStaff()
                 ? \App\Modules\Admin\AdminNav::groupsFor($isAdmin, fn (string $c) => $current->canAnywhere($c))

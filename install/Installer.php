@@ -135,7 +135,7 @@ final class Installer
         foreach (['pdo_mysql' => 'talk to the database', 'mbstring' => 'handle text in every language', 'json' => 'read and write data', 'openssl' => 'encrypt secrets and check signatures', 'ctype' => 'validate input', 'fileinfo' => 'check what uploaded files really are'] as $ext => $why) {
             $out[] = ['label' => "The $ext extension", 'ok' => extension_loaded($ext), 'detail' => "Needed to $why. Ask your host to enable the $ext extension.", 'blocking' => true];
         }
-        foreach (['curl' => 'reach other services quickly (it falls back to PHP streams)', 'zip' => 'install plugins and themes from a zip', 'gd' => 'resize and clean uploaded images', 'intl' => 'sort and fold names in every language'] as $ext => $why) {
+        foreach (['curl' => 'reach other services quickly (it falls back to PHP streams)', 'zip' => 'install plugins, themes and updates from a zip', 'sodium' => 'check the signature of an update uploaded as a zip', 'gd' => 'resize and clean uploaded images', 'intl' => 'sort and fold names in every language'] as $ext => $why) {
             $out[] = ['label' => "The $ext extension (optional)", 'ok' => extension_loaded($ext), 'detail' => "Used to $why.", 'blocking' => false];
         }
         $out[] = ['label' => 'Web Push signing (bcmath or gmp, optional)', 'ok' => extension_loaded('bcmath') || extension_loaded('gmp'), 'detail' => 'Without one of these, push notifications report themselves unavailable; email and the inbox still work.', 'blocking' => false];
@@ -432,6 +432,7 @@ final class Installer
             $set('site.locale', $values['locale']);
             $set('site.timezone', $values['timezone']);
             $set('theme.active', 'default');
+            $set(\App\Modules\Update\Updater::VERSION_SETTING, \App\Core\App::VERSION);
             $db->run('INSERT IGNORE INTO {{settings}} (name, value) VALUES (?, ?)', ['cron.token', json_encode(bin2hex(random_bytes(24)))]);
             $db->run('INSERT IGNORE INTO {{auth_settings}} (id) VALUES (\'singleton\')');
             $db->run('INSERT IGNORE INTO {{download_policies}} (id) VALUES (\'singleton\')');

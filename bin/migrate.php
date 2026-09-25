@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 /*
  * For the minority of hosts with a shell: applies every pending core and
- * plugin migration. Never required — /admin/update does the same from the
- * browser, one file per request.
+ * active-plugin migration and records the version. Never required —
+ * /admin/update does the same from the browser, one file per request. It
+ * doesn't touch maintenance mode: take the site down first if you need to.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -18,8 +19,12 @@ if (!$app->isInstalled()) {
     exit(1);
 }
 App\Core\Crypto::configure((string) $app->config['app_key']);
-$migrator = new App\Core\Migrator($app->db(), $app->paths->app() . '/Migrations');
+App\Core\Cache::configure($app->paths->storage('cache'));
+$updater = new App\Modules\Update\Updater($app);
+$migrator = $updater->migrator();
 while (($result = $migrator->runNext())['applied'] !== null) {
     echo "applied {$result['applied']} ({$result['remaining']} left)\n";
 }
-echo "up to date\n";
+$app->settings()->set(App\Modules\Update\Updater::VERSION_SETTING, App\Core\App::VERSION);
+App\Modules\Update\Updater::clearCaches();
+echo 'up to date at ' . App\Core\App::VERSION . "\n";
