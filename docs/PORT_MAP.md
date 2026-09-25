@@ -20,7 +20,7 @@ commit as the code it describes.
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
-| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks, notifications, subscriptions, playlists, sermon-notes, share-links, downloads — the 21 member plugins; comments next) |
+| 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
@@ -90,7 +90,7 @@ commit as the code it describes.
 | `/admin/broadcasts` | todo | |
 | `/admin/categories` | done | Tree to any depth, ↑↓ among siblings, trash; administrators only (admin-nav) |
 | `/admin/categories/[id]` | done | Every field incl. parent (cycle-guarded), cover upload, three-way downloads |
-| `/admin/comments` | todo | |
+| `/admin/comments` | done | plugins/comments: the reported-or-hidden queue, scoped to the moderator's part of the library |
 | `/admin/downloads` | done | Who (any member, or roles and people) and where (web, app, both), suggested space |
 | `/admin/events` | todo | |
 | `/admin/events/[id]` | todo | |
@@ -193,8 +193,8 @@ commit as the code it describes.
 | `/api/admin/calendar-events/[id]` | GET PATCH DELETE | todo | |
 | `/api/admin/categories/[id]` | PATCH DELETE | done | `{move: up|down|n}` reorders; DELETE trashes |
 | `/api/admin/categories` | GET POST | done | Top-level creation for administrators only |
-| `/api/admin/comments/[id]` | PATCH | todo | |
-| `/api/admin/comments` | GET | todo | |
+| `/api/admin/comments/[id]` | PATCH | done | `{hidden}`; showing again clears the reports |
+| `/api/admin/comments` | GET | done | |
 | `/api/admin/downloads` | GET PATCH | done |  |
 | `/api/admin/editors/category/[id]` | DELETE | done |  |
 | `/api/admin/editors/category` | POST | done | By email |
@@ -298,9 +298,9 @@ commit as the code it describes.
 | `/api/auth/registration-check` | POST | done | Bearer secret from settings, fails closed, {allowed} only, rate-limited, records SIGNUP refusals |
 | `/api/calendar-events` | GET | todo | |
 | `/api/calendar/[token]/marine-team.ics` | GET | todo | |
-| `/api/comments/[id]/report` | POST | todo | |
-| `/api/comments/[id]` | DELETE | todo | |
-| `/api/comments` | GET POST | todo | |
+| `/api/comments/[id]/report` | POST | done | once per member, never one's own |
+| `/api/comments/[id]` | DELETE | done | the author, or a moderator for that part of the library |
+| `/api/comments` | GET POST | done | GET for anybody who may open the page; POST `{seriesId|videoId, body, parentId?}` members, one level of replies, 10 a minute |
 | `/api/cron/broadcasts` | GET | todo | |
 | `/api/cron/extend-events` | GET | todo | |
 | `/api/cron/notification-digest` | GET | done | Job `notification-digest`, daily at 13:00 UTC (plugins/notifications) |
@@ -419,8 +419,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | ServiceAssignment | `service_assignments` | todo | |
 | ServiceBlockout | `service_blockouts` | todo | |
 | ServicePlanItem | `service_plan_items` | todo | |
-| Comment | `comments` | todo | |
-| CommentReport | `comment_reports` | todo | |
+| Comment | `comments` | done | the byline is the display name (Profiles on) or sign-in name, never an address |
+| CommentReport | `comment_reports` | done | |
 | WatchProgress | `watch_progresses` | todo | |
 | FileAsset | `file_assets` | todo | |
 | ReadingProgress | `reading_progresses` | todo | |
