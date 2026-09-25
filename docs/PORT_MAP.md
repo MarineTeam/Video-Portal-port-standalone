@@ -20,7 +20,7 @@ commit as the code it describes.
 | 1 | Read the brief; write this map | done |
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
-| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements) |
+| 4 | Bundled plugins, simplest first | in progress (favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
@@ -38,7 +38,7 @@ commit as the code it describes.
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
-| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
+| Member plugins (favorites … downloads, 21 of Appendix E) | plugins | partial | favorites, watch-later, view-counts, social-share, ratings, likes-dislikes, related-content, up-next, watch-history, profiles, chapters, transcripts, recommendations, announcements, webhooks in plugins/; page hooks page.category/series/video.panels; tests/Integration/MemberListsTest.php through a real server |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
@@ -120,7 +120,7 @@ commit as the code it describes.
 | `/admin/users` | done | Roles (ADMIN only, never the last admin), pre-authorise by email, revoke; changing a role signs the person out |
 | `/admin/video-feeds` | done | Administrators only (a feed can file videos anywhere) |
 | `/admin/videos` | done | VideosAdmin: add by link or upload (tus, presigned PUT/multipart, resumable, chunked), Bunny import, bulk; edit page at /admin/videos/[id] (the port's) with thumbnail, captions, restricted viewing |
-| `/admin/webhooks` | todo | |
+| `/admin/webhooks` | done | plugins/webhooks |
 | `/books/[fileId]` | todo | |
 | `/calendar` | todo | |
 | `/categories/[slug]` | done | Children, series, standalone videos and files; generic title + sign-in page (401) for a members-only one |
@@ -293,8 +293,8 @@ commit as the code it describes.
 | `/api/admin/videos` | GET POST | done | POST `mode`: link or upload; upload answers the ticket |
 | `/api/admin/videos/viewer-groups/[id]` | DELETE | done |  |
 | `/api/admin/videos/viewers/[id]` | DELETE | done |  |
-| `/api/admin/webhooks/[id]` | PATCH DELETE | todo | |
-| `/api/admin/webhooks` | GET POST | todo | |
+| `/api/admin/webhooks/[id]` | PATCH DELETE | done | plus POST `/api/admin/webhooks/[id]/test` (the port's: a test delivery, 502 with the reason when it fails) |
+| `/api/admin/webhooks` | GET POST | done | public addresses only; the secret encrypted, shown only as `secretSet` |
 | `/api/auth/registration-check` | POST | done | Bearer secret from settings, fails closed, {allowed} only, rate-limited, records SIGNUP refusals |
 | `/api/calendar-events` | GET | todo | |
 | `/api/calendar/[token]/marine-team.ics` | GET | todo | |
@@ -437,7 +437,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | VideoWatchLater | `video_watch_laters` | done | plugins/watch-later |
 | PushSubscription | `push_subscriptions` | todo | |
 | DraftRevision | `draft_revisions` | done | Series drafts |
-| Webhook | `webhooks` | todo | |
+| Webhook | `webhooks` | done | series.published / video.published → JSON POST through fetchUntrusted, X-Webhook-Signature (hex HMAC-SHA256), sent after the response where the host allows |
 | Announcement | `announcements` | done | the banner through render.page_top; cached a minute per audience, forgotten on every write; dismissed per browser session |
 | LiveStream | `live_streams` | todo | |
 | HomeRow | `home_rows` | done | Library\HomeRows (seeded once, built-in order when empty or unreadable) |
@@ -633,6 +633,7 @@ met, with the reason.
 - **Chapters, transcripts, trending and recommendations moved into `plugins/`** once the page hooks existed: the chapter and transcript panels are page.video.panels, and the two homepage rows are filled through the home.row filter by Recommendations and View counts. What stays in the library is the content (chapters edited on the video page, the transcript column) and the transcript's part in search, which the search asks of the plugin state. Share links and downloads, built in step 3, still live in the library gated by their plugin's state.
 - **A display name counts only while the Profiles plugin is on**; switched off, members are shown by their sign-in name again and `/directory` is gone. The account fields stay stored either way.
 - **Bundled plugins add no data-export sections of their own**: the core's export already holds every member table (favorites, ratings, reactions, watch history…), whether or not the plugin that writes them is on, since the data outlives the switch.
+- **The webhook payload is the port's**: `{event, id, title, slug, url, memberOnly, publishedAt}` (the brief names the event and the signature, not the body). Secrets are stored encrypted under app_key rather than in plain text; a delivery that fails is logged, not retried, as before.
 - **`/robots.txt`** is served by the app (base-path aware, pointing at the sitemap); the original had none.
 - **The view beacon's cookie is `mt_views`**, one cookie listing recently viewed ids with their times, since Appendix H names no cookie for it.
 - **Uploaded images (logo, artwork) are served at `/media/<kind>/<random>.<ext>` from `storage/media/`**, through the app, with a year-long immutable cache and a sandbox CSP. `storage/` is the only place the site writes, so nothing lands in `public/`.
