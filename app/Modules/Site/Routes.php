@@ -18,7 +18,7 @@ final class Routes
     {
         $r->get('/', fn (Request $req) => self::home($app, $req));
         $r->get('/api/manifest', function () use ($app): Response {
-            $response = Response::json(Branding::manifest(Branding::load($app->db()), Url::basePath()));
+            $response = Response::json(Branding::manifest(\App\Modules\Themes\Appearance::forPage($app)['branding'], Url::basePath()));
             $response->header('Content-Type', 'application/manifest+json; charset=utf-8');
             $response->header('Cache-Control', 'public, max-age=300');
             return $response;
@@ -43,7 +43,7 @@ final class Routes
     /** The library's home page arrives with the Library module; until then, a plain welcome. */
     private static function home(App $app, Request $req): Response
     {
-        $branding = Branding::load($app->db());
+        $branding = \App\Modules\Themes\Appearance::forPage($app)['branding'];
         return $app->page('home', [
             'title' => $branding['name'],
             'branding' => $branding,

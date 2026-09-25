@@ -15,7 +15,7 @@ $user = $shell['user'];
 $tabs = $shell['tabs'];
 ?>
 <!doctype html>
-<html lang="<?= e($shell['locale']) ?>">
+<html lang="<?= e($shell['locale']) ?>" class="<?= e($shell['themeClasses']) ?>">
 <head>
 <?= $v->partial('partials/head', get_defined_vars()) ?>
 </head>

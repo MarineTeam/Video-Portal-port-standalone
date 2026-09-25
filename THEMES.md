@@ -92,6 +92,8 @@ the build lists so every use is visible to a reviewer.
 | `notices`, `themeNotice`, `breakGlass` | administrator notices |
 | `adminNav` | the admin sections this person can use |
 | `head`, `bodyEnd` | what plugins added through `render.head` / `render.body_end` |
+| `themeSettings` | the active theme's customizer values, `key => value` |
+| `themeClasses` | the classes the layouts put on `<html>` for toggles and selects |
 
 ### Core templates and their variables
 
@@ -119,14 +121,51 @@ ported. A plugin can let a theme change a template's variables through the
 
 ## Customizer settings
 
-`customizer.json` is a list of settings, each `key`, `type` (`colour`,
-`image`, `text`, `select`, `toggle`), `label`, optional `default` and, for a
-select, `options`. They appear under Admin → Appearance and are merged over
-the branding, so the three brand colours, name, short name and logo remain
-the base every theme inherits.
+`customizer.json` is a list of settings, each `key` (a letter, then letters,
+digits, `_` or `-`), `type` (`colour`, `image`, `text`, `select`, `toggle`),
+`label`, optional `default` and, for a select, `options` (strings, or
+`{"value", "label"}` with values of lowercase letters, digits and dashes).
+A child theme's declaration of a key replaces its parent's.
 
-## Installing
+```json
+[
+  { "key": "rounded", "type": "toggle", "label": "Rounded corners", "default": true },
+  { "key": "stripe", "type": "colour", "label": "Stripe colour", "default": "#ff8800" },
+  { "key": "density", "type": "select", "label": "Density", "default": "cosy",
+    "options": [{ "value": "cosy", "label": "Cosy" }, { "value": "compact", "label": "Compact" }] },
+  { "key": "hero", "type": "image", "label": "Hero image" }
+]
+```
+
+They appear under Admin → Appearance, are stored per theme, and reach the
+page like this:
+
+| Type | On the page |
+|---|---|
+| `toggle` | the class `theme-<key>` on `<html>` while it is on |
+| `select` | the class `theme-<key>-<value>` on `<html>` |
+| `colour` | the custom property `--theme-<key>` (`#rrggbb`) |
+| `image` | the custom property `--theme-<key>` as `url("…")` — an https:// address or an image uploaded on that screen |
+| `text` | only `$shell['themeSettings']` |
+
+Keys are written kebab-case in class and property names (`heroImage` →
+`--theme-hero-image`). Every value is also in `$shell['themeSettings']`.
+
+A setting whose key is a branding field — `name`, `shortName`, `brand`,
+`brandDeep`, `brandLight`, `logoUrl` — replaces that field while the theme is
+active (the colours every other colour is derived from included), so the
+branding stays the base every theme inherits and a theme can still offer its
+own. The default theme's one setting is *Rounded corners*:
+
+```css
+html:not(.theme-rounded) { --radius: 0; --radius-sm: 0; }
+```
+
+## Installing, switching, deleting
 
 Admin → Appearance → *Install a theme* takes a `.zip` holding one folder named
-after the slug (the same checks as plugins). Without the zip extension, upload
-the folder into `themes/` by FTP.
+after the slug (the same checks as plugins); uploading one that is installed
+replaces it. Without the zip extension, upload the folder into `themes/` by
+FTP. A theme can't be activated while the parent it names is missing, and
+the default theme, the active theme, its parents, and any theme another one
+builds on can't be deleted. Deleting a theme deletes its customizer values.

@@ -13,7 +13,7 @@ $noindex = true;
 $current = AdminNav::currentLabel($shell['path']);
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" class="<?= e($shell['themeClasses']) ?>">
 <head>
 <?= $v->partial('partials/head', get_defined_vars()) ?>
 </head>

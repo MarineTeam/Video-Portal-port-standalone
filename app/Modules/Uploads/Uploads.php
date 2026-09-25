@@ -80,7 +80,10 @@ final class Uploads
             throw ApiError::invalid('Unknown upload purpose.');
         }
         if (in_array($purpose, ['plugin', 'theme', 'release', 'import'], true)) {
-            if (!$app->currentUser()->can('manage_plugins')) {
+            // Plugins are the plugin managers'; themes, release zips and
+            // imports change the whole site, so they are administrators'.
+            $allowed = $purpose === 'plugin' ? $app->currentUser()->can('manage_plugins') : $app->currentUser()->isAdmin();
+            if (!$allowed) {
                 throw ApiError::forbidden();
             }
             if (UploadTypes::extensionOf($name) !== 'zip') {

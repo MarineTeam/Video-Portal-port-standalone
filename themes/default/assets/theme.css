@@ -7,4 +7,11 @@
  * slug in theme.json (and set "parent": "default" to inherit everything you
  * don't override), then override any template by putting a file at the same
  * path under templates/ as it has under app/Templates/.
+ *
+ * Customizer settings (customizer.json) reach the stylesheet as classes on
+ * <html>: a toggle that is on adds theme-<key>, a select adds
+ * theme-<key>-<value>; a colour or image setting becomes --theme-<key>.
  */
+
+/* "Rounded corners" (on by default): off squares every corner. */
+html:not(.theme-rounded) { --radius: 0; --radius-sm: 0; }

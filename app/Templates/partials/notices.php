@@ -21,5 +21,11 @@
 </div>
 <?php endforeach ?>
 <?php if (is_array($shell['themeNotice'])): ?>
-<div class="notice error" role="status">The theme <strong><?= e($shell['themeNotice']['slug'] ?? '') ?></strong> failed to load and the default theme was restored: <?= e(mb_substr((string) ($shell['themeNotice']['error'] ?? ''), 0, 300)) ?></div>
+<div class="notice error" role="status">
+  The theme <strong><?= e($shell['themeNotice']['slug'] ?? '') ?></strong> failed to load and the default theme was restored: <?= e(mb_substr((string) ($shell['themeNotice']['error'] ?? ''), 0, 300)) ?>
+  <form method="post" action="<?= e(url('/admin/appearance/dismiss')) ?>" class="inline">
+    <?= $v->raw(csrf_field()) ?><input type="hidden" name="returnTo" value="<?= e(url($shell['path'])) ?>">
+    <button type="submit" class="link">Dismiss</button>
+  </form>
+</div>
 <?php endif ?>

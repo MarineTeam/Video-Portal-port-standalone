@@ -31,6 +31,8 @@ for (const form of document.querySelectorAll('form[data-chunked-upload]')) {
     const target = form.querySelector('[data-upload-id]');
     if (!input?.files?.length || target.value) return;
     event.preventDefault();
+    // A data-api form is sent by the handler below once the id is in place.
+    event.stopPropagation();
     const progress = form.querySelector('[data-upload-progress]');
     if (progress) progress.hidden = false;
     const button = form.querySelector('button[type=submit]');
@@ -38,7 +40,16 @@ for (const form of document.querySelectorAll('form[data-chunked-upload]')) {
     try {
       target.value = await uploadInChunks(input.files[0], form.dataset.chunkedUpload, (p) => { if (progress) progress.value = Math.round(p * 100); });
       input.disabled = true;
-      form.submit();
+      if (form.dataset.api) {
+        // requestSubmit fires the submit event, whose JSON body is read
+        // synchronously; after it the form is ready for another file.
+        form.requestSubmit();
+        target.value = '';
+        input.disabled = false;
+        if (button) button.disabled = false;
+      } else {
+        form.submit();
+      }
     } catch (error) {
       window.alert(error.message);
       if (button) button.disabled = false;

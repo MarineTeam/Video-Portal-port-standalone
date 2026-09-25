@@ -18,7 +18,7 @@ commit as the code it describes.
 | Step | What | Status |
 |---|---|---|
 | 1 | Read the brief; write this map | done |
-| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | partial — remaining: /admin/appearance, /admin/update, /admin/tools, the profile shell |
+| 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | partial — remaining: /admin/update, /admin/tools, the profile shell |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | todo |
 | 4 | Bundled plugins, simplest first | todo |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | todo |
@@ -37,7 +37,7 @@ commit as the code it describes.
 | Read API `/api/v1` | core | todo | |
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
-| Theme loader, default theme, customizer | core | partial | Loader, fallback, default theme; /admin/appearance pending |
+| Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
 | Member plugins (favorites … downloads, 21 of Appendix E) | plugins | todo | |
 | Live streaming and chat | plugin | todo | |
 | Book reader, hymnals, service plans, rota | plugins | todo | |

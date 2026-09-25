@@ -337,7 +337,8 @@ final class App
     {
         $current = $this->currentUser();
         $user = $current->user();
-        $branding = \App\Modules\Branding\Branding::load($this->db());
+        $look = \App\Modules\Themes\Appearance::forPage($this);
+        $branding = $look['branding'];
         $isAdmin = $current->isAdmin();
         $nav = [
             ['href' => '/', 'label' => t('nav.home'), 'icon' => 'home'],
@@ -350,7 +351,9 @@ final class App
         }
         return [
             'branding' => $branding,
-            'brandingCss' => \App\Modules\Branding\Branding::brandingCss($branding),
+            'brandingCss' => $look['css'],
+            'themeClasses' => $look['classes'],
+            'themeSettings' => $look['values'],
             'user' => $user === null ? null : [
                 'id' => $user['id'],
                 'name' => $current->displayName(),
