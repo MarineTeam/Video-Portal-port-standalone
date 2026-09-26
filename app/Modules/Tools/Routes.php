@@ -11,6 +11,9 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
 use App\Modules\Audit\Audit;
+use App\Modules\Tools\Import\Importer;
+use App\Modules\Tools\Import\Mapping;
+use App\Modules\Uploads\Uploads;
 
 /**
  * /admin/tools: the database backup and the uploaded files, each downloaded
@@ -32,6 +35,9 @@ final class Routes
         $r->post('/api/admin/tools/backup/[id]/step', [$self, 'backupStep'], [$admin]);
         $r->get('/api/admin/tools/backup/[id]/download', [$self, 'backupDownload'], [$admin]);
         $r->get('/api/admin/tools/uploads/[part]', [$self, 'uploadsPart'], [$admin]);
+        $r->post('/api/admin/tools/import', [$self, 'importStart'], [$admin]);
+        $r->post('/api/admin/tools/import/[id]/step', [$self, 'importStep'], [$admin]);
+        $r->get('/api/admin/tools/import/[id]', [$self, 'importState'], [$admin]);
     }
 
     private function actor(): string
@@ -80,6 +86,88 @@ final class Routes
             'tables' => count($state['tables']),
             'rows' => $state['rows'],
             'bytes' => $state['bytes'] ?? 0,
+        ];
+    }
+
+    // -- The import from the Next.js site ------------------------------------
+
+    public function importStart(Request $req): Response
+    {
+        $uploadId = (string) ($req->input()['upload'] ?? '');
+        $upload = Uploads::take($this->app, $uploadId, 'import');
+        try {
+            $state = (new Importer($this->app))->start($upload['path']);
+        } catch (\RuntimeException $e) {
+            throw ApiError::invalid($e->getMessage());
+        } finally {
+            Uploads::discard($this->app, $uploadId);
+        }
+        Audit::log($this->app->db(), $this->actor(), 'import.start', 'Site', (string) $state['id']);
+        return Response::json(self::importPublic($state), 201);
+    }
+
+    /** @param array<string, string> $p */
+    public function importStep(Request $req, array $p): Response
+    {
+        $importer = new Importer($this->app);
+        $was = $importer->state($p['id'])['phase'] ?? null;
+        try {
+            $state = $importer->step($p['id']);
+        } catch (\RuntimeException $e) {
+            throw ApiError::conflict($e->getMessage());
+        }
+        // On the step that finishes it, not on every poll after.
+        if ($state['phase'] === 'done' && $was !== 'done') {
+            Audit::log($this->app->db(), $this->actor(), 'import.finish', 'Site', (string) $state['id']);
+        }
+        return Response::json(self::importPublic($state));
+    }
+
+    /** @param array<string, string> $p */
+    public function importState(Request $req, array $p): Response
+    {
+        $state = (new Importer($this->app))->state($p['id']);
+        if ($state === null) {
+            throw ApiError::notFound('That import has gone; upload the export again.');
+        }
+        return Response::json(self::importPublic($state));
+    }
+
+    /**
+     * What the screen is told. The whole state holds byte offsets and a
+     * table order nobody needs to read; this is the progress and the counts.
+     *
+     * @param array<string, mixed> $state
+     * @return array<string, mixed>
+     */
+    private static function importPublic(array $state): array
+    {
+        $models = is_array($state['models']) ? $state['models'] : [];
+        $errors = [];
+        foreach (is_array($state['errors']) ? $state['errors'] : [] as $model => $list) {
+            foreach (is_array($list) ? $list : [] as $one) {
+                $errors[] = ['model' => (string) $model] + (array) $one;
+            }
+        }
+        $dropped = [];
+        foreach (is_array($state['dropped']) ? $state['dropped'] : [] as $model => $fields) {
+            $dropped[] = ['model' => (string) $model, 'fields' => array_values((array) $fields)];
+        }
+        return [
+            'id' => $state['id'],
+            'phase' => $state['phase'],
+            'at' => $state['at'],
+            'models' => count($models),
+            'model' => $models[$state['at']] ?? null,
+            'exportedAt' => $state['exportedAt'] ?? null,
+            'report' => Importer::report($state),
+            'errors' => $errors,
+            'dropped' => $dropped,
+            'skipped' => array_map(
+                static fn (string $model) => ['model' => $model, 'why' => Mapping::SKIPPED[$model]],
+                array_values((array) ($state['skippedModels'] ?? [])),
+            ),
+            'unknown' => array_values((array) ($state['unknownModels'] ?? [])),
         ];
     }
 

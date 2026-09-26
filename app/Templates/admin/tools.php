@@ -43,4 +43,28 @@ $mb = static fn (int $bytes): string => $bytes >= 1048576 ? number_format($bytes
     <p class="small muted">Files kept with an external storage service (such as Bunny Storage) are not on this server and aren’t included; they are safe where they are.</p>
   <?php endif ?>
 </div>
+<h2>Import from the old site</h2>
+<div class="card stack" data-import>
+  <?php if (!$zip): ?>
+    <p>This host has no zip extension, so an export can’t be opened here. Ask your host to enable it, or import the database with phpMyAdmin instead.</p>
+  <?php else: ?>
+    <p>Everything from the Next.js site — members, the library, events, groups, the lot — read out of an export made with <code>tools/export-from-nextjs/export.mjs</code>. Run that script on a computer with the old database’s connection string, then upload the zip it writes.</p>
+    <p class="small muted">Meant for a site that is still empty: nothing here is deleted or overwritten, and a row whose id is already present is counted and left alone, so stopping half way and starting again is safe. Push subscriptions and paired televisions are deliberately not carried over — each is a credential that only works on the old site.</p>
+    <form class="stack" data-import-form>
+      <input type="file" accept=".zip" data-import-file required>
+      <progress data-upload-progress value="0" max="100" hidden></progress>
+      <button class="button primary" type="submit">Upload and import</button>
+    </form>
+    <progress data-import-progress value="0" max="100" hidden></progress>
+    <p class="small" data-import-status></p>
+    <div data-import-report hidden>
+      <table class="table">
+        <thead><tr><th>Table</th><th>In the export</th><th>Added</th><th>Already here</th><th>Refused</th></tr></thead>
+        <tbody data-import-rows></tbody>
+      </table>
+    </div>
+    <p class="error" data-error hidden></p>
+  <?php endif ?>
+</div>
+
 <script type="module" src="<?= e(asset('js/tools.js')) ?>"></script>
