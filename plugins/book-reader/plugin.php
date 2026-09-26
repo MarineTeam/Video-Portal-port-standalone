@@ -92,7 +92,15 @@ return new class (__DIR__) extends BasePlugin {
             // Indexing a book, from the admin's browser where pdf.js runs.
             $r->add('PUT', '/api/admin/files/[fileId]/contents', fn (Request $req, array $p) => $this->saveContents($app, $req, (string) $p['fileId']), [$manage]);
             $r->get('/api/admin/files/[fileId]/contents', fn (Request $req, array $p) => $this->readContents($app, (string) $p['fileId']), [$manage]);
-            $r->add('PUT', '/api/admin/files/[fileId]/pages', fn (Request $req, array $p) => $this->savePages($app, $req, (string) $p['fileId']), [$manage]);
+            // The words of a hymn, typed in: for a hymn that is its own
+            // file, and for one inside a book, named by its number.
+            $r->get('/api/admin/files/[fileId]/lyrics', fn (Request $req, array $p) => $this->readLyrics($app, $req, (string) $p['fileId']), [$manage]);
+            $r->add('PUT', '/api/admin/files/[fileId]/lyrics', fn (Request $req, array $p) => $this->saveLyrics($app, $req, (string) $p['fileId']), [$manage]);
+            // Every page's words, which the admin's own browser reads out of
+            // the file a batch at a time and can stop and carry on.
+            $r->get('/api/admin/files/[fileId]/text', fn (Request $req, array $p) => $this->readText($app, (string) $p['fileId']), [$manage]);
+            $r->post('/api/admin/files/[fileId]/text', fn (Request $req, array $p) => $this->savePages($app, $req, (string) $p['fileId']), [$manage]);
+            $r->add('DELETE', '/api/admin/files/[fileId]/text', fn (Request $req, array $p) => $this->forgetText($app, (string) $p['fileId']), [$manage]);
         });
     }
 
@@ -653,6 +661,117 @@ return new class (__DIR__) extends BasePlugin {
      * says it reached the last page, because a half-read book that claimed
      * to be searchable would answer "no results" for everything after it.
      */
+    /**
+     * The words of one hymn, and its credits.
+     *
+     * Two places hold them, because there are two kinds of hymn: one that is
+     * its own file keeps them on the file row, and one printed inside a book
+     * keeps them per number. `?number=` says which is being asked for.
+     */
+    private function readLyrics(App $app, Request $req, string $fileId): Response
+    {
+        $db = $app->db();
+        $file = $this->findFile($db, $fileId);
+        $number = ($req->query('number') ?? '') !== '' ? (int) $req->query('number') : null;
+        if ($number === null) {
+            return Response::json([
+                'number' => null,
+                'words' => (string) ($file['lyrics_text'] ?? ''),
+                'credits' => [
+                    'ccli' => $file['ccli_number'],
+                    'author' => $file['song_author'],
+                    'copyright' => $file['song_copyright'],
+                    'key' => $file['musical_key'],
+                    'tempo' => $file['tempo_bpm'] === null ? null : (int) $file['tempo_bpm'],
+                ],
+            ]);
+        }
+        $detail = $db->one('SELECT * FROM {{book_hymn_details}} WHERE file_id = ? AND number = ?', [$file['id'], $number]);
+        return Response::json([
+            'number' => $number,
+            'words' => (string) ($detail['lyrics_text'] ?? ''),
+            'credits' => [
+                'ccli' => $detail['ccli_number'] ?? null,
+                'author' => $detail['author'] ?? null,
+                'copyright' => $detail['copyright'] ?? null,
+                'key' => $detail['musical_key'] ?? null,
+                'tempo' => ($detail['tempo_bpm'] ?? null) === null ? null : (int) $detail['tempo_bpm'],
+            ],
+        ]);
+    }
+
+    private function saveLyrics(App $app, Request $req, string $fileId): Response
+    {
+        $db = $app->db();
+        $file = $this->findFile($db, $fileId);
+        $data = Validator::check($req->input(), [
+            'number' => ['int', 'nullable', 'min' => 1, 'max' => 99999],
+            'words' => ['text', 'nullable', 'max' => 20000],
+            'ccli' => ['string', 'nullable', 'max' => 32],
+            'author' => ['string', 'nullable', 'max' => 255],
+            'copyright' => ['string', 'nullable', 'max' => 500],
+            'key' => ['string', 'nullable', 'max' => 16],
+            'tempo' => ['int', 'nullable', 'min' => 20, 'max' => 400],
+        ]);
+        // Empty is a real answer: it is how somebody takes down words they
+        // put up by mistake, and /present refuses a hymn nobody has typed.
+        $words = trim((string) ($data['words'] ?? ''));
+        $number = isset($data['number']) ? (int) $data['number'] : null;
+        if ($number === null) {
+            $db->update('file_assets', [
+                'lyrics_text' => $words === '' ? null : $words,
+                'ccli_number' => $data['ccli'] ?? null,
+                'song_author' => $data['author'] ?? null,
+                'song_copyright' => $data['copyright'] ?? null,
+                'musical_key' => $data['key'] ?? null,
+                'tempo_bpm' => $data['tempo'] ?? null,
+            ], ['id' => $file['id']]);
+        } else {
+            $row = [
+                'lyrics_text' => $words === '' ? null : $words,
+                'ccli_number' => $data['ccli'] ?? null,
+                'author' => $data['author'] ?? null,
+                'copyright' => $data['copyright'] ?? null,
+                'musical_key' => $data['key'] ?? null,
+                'tempo_bpm' => $data['tempo'] ?? null,
+            ];
+            $existing = $db->one('SELECT id FROM {{book_hymn_details}} WHERE file_id = ? AND number = ?', [$file['id'], $number]);
+            if ($existing === null) {
+                $db->insert('book_hymn_details', $row + ['file_id' => (string) $file['id'], 'number' => $number]);
+            } else {
+                $db->update('book_hymn_details', $row, ['id' => $existing['id']]);
+            }
+        }
+        Audit::log($db, (string) $app->currentUser()->email(), 'book.lyrics', 'FileAsset', (string) $file['id'], $number === null ? null : "no. $number");
+        return $this->readLyrics($app, $req, $fileId);
+    }
+
+    /** What has been read out of this book so far. */
+    private function readText(App $app, string $fileId): Response
+    {
+        $db = $app->db();
+        $file = $this->findFile($db, $fileId);
+        return Response::json([
+            'pages' => (int) $db->value('SELECT COUNT(*) FROM {{book_pages}} WHERE file_id = ?', [$file['id']]),
+            'finished' => $file['text_indexed_at'] !== null,
+            'indexedAt' => Json::instant($file['text_indexed_at']),
+            // Which pages are already done, so a stopped pass carries on from
+            // where it stopped rather than reading the whole book again.
+            'done' => array_map('intval', $db->column('SELECT page FROM {{book_pages}} WHERE file_id = ? ORDER BY page', [$file['id']])),
+        ]);
+    }
+
+    /** Throw the indexed words away, to read the book again from the start. */
+    private function forgetText(App $app, string $fileId): Response
+    {
+        $db = $app->db();
+        $file = $this->findFile($db, $fileId);
+        $db->run('DELETE FROM {{book_pages}} WHERE file_id = ?', [$file['id']]);
+        $db->update('file_assets', ['text_indexed_at' => null], ['id' => $file['id']]);
+        Audit::log($db, (string) $app->currentUser()->email(), 'book.text.clear', 'FileAsset', (string) $file['id']);
+        return Response::json(['ok' => true, 'pages' => 0, 'finished' => false]);
+    }
+
     private function savePages(App $app, Request $req, string $fileId): Response
     {
         $db = $app->db();

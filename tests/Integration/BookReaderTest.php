@@ -128,7 +128,7 @@ final class BookReaderTest extends ServerTestCase
 
     public function test_5_a_page_of_text_at_a_time_and_only_a_finished_run_says_searchable(): void
     {
-        $put = fn (array $body) => self::http('PUT', '/api/admin/files/' . self::$ids['book'] . '/pages', (string) json_encode($body), 'admin', [
+        $put = fn (array $body) => self::http('POST', '/api/admin/files/' . self::$ids['book'] . '/text', (string) json_encode($body), 'admin', [
             'Content-Type' => 'application/json', 'Accept' => 'application/json', 'X-CSRF-Token' => self::token(),
         ]);
         $first = $put(['pages' => [
@@ -252,5 +252,65 @@ final class BookReaderTest extends ServerTestCase
 
         // And a stranger is offered nothing to press.
         self::assertStringNotContainsString('/api/favorites', self::http('GET', '/hymns/' . self::$ids['single'], null, 'guest')['body']);
+    }
+
+    public function test_11_a_hymns_words_can_be_typed_in_and_taken_down_again(): void
+    {
+        // A hymn that is its own file: the words live on the file row.
+        $saved = self::http('PUT', '/api/admin/files/' . self::$ids['single'] . '/lyrics', (string) json_encode([
+            'words' => "Be thou my vision\n\nBe thou my wisdom", 'author' => 'Dallán Forgaill', 'ccli' => '30639', 'tempo' => 96,
+        ]), 'admin', ['Content-Type' => 'application/json', 'X-CSRF-Token' => self::token()]);
+        self::assertSame(200, $saved['status'], (string) $saved['body']);
+        self::assertStringContainsString('Be thou my wisdom', (string) $saved['json']['words']);
+        self::assertSame('Dallán Forgaill', $saved['json']['credits']['author']);
+        self::assertSame(96, $saved['json']['credits']['tempo']);
+        self::assertNull($saved['json']['number']);
+
+        // And the page that shows them can now show them.
+        self::assertStringContainsString('Be thou my wisdom', self::http('GET', '/hymns/' . self::$ids['single'], null, 'ruth')['body']);
+
+        // Emptying it is how words put up by mistake come down.
+        $cleared = self::http('PUT', '/api/admin/files/' . self::$ids['single'] . '/lyrics', (string) json_encode(['words' => '']), 'admin', ['Content-Type' => 'application/json', 'X-CSRF-Token' => self::token()]);
+        self::assertSame('', (string) $cleared['json']['words']);
+        self::assertSame(404, self::http('GET', '/present/' . self::$ids['single'], null, 'ruth')['status'], 'and the projector refuses a hymn nobody has typed');
+    }
+
+    public function test_12_a_hymn_inside_a_book_keeps_its_words_against_its_number(): void
+    {
+        $put = fn (array $body) => self::http('PUT', '/api/admin/files/' . self::$ids['book'] . '/lyrics', (string) json_encode($body), 'admin', ['Content-Type' => 'application/json', 'X-CSRF-Token' => self::token()]);
+        self::assertSame(200, $put(['number' => 1, 'words' => 'O come, O come, Emmanuel', 'copyright' => 'Public domain'])['status']);
+        self::assertSame(200, $put(['number' => 2, 'words' => 'Hark the herald angels sing'])['status']);
+
+        // Each number answers with its own, not the last one saved.
+        $first = self::http('GET', '/api/admin/files/' . self::$ids['book'] . '/lyrics?number=1');
+        self::assertSame('O come, O come, Emmanuel', $first['json']['words']);
+        self::assertSame('Public domain', $first['json']['credits']['copyright']);
+        self::assertSame('Hark the herald angels sing', self::http('GET', '/api/admin/files/' . self::$ids['book'] . '/lyrics?number=2')['json']['words']);
+        self::assertSame('', self::http('GET', '/api/admin/files/' . self::$ids['book'] . '/lyrics?number=3')['json']['words'], 'a number nobody has typed is empty, not missing');
+
+        // Saving the same number again replaces rather than adds.
+        self::assertSame(200, $put(['number' => 1, 'words' => 'O come, O come, Emmanuel (corrected)'])['status']);
+        self::assertSame(1, (int) self::connect(self::prefix())->value('SELECT COUNT(*) FROM {{book_hymn_details}} WHERE file_id = ? AND number = 1', [self::$ids['book']]));
+    }
+
+    public function test_13_the_indexed_text_says_what_is_done_and_can_be_thrown_away(): void
+    {
+        $state = self::api('GET', '/api/admin/files/' . self::$ids['book'] . '/text');
+        self::assertSame(200, $state['status']);
+        self::assertGreaterThan(0, $state['json']['pages'], 'the earlier test read this book');
+        self::assertNotSame([], $state['json']['done'], 'and says which pages, so a stopped pass carries on');
+        self::assertSame([11, 12, 14], $state['json']['done'], 'the pages actually read, in order');
+
+        self::assertSame(200, self::api('DELETE', '/api/admin/files/' . self::$ids['book'] . '/text')['status']);
+        $after = self::api('GET', '/api/admin/files/' . self::$ids['book'] . '/text')['json'];
+        self::assertSame(0, $after['pages']);
+        self::assertFalse($after['finished']);
+        self::assertNull($after['indexedAt']);
+    }
+
+    public function test_14_typing_a_hymns_words_needs_the_capability(): void
+    {
+        self::assertSame(403, self::api('GET', '/api/admin/files/' . self::$ids['book'] . '/lyrics', null, 'ruth')['status']);
+        self::assertSame(403, self::api('DELETE', '/api/admin/files/' . self::$ids['book'] . '/text', null, 'ruth')['status']);
     }
 }

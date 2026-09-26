@@ -167,7 +167,7 @@ ready(() => {
         // Written a few pages at a time, so an hour-long run over a scanned
         // hymnal is resumable: what is saved stays saved.
         if (batch.length >= 5 || at === total) {
-          await MT.api(`/api/admin/files/${fileId}/pages`, { method: 'PUT', body: { pages: batch, finished: at === total && !stop } });
+          await MT.api(`/api/admin/files/${fileId}/text`, { method: 'POST', body: { pages: batch, finished: at === total && !stop } });
           batch = [];
           box.dataset.readFrom = String(at + 1);
         }
@@ -179,4 +179,72 @@ ready(() => {
     box.querySelector('[data-book-stop]')?.setAttribute('hidden', '');
     event.target.disabled = false;
   });
+
+  // The words of a hymn, typed in. Reading them back on a number change is
+  // the point: a book holds a hundred of these, and typing over the last
+  // one you looked at would be the obvious way to lose work.
+  const lyrics = box.querySelector('[data-book-lyrics]');
+  if (lyrics) {
+    const status = box.querySelector('[data-book-lyrics-status]');
+    const fields = ['words', 'author', 'copyright', 'ccli', 'key', 'tempo'];
+    const show = (answer) => {
+      lyrics.elements.words.value = answer.words || '';
+      for (const name of ['author', 'copyright', 'ccli', 'key', 'tempo']) {
+        lyrics.elements[name].value = answer.credits?.[name] ?? '';
+      }
+    };
+    // A load that lands after somebody has started typing must not wipe
+    // what they wrote — the answer it carries is for a hymn they have
+    // already moved on from. Each load claims a turn; only the newest one,
+    // into an untouched form, is allowed to fill it in.
+    let turn = 0;
+    let typing = false;
+    const load = async () => {
+      const mine = ++turn;
+      const number = lyrics.elements.number.value.trim();
+      try {
+        const answer = await MT.api(`/api/admin/files/${fileId}/lyrics${number ? `?number=${encodeURIComponent(number)}` : ''}`);
+        if (mine !== turn || typing) return;
+        show(answer);
+        if (status) status.textContent = '';
+      } catch (e) {
+        if (mine === turn && status) status.textContent = e.message;
+      }
+    };
+    for (const name of fields) {
+      lyrics.elements[name].addEventListener('input', () => { typing = true; });
+    }
+    lyrics.elements.number.addEventListener('change', () => { typing = false; load(); });
+    load();
+
+    lyrics.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const number = lyrics.elements.number.value.trim();
+      const body = { number: number === '' ? null : Number(number) };
+      for (const name of fields) {
+        const value = lyrics.elements[name].value.trim();
+        body[name] = value === '' ? null : (name === 'tempo' ? Number(value) : value);
+      }
+      try {
+        turn++;
+        show(await MT.api(`/api/admin/files/${fileId}/lyrics`, { method: 'PUT', body }));
+        typing = false;
+        if (status) status.textContent = labels.wordsSaved;
+      } catch (e) {
+        if (status) status.textContent = e.message;
+      }
+    });
+  }
+
+  // Throwing the indexed words away, to read the book again from the start.
+  box.querySelector('[data-book-forget]')?.addEventListener('click', async (event) => {
+    if (!window.confirm(event.target.dataset.confirm)) return;
+    try {
+      await MT.api(`/api/admin/files/${fileId}/text`, { method: 'DELETE' });
+      window.location.reload();
+    } catch (e) {
+      say(e.message);
+    }
+  });
+
 });

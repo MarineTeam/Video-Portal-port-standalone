@@ -208,10 +208,10 @@ commit as the code it describes.
 | `/api/admin/events/series/[id]` | PATCH DELETE | done | Changing the timing clears empty future dates and lays them down again; DELETE stops the repeat without deleting anybody's place |
 | `/api/admin/events/series` | GET POST | done | Takes the five shapes (`shape`, `days`, `interval`, `count`/`until`) or a raw `rule`; answers with the rule in words |
 | `/api/admin/files/[id]/contents` | GET PUT | done | plugins/book-reader; the contents box typed by hand, or read from the book's own bookmarks |
-| `/api/admin/files/[id]/lyrics` | GET PUT | todo | |
+| `/api/admin/files/[id]/lyrics` | GET PUT | done | plugins/book-reader; the words and credits of a hymn — on the file row for one that is its own file, against `?number=` for one inside a book |
 | `/api/admin/files/[id]/replace` | POST | done | Takes a chunked upload id; the Bunny Storage pick arrives with that provider |
 | `/api/admin/files/[id]` | PATCH DELETE | done | PATCH also takes `move` |
-| `/api/admin/files/[id]/text` | GET POST DELETE | todo | |
+| `/api/admin/files/[id]/text` | GET POST DELETE | done | plugins/book-reader; GET says which pages are read so a stopped pass carries on, POST adds a batch, DELETE throws the index away |
 | `/api/admin/files/bulk` | POST | done | publish, unpublish, delete, move, podcast, unpodcast |
 | `/api/admin/files/bunny-storage` | GET | done | ?dir=, marks what is already imported |
 | `/api/admin/files/import` | POST | done | Objects stay where they are; each becomes a file row |

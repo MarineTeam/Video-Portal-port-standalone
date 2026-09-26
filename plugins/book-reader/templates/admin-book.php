@@ -22,6 +22,7 @@
          'readingText' => t('books.readingText', ['page' => '{page}', 'count' => '{count}']),
          'textRead' => t('books.textRead', ['count' => '{count}']),
          'ocrNeeded' => t('books.ocrNeeded'),
+         'wordsSaved' => t('books.wordsSaved'),
      ])) ?>">
 
   <p class="notice small" data-book-status hidden></p>
@@ -64,8 +65,33 @@
       <p class="row">
         <button class="button" type="button" data-book-text><?= e(t('books.readTheText')) ?></button>
         <button class="button small" type="button" data-book-stop hidden><?= e(t('books.stopReading')) ?></button>
+        <?php if ($file['pages'] > 0): ?>
+          <button class="button small danger" type="button" data-book-forget data-confirm="<?= e(t('books.forgetTextConfirm')) ?>"><?= e(t('books.forgetText')) ?></button>
+        <?php endif ?>
       </p>
     </section>
   <?php endif ?>
+
+  <section>
+    <h2><?= e(t('books.words')) ?></h2>
+    <p class="small muted"><?= e(t('books.wordsHint')) ?></p>
+    <form class="stack" data-book-lyrics>
+      <label><?= e(t('books.wordsNumber')) ?><input name="number" type="number" min="1" max="99999" data-null inputmode="numeric"></label>
+      <label><?= e(t('books.wordsText')) ?><textarea name="words" rows="10" data-null placeholder="<?= e(t('books.wordsPlaceholder')) ?>"></textarea></label>
+      <div class="row">
+        <label><?= e(t('books.wordsAuthor')) ?><input name="author" maxlength="255" data-null></label>
+        <label><?= e(t('books.wordsCopyright')) ?><input name="copyright" maxlength="500" data-null></label>
+      </div>
+      <div class="row">
+        <label><?= e(t('books.wordsCcli')) ?><input name="ccli" maxlength="32" data-null></label>
+        <label><?= e(t('books.wordsKey')) ?><input name="key" maxlength="16" data-null></label>
+        <label><?= e(t('books.wordsTempo')) ?><input name="tempo" type="number" min="20" max="400" data-null inputmode="numeric"></label>
+      </div>
+      <p class="row">
+        <button class="button primary" type="submit"><?= e(t('books.wordsSave')) ?></button>
+        <span class="small" data-book-lyrics-status></span>
+      </p>
+    </form>
+  </section>
 </div>
 <script type="module" src="<?= e($script) ?>"></script>
