@@ -21,6 +21,12 @@ use App\Support\TocNav;
  */
 final class Books
 {
+    /**
+     * Where a hymn was opened from, which is what lets a count be read
+     * knowing what kind of opening it counts.
+     */
+    public const OPENINGS = ['hymn', 'book', 'reader', 'present'];
+
     public const LIMIT = 50;
 
     /**

@@ -81,7 +81,7 @@ commit as the code it describes.
 | `/access-denied` | done | One plain sentence; guest link only while the switch is open |
 | `/admin` | partial | Dashboard with counts and setup warnings; library cards pending |
 | `/admin/access-attempts` | done | Filter by address, reason, date and unreviewed; mark reviewed; prune past 90 days |
-| `/admin/analytics` | todo | |
+| `/admin/analytics` | done | Views and people over 7/30/90 days, the top ten series and videos with a watch-through rate, and the hymns opened most often |
 | `/admin/announcements` | done | plugins/announcements |
 | `/admin/api-keys` | done | The key is shown once at creation and never again; revoking keeps the row and its history |
 | `/admin/audit` | done | Paged, filterable; CSV/JSON export streamed, cells that start with = + - @ are quoted |
@@ -174,7 +174,7 @@ commit as the code it describes.
 | Path | Methods | Status | Notes |
 |---|---|---|---|
 | `/api/admin/access-attempts` | GET POST | done | Filters as the page; POST {action: review|prune} |
-| `/api/admin/analytics/export` | GET | todo | |
+| `/api/admin/analytics/export` | GET | done | The same three tables as one CSV with a section each, or JSON; a cell starting = + - @ is quoted |
 | `/api/admin/announcements/[id]` | PATCH DELETE | done | plugins/announcements |
 | `/api/admin/announcements` | GET POST | done | message, active, publishAt/expiresAt window, audience ALL/GUESTS/MEMBERS |
 | `/api/admin/api-keys/[id]` | DELETE | done | Revokes (sets `revoked_at`); the row stays so audit and last-used survive |
@@ -446,8 +446,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | Playlist | `playlists` | done | plugins/playlists |
 | PlaylistItem | `playlist_items` | done | plugins/playlists |
 | Reaction | `reactions` | done | plugins/likes-dislikes |
-| ViewEvent | `view_events` | todo | |
-| HymnLookup | `hymn_lookups` | todo | |
+| ViewEvent | `view_events` | done | Written by /api/view-events; read by the Trending row and /admin/analytics |
+| HymnLookup | `hymn_lookups` | done | Written from the browser when a hymn is really opened (its own page, a book at its number, the projector); read by /admin/analytics |
 | SeriesViewerGroup | `series_viewer_groups` | done | Restricted viewing, checked by ContentAccess |
 | SeriesViewer | `series_viewers` | done | Restricted viewing, checked by ContentAccess |
 | VideoViewerGroup | `video_viewer_groups` | done | Restricted viewing, checked by ContentAccess |

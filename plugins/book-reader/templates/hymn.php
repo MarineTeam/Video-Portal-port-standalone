@@ -6,8 +6,11 @@
  * @var array<string, mixed> $file
  * @var array<string, mixed> $credits
  * @var array{title: string, slug: string}|null $series
+ * @var string $opened
+ * @var string $openedScript
  */
 ?>
+<div hidden data-opened="<?= e($opened) ?>"></div>
 <?php if ($series !== null): ?><p><a href="<?= e(url('/series/' . $series['slug'])) ?>">← <?= e($series['title']) ?></a></p><?php endif ?>
 <h1><?php if ($file['number'] !== null): ?><span class="chapter-time"><?= e((string) $file['number']) ?></span> <?php endif ?><?= e((string) $file['title']) ?></h1>
 <?php if ($file['group'] !== null && $file['group'] !== ''): ?><p class="small muted"><?= e((string) $file['group']) ?></p><?php endif ?>
@@ -26,3 +29,4 @@
   <a class="button small" href="<?= e(url('/api/files/' . $file['id'] . '/content')) ?>" download><?= e(t('books.download')) ?></a>
 </p>
 <?= $v->partial('book-reader/credits', ['credits' => $credits]) ?>
+<script type="module" src="<?= e($openedScript) ?>"></script>

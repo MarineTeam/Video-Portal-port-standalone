@@ -10,6 +10,8 @@
  * @var ?string $ccli
  * @var array{id: string, title: string}|null $plan
  * @var string $script
+ * @var string $opened
+ * @var string $openedScript
  */
 ?>
 <section class="present" data-present>
@@ -31,4 +33,6 @@
     <p class="small muted present-credit"><?= e((string) $copyright) ?><?php if ($ccli !== null): ?> · CCLI <?= e($ccli) ?><?php endif ?></p>
   <?php endif ?>
 </section>
+<div hidden data-opened="<?= e($opened) ?>"></div>
 <script type="module" src="<?= e($script) ?>"></script>
+<script type="module" src="<?= e($openedScript) ?>"></script>

@@ -75,4 +75,5 @@ return [
     'books.pageOffset' => 'Pages before printed page 1',
     'books.pageOffsetHint' => 'The cover, title page and contents. With ten here, printed page 1 is the eleventh page of the file.',
     'books.readTheTextHint' => 'Every page’s words, so searching finds a hymn printed inside a scan. From the file’s own text layer where there is one, and by reading the image where there is not — which is slow, and can be stopped and carried on later.',
+    'books.lookupNeedsSomething' => 'Which hymn? This needs a number, a book, or both.',
 ];

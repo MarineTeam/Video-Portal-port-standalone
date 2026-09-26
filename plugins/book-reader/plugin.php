@@ -169,14 +169,65 @@ return new class (__DIR__) extends BasePlugin {
     private function lookupHymn(App $app, Request $req): Response
     {
         $data = Validator::check($req->input(), [
-            'number' => ['int', 'required', 'min' => 1, 'max' => 99999],
+            'number' => ['int', 'nullable', 'min' => 1, 'max' => 99999],
             'fileId' => ['id', 'nullable'],
+            'source' => ['string', 'nullable', 'max' => 16],
         ]);
+        $number = isset($data['number']) ? (int) $data['number'] : null;
+        $asked = isset($data['fileId']) ? (string) $data['fileId'] : null;
         $files = $this->readableFileIds($app);
-        if (isset($data['fileId'])) {
-            $files = array_values(array_intersect($files, [(string) $data['fileId']]));
+        if ($asked !== null) {
+            $files = array_values(array_intersect($files, [$asked]));
         }
-        return Response::json(['number' => (int) $data['number'], 'hymns' => Books::lookup($app->db(), $files, (int) $data['number'])]);
+        if ($number === null && $asked === null) {
+            throw ApiError::invalid(t('books.lookupNeedsSomething'));
+        }
+        $this->countOpening($app, $files, $asked, $number, is_string($data['source'] ?? null) ? $data['source'] : null);
+        return Response::json([
+            'number' => $number,
+            'hymns' => $number === null ? [] : Books::lookup($app->db(), $files, $number),
+        ]);
+    }
+
+    /**
+     * The marker the page carries for {@see self::countOpening}, as JSON for
+     * a data attribute. Null number for a hymn that is its own file: the
+     * file says which hymn it is.
+     */
+    private function openedMarker(string $fileId, ?int $number, string $source): string
+    {
+        return (string) json_encode(['fileId' => $fileId, 'number' => $number, 'source' => $source], JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * That somebody really opened this hymn, for "what does this
+     * congregation actually sing".
+     *
+     * Only when the caller says where from: the running-order builder asks
+     * this endpoint the same question while somebody types, and counting
+     * that would count typing rather than singing. Counted from the browser
+     * for the same reason — hovering a link prefetches the page, so counting
+     * a render would largely count mice. The cost is the other way round: a
+     * blocked request means an opening goes uncounted, which is the right
+     * way round for a number nothing depends on.
+     *
+     * @param list<string> $files the books this reader may open
+     */
+    private function countOpening(App $app, array $files, ?string $fileId, ?int $number, ?string $source): void
+    {
+        if ($source === null || !in_array($source, Books::OPENINGS, true) || $fileId === null) {
+            return;
+        }
+        // Only a book this reader may open: the count is of real openings.
+        if (!in_array($fileId, $files, true)) {
+            return;
+        }
+        $app->db()->insert('hymn_lookups', [
+            'file_id' => $fileId,
+            'number' => $number,
+            'source' => $source,
+            'user_id' => $app->currentUser()->id(),
+        ]);
     }
 
     // -- What the reader asks for --------------------------------------------
@@ -677,6 +728,10 @@ return new class (__DIR__) extends BasePlugin {
             'found' => $found === null ? null : ['title' => (string) $found['title'], 'page' => (int) $found['page']],
             'words' => $detail === null ? null : (string) ($detail['lyrics_text'] ?? ''),
             'credits' => $detail === null ? null : ['ccli' => $detail['ccli_number'], 'author' => $detail['author'], 'copyright' => $detail['copyright']],
+            // Only a book opened *at a number* is an opened hymn; browsing
+            // the contents is not somebody singing something.
+            'opened' => $wanted === null ? '' : $this->openedMarker((string) $file['id'], $wanted, 'book'),
+            'openedScript' => $this->asset('opened.js'),
         ]);
         });
     }
@@ -696,6 +751,8 @@ return new class (__DIR__) extends BasePlugin {
             ],
             'credits' => ['ccli' => $file['ccli_number'], 'author' => $file['song_author'], 'copyright' => $file['song_copyright'], 'key' => $file['musical_key'], 'tempo' => $file['tempo_bpm']],
             'series' => $series === null ? null : ['title' => (string) $series['title'], 'slug' => (string) $series['slug']],
+            'opened' => $this->openedMarker((string) $file['id'], null, 'hymn'),
+            'openedScript' => $this->asset('opened.js'),
         ]));
     }
 
@@ -725,6 +782,8 @@ return new class (__DIR__) extends BasePlugin {
             'ccli' => $this->isHymnFile($series) ? $file['ccli_number'] : ($detail['ccli_number'] ?? null),
             'plan' => $plan === null ? null : ['id' => (string) $plan['id'], 'title' => (string) $plan['title']],
             'script' => $this->asset('present.js'),
+            'opened' => $this->openedMarker((string) $file['id'], $number, 'present'),
+            'openedScript' => $this->asset('opened.js'),
         ], 200, 'layouts/site');
         });
     }

@@ -73,4 +73,5 @@ return [
     'books.pageOffset' => 'Páginas antes de la página impresa 1',
     'books.pageOffsetHint' => 'La portada, la portadilla y el índice. Con diez aquí, la página impresa 1 es la undécima del archivo.',
     'books.readTheTextHint' => 'Las palabras de cada página, para que la búsqueda encuentre un himno impreso dentro de un escaneo. Desde la capa de texto del archivo cuando la hay, y leyendo la imagen cuando no — lo cual es lento, y se puede detener y continuar después.',
+    'books.lookupNeedsSomething' => '¿Qué himno? Hace falta un número, un libro o ambos.',
 ];

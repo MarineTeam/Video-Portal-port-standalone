@@ -9,8 +9,11 @@
  * @var array{title: string, page: int}|null $found
  * @var ?string $words the typed-out words of the wanted number, when there are any
  * @var array<string, mixed>|null $credits
+ * @var string $opened
+ * @var string $openedScript
  */
 ?>
+<div hidden data-opened="<?= e($opened) ?>"></div>
 <h1><?= e((string) $file['title']) ?></h1>
 <?php if ($wanted !== null): ?>
   <?php if ($found !== null): ?>
@@ -47,3 +50,4 @@
 <?php else: ?>
   <p class="muted"><?= e(t('books.noContents')) ?></p>
 <?php endif ?>
+<script type="module" src="<?= e($openedScript) ?>"></script>
