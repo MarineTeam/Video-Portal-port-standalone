@@ -29,6 +29,7 @@ final class Modules
         \App\Modules\Jobs\Routes::class,
         \App\Modules\Uploads\Uploads::class,
         \App\Modules\Push\Push::class,
+        \App\Modules\Sms\Callbacks::class,
     ];
 
     public static function register(App $app): void

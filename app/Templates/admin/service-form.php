@@ -53,5 +53,11 @@
 <form method="post" action="<?= e(url("/admin/providers/$slot/$provider/test")) ?>" class="stack narrow" autocomplete="off">
   <?= $v->raw(csrf_field()) ?>
   <?= $v->partial('partials/config-fields', ['fields' => $class::configSchema(), 'values' => $values]) ?>
+  <?php if ($slot === 'sms'): ?>
+    <?php /* Asked for by the test, never stored: a provider accepting a
+             message says nothing about a carrier delivering it, so the test
+             ends with a text arriving on somebody's own phone. */ ?>
+    <label>Your own mobile number, to text<input name="test_to" inputmode="tel" autocomplete="off" placeholder="+44 7700 900123"></label>
+  <?php endif ?>
   <button type="submit" class="button">Test</button>
 </form>

@@ -128,6 +128,9 @@ button.link { font: inherit; background: none; border: 0; padding: 0; color: var
 .narrow { max-width: 32rem; }
 .row { display: flex; gap: 1rem; flex-wrap: wrap; }
 label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; font-weight: 500; }
+/* A display rule on an element type beats the browser's own [hidden], which
+   is how a hidden label ends up on screen anyway. */
+[hidden] { display: none !important; }
 label.check { flex-direction: row; align-items: flex-start; gap: 0.5rem; font-weight: 400; }
 input[type=text], input[type=email], input[type=password], input[type=search], input[type=number], input[type=url], input[type=date], input[type=time], input[type=datetime-local], select, textarea, input:not([type]) {
   font: inherit; font-size: 1rem; font-weight: 400;

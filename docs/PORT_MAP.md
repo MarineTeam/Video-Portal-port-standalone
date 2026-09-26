@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -71,7 +71,7 @@ commit as the code it describes.
 | email | Resend, Mailgun, SendGrid, Postmark, Amazon SES, Brevo, Microsoft Graph | done | One HttpEmailProvider base: the key is checked before a test message goes out; SES signed with the shared App\Support\SigV4 |
 | files | Local disk | done | |
 | files | Bunny Storage | done | Signed 10-minute redirects (optionally address-bound) with token auth; otherwise a streamed proxy with Range; storage listing and import; public podcast zone |
-| sms | Twilio, Vonage, MessageBird, Plivo, Sinch, Telnyx, Amazon SNS, ClickSend, Textlocal, BulkSMS, JSON webhook | todo | |
+| sms | Twilio, Vonage, MessageBird (Bird), Plivo, Sinch, Telnyx, Amazon SNS, ClickSend, Textlocal, BulkSMS, JSON webhook | done | Each one's test ends with a text to the administrator's own phone carrying a code they type back. Signed callbacks where the provider has a scheme (Twilio HMAC-SHA1, Vonage's JWT, MessageBird's timestamped hash, Plivo's nonce, Telnyx's Ed25519); the rest get a per-install secret in the callback address |
 
 ## Pages (Appendix C.1) — 91
 
@@ -87,7 +87,7 @@ commit as the code it describes.
 | `/admin/audit` | done | Paged, filterable; CSV/JSON export streamed, cells that start with = + - @ are quoted |
 | `/admin/authorized-emails` | done | Allowlist with search and status filter; never suspends or removes the last active entry; organisation exemption per address; guest-login switch |
 | `/admin/branding` | done | Name, short name, three colours with live preview, logo by URL or upload (re-encoded by GD, served from storage/media) |
-| `/admin/broadcasts` | todo | |
+| `/admin/broadcasts` | done | The composer, with the count it will reach and the reason for the rest before it goes |
 | `/admin/categories` | done | Tree to any depth, ↑↓ among siblings, trash; administrators only (admin-nav) |
 | `/admin/categories/[id]` | done | Every field incl. parent (cycle-guarded), cover upload, three-way downloads |
 | `/admin/comments` | done | plugins/comments: the reported-or-hidden queue, scoped to the moderator's part of the library |
@@ -185,10 +185,10 @@ commit as the code it describes.
 | `/api/admin/authorized-emails/[id]` | PATCH DELETE | done | Last-active guard |
 | `/api/admin/authorized-emails` | GET POST | done | 409 on a duplicate address |
 | `/api/admin/branding` | GET PUT DELETE | done | javascript:/data: logos refused |
-| `/api/admin/broadcasts/[id]` | GET DELETE | todo | |
-| `/api/admin/broadcasts/[id]/send` | POST | todo | |
-| `/api/admin/broadcasts/[id]/test` | POST | todo | |
-| `/api/admin/broadcasts` | GET POST | todo | |
+| `/api/admin/broadcasts/[id]` | GET DELETE | done | Also PATCH while it is still a draft; a message on its way is not editable |
+| `/api/admin/broadcasts/[id]/send` | POST | done | Freezes the list on the first call, then works a batch at a time; the browser calls it until nothing is pending |
+| `/api/admin/broadcasts/[id]/test` | POST | done | To whoever asked, whatever they have switched off — they are asking to see it |
+| `/api/admin/broadcasts` | GET POST | done | Plus `/preview` for the count, and `/[id]/cancel` to stop one part-way |
 | `/api/admin/bunny-audit` | GET | todo | |
 | `/api/admin/calendar-events/[id]` | GET PATCH DELETE | done | |
 | `/api/admin/categories/[id]` | PATCH DELETE | done | `{move: up|down|n}` reorders; DELETE trashes |
@@ -301,7 +301,7 @@ commit as the code it describes.
 | `/api/comments/[id]/report` | POST | done | once per member, never one's own |
 | `/api/comments/[id]` | DELETE | done | the author, or a moderator for that part of the library |
 | `/api/comments` | GET POST | done | GET for anybody who may open the page; POST `{seriesId|videoId, body, parentId?}` members, one level of replies, 10 a minute |
-| `/api/cron/broadcasts` | GET | todo | |
+| `/api/cron/broadcasts` | GET | done | Job `broadcasts` every 5 minutes: the backstop for a closed laptop, not the delivery path |
 | `/api/cron/extend-events` | GET | done | Job `extend-events`, daily at 02:20 UTC through /cron/run; keeps every series filled in six months ahead |
 | `/api/cron/notification-digest` | GET | done | Job `notification-digest`, daily at 13:00 UTC (plugins/notifications) |
 | `/api/cron/schedule-reminders` | GET | todo | |
@@ -487,8 +487,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | DiscussionGuideItem | `discussion_guide_items` | done | A LEADER_NOTE has no field on a member's shape to be printed from |
 | SmallGroupMeeting | `small_group_meetings` | done | One per group per day under the unique index |
 | GroupAttendance | `group_attendances` | done | Apologies is a status of its own |
-| Broadcast | `broadcasts` | todo | |
-| BroadcastRecipient | `broadcast_recipients` | todo | |
+| Broadcast | `broadcasts` | done | plugins/broadcasts |
+| BroadcastRecipient | `broadcast_recipients` | done | One row per person per channel with the address copied in; the port adds the provider's message id and the delivery receipt |
 | VideoFeed | `video_feeds` | done | |
 | LiveChatMessage | `live_chat_messages` | done | Taken down = `hidden`, never deleted |
 | LiveChatMute | `live_chat_mutes` | done | Per stream: muted for the evening, not for ever |
@@ -508,7 +508,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/authorization.test.ts` | done | tests/Unit/Access/AuthorizationTest.php; the guest-login cases in tests/Integration/GuestLoginTest.php |
 | `lib/book-contents.test.ts` | todo | |
 | `lib/branding.test.ts` | done | tests/Unit/Branding/BrandingTest.php |
-| `lib/broadcast.test.ts` | todo | |
+| `lib/broadcast.test.ts` | done | tests/Unit/Plugins/BroadcastTest.php (every case) |
 | `lib/bunny.test.ts` | done | tests/Unit/Video/BunnyTest.php |
 | `lib/client-bundle.test.ts` | todo | |
 | `lib/content-language.test.ts` | todo | |
@@ -560,7 +560,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/sheets/dates.test.ts` | done | tests/Unit/Plugins/SheetParseTest.php |
 | `lib/sheets/parse.test.ts` | done | tests/Unit/Plugins/SheetParseTest.php (both layouts, skip-and-report) |
 | `lib/slug.test.ts` | done | tests/Unit/Support/SupportTest.php |
-| `lib/sms.test.ts` | todo | |
+| `lib/sms.test.ts` | done | tests/Unit/Support/SmsTest.php and tests/js/sms.test.mjs (every case, both halves) |
 | `lib/toc-nav.test.ts` | todo | |
 | `lib/transcribe-worker.test.ts` | done | tests/Integration/TranscriptionTest.php (claim, DONE/FAILED, stale sweep, deadline) |
 | `lib/transcribe.test.ts` | done | tests/Integration/TranscriptionTest.php (multipart shape, model/language fields, size limit, the settings test) |
@@ -683,6 +683,12 @@ met, with the reason.
 - **The user code's alphabet has no digits and no vowels** (`BCFGHJKLMNPRSTVWXZ`): no digit can be misread as a letter across a room, no code is ever a word, and `normalizeUserCode` forgives a lookalike typed for a character the screen never showed (1/I → L, 5 → S, 8 → B, 6 → G, 2 → Z, U → V). 18^6 is thirty-four million against a code that lives fifteen minutes behind a rate-limited lookup.
 - **`/tv` never prints an email address**, the same rule the comments and group pages keep — it is the most public screen in the building, so a member whose name is missing or is an address is "a member".
 - **The television feed needs a stream, not an embed.** A set-top box has no browser to put an iframe in, so `streamUrl` is Bunny's HLS playlist (`Bunny::hlsUrl`, signed for a day where token authentication is on) or a file-based provider's own URL; a video available only as an embed falls back to its source's own page, and one with neither drops out of the feed rather than becoming a tile with nothing behind it.
+- **Broadcasts are a bundled plugin, though the original's 31-feature list has no such slug.** The brief's own area table calls it one, and a church that never sends a broadcast should be able to switch the screen off; a plugin on disk that the feature registry does not name is seeded from its own header, so nothing else had to change.
+- **A channel with nothing behind it marks its rows SKIPPED, not FAILED.** An install with no email provider would otherwise show four hundred red rows, each blaming an address that is perfectly good — and the enum's own word for "there was simply no way to reach them on this channel" is skipped. A provider that refuses a particular message is still a failure, with its own sentence beside the name.
+- **A claim comes before the send.** Each recipient row is moved from PENDING to SENT by a conditional update before the provider is called, so two callers racing (the browser loop and the cron backstop) cannot both send to the same person; a refusal then moves it to FAILED with the reason.
+- **An event audience is texted only on numbers members typed in themselves.** The number on a public sign-up form is copied nowhere near the text channel: it is not consent, and treating it as such is the mistake this rule exists to prevent.
+- **`/api/people`-style secrets for callbacks**: an SMS provider with no signature scheme (ClickSend, Textlocal, BulkSMS, Sinch, the JSON webhook) is given a per-install secret in its callback address, derived with the app key rather than stored, and compared in constant time.
+- **The composer's cost and the server's cost are the same code twice**: `app/Support/Sms.php` and `public/assets/js/sms.js`, tested against one case list, so the number on the screen is the number that goes out.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -802,3 +808,14 @@ met, with the reason.
   on the screen — plus the four arrows stopping at the end of a row, OK
   opening a tile and Back leaving it. Four concurrent polls yield exactly
   one token. 923 unit, 115 integration, 50 browser-module tests.
+
+- 2026-09-26 — broadcasts and texting: the SMS slot with eleven providers
+  (each with an account check and a test that ends with a code arriving on
+  the administrator's own phone), the signed status and inbound callbacks
+  with stop words in both languages, and the broadcasts plugin —
+  planDelivery's three consent rules, the frozen list, the browser's batch
+  loop with the cron job as backstop, and the failures listed afterwards
+  with the reason the provider gave. Verified in a browser against a real
+  SMTP conversation: the reach line and the skip reasons as the composer is
+  filled in, and a send that reports what it sent. 973 unit, 128
+  integration, 62 browser-module tests.
