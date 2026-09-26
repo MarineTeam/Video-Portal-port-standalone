@@ -88,6 +88,29 @@ ready((MT) => {
     const sourceForm = document.querySelector('[data-source-form]');
     const result = document.querySelector('[data-source-result]');
 
+    // Offer the spreadsheet's own tabs once there is an id to ask about, so
+    // the sheet is picked rather than typed. Silent when it cannot be read:
+    // the Test connection button below is where a sheet nobody shared is
+    // reported, and saying it twice from two places helps nobody.
+    const tabs = document.querySelector('[data-sheet-tabs]');
+    const spreadsheet = sourceForm?.elements?.spreadsheetId;
+    const loadTabs = async () => {
+      const id = spreadsheet?.value?.trim();
+      if (!tabs || !id) return;
+      try {
+        const answer = await MT.api(`/api/admin/sheets/tabs?spreadsheetId=${encodeURIComponent(id)}`);
+        tabs.replaceChildren(...(answer.tabs || []).map((name) => {
+          const option = document.createElement('option');
+          option.value = name;
+          return option;
+        }));
+      } catch {
+        tabs.replaceChildren();
+      }
+    };
+    spreadsheet?.addEventListener('change', loadTabs);
+    loadTabs();
+
     const drawResult = (data) => {
       if (!result) return;
       result.hidden = false;

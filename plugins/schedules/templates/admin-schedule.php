@@ -52,7 +52,8 @@ $source = $schedule['source'];
   <?php endif ?>
   <form class="stack" data-source-form>
     <label><?= e(t('schedules.spreadsheet')) ?><input name="spreadsheetId" value="<?= e((string) ($source['spreadsheetId'] ?? '')) ?>" maxlength="191" spellcheck="false"></label>
-    <label><?= e(t('schedules.sheetName')) ?><input name="sheetName" value="<?= e((string) ($source['sheetName'] ?? '')) ?>" maxlength="191" data-null></label>
+    <label><?= e(t('schedules.sheetName')) ?><input name="sheetName" value="<?= e((string) ($source['sheetName'] ?? '')) ?>" maxlength="191" list="sheet-tabs" data-null></label>
+    <datalist id="sheet-tabs" data-sheet-tabs></datalist>
     <label><?= e(t('schedules.range')) ?><input name="range" value="<?= e((string) ($source['range'] ?? '')) ?>" maxlength="64" placeholder="A:F" data-null></label>
     <label><?= e(t('schedules.format')) ?>
       <select name="format">

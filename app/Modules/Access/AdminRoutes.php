@@ -59,9 +59,9 @@ final class AdminRoutes
         $r->post('/api/admin/permission-groups', [$self, 'groupsCreate'], [$perms]);
         $r->add('PATCH', '/api/admin/permission-groups/[id]', [$self, 'groupsUpdate'], [$perms]);
         $r->add('DELETE', '/api/admin/permission-groups/[id]', [$self, 'groupsDelete'], [$perms]);
-        $r->get('/api/admin/group-assignments', [$self, 'assignmentsList'], [$perms]);
-        $r->post('/api/admin/group-assignments', [$self, 'assignmentsCreate'], [$perms]);
-        $r->add('DELETE', '/api/admin/group-assignments/[id]', [$self, 'assignmentsDelete'], [$perms]);
+        $r->get('/api/admin/assignments', [$self, 'assignmentsList'], [$perms]);
+        $r->post('/api/admin/assignments', [$self, 'assignmentsCreate'], [$perms]);
+        $r->add('DELETE', '/api/admin/assignments/[id]', [$self, 'assignmentsDelete'], [$perms]);
 
         $r->get('/api/admin/editors', [$self, 'editorsList'], [$users]);
         $r->post('/api/admin/editors/category', fn (Request $q) => $self->editorsCreate($q, 'category'), [$users]);

@@ -179,7 +179,7 @@ commit as the code it describes.
 | `/api/admin/announcements` | GET POST | done | message, active, publishAt/expiresAt window, audience ALL/GUESTS/MEMBERS |
 | `/api/admin/api-keys/[id]` | DELETE | done | Revokes (sets `revoked_at`); the row stays so audit and last-used survive |
 | `/api/admin/api-keys` | GET POST | done | POST returns the one and only plaintext copy; GET lists prefixes, scopes, last use |
-| `/api/admin/assignments` | POST DELETE | todo | |
+| `/api/admin/assignments` | POST DELETE | done | Permission-group assignments, managed at /admin/permissions (GET added; the original had none) |
 | `/api/admin/audit/export` | GET | done | ?format=csv|json, streamed |
 | `/api/admin/audit` | GET | done | Paged, filter by actor/action/entity/date |
 | `/api/admin/authorized-emails/[id]` | PATCH DELETE | done | Last-active guard |
@@ -266,7 +266,7 @@ commit as the code it describes.
 | `/api/admin/services` | GET POST | done | `manage_files` |
 | `/api/admin/share-links/[id]` | PATCH DELETE | done | DELETE revokes (keeps the row) |
 | `/api/admin/share-links` | GET POST | done | GET ?state=active|revoked |
-| `/api/admin/sheets/tabs` | GET | todo | |
+| `/api/admin/sheets/tabs` | GET | done | plugins/schedules; the tabs of a spreadsheet, offered as a datalist so the sheet is picked rather than typed |
 | `/api/admin/speakers/[id]` | PATCH DELETE | done | Videos keep playing without a speaker |
 | `/api/admin/speakers` | GET POST | done |  |
 | `/api/admin/teams/[id]` | PATCH DELETE | done | `addEmail`/`addPosition` and `removeMemberId` keep the members on the same route |
@@ -304,7 +304,7 @@ commit as the code it describes.
 | `/api/cron/broadcasts` | GET | done | Job `broadcasts` every 5 minutes: the backstop for a closed laptop, not the delivery path |
 | `/api/cron/extend-events` | GET | done | Job `extend-events`, daily at 02:20 UTC through /cron/run; keeps every series filled in six months ahead |
 | `/api/cron/notification-digest` | GET | done | Job `notification-digest`, daily at 13:00 UTC (plugins/notifications) |
-| `/api/cron/schedule-reminders` | GET | todo | |
+| `/api/cron/schedule-reminders` | GET | done | Job `schedule-reminders` at 18:00 UTC through /cron/run: what each person is on for tomorrow, one message however many rotas they are on |
 | `/api/cron/sync-schedules` | GET POST | done | The `sync-schedules` job, 05:30 UTC, before the reminders |
 | `/api/cron/sync-video-feeds` | GET | done | Job `sync-video-feeds`, daily at 07:15 UTC as before |
 | `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min through /cron/run; abandoned upload placeholders marked FAILED after a day |

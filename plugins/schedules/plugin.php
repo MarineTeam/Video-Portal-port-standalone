@@ -122,6 +122,10 @@ return new class (__DIR__) extends BasePlugin {
             $r->post('/api/admin/people/merge', fn (Request $req) => $this->mergePeople($app, $req), [$manage]);
             $r->add('PATCH', '/api/admin/people/[id]', fn (Request $req, array $p) => $this->savePerson($app, $req, (string) $p['id']), [$manage]);
             $r->add('DELETE', '/api/admin/people/[id]', fn (Request $req, array $p) => $this->deletePerson($app, (string) $p['id']), [$manage]);
+            // The tabs in a spreadsheet, so the sheet is picked rather than
+            // typed: a typo reads back from Google as "no such range", which
+            // sounds like a permission problem and is not one.
+            $r->get('/api/admin/sheets/tabs', fn (Request $req) => $this->sheetTabs($app, $req), [$manage]);
             $r->post('/api/admin/schedules/key', fn (Request $req) => $this->saveKey($app, $req), [$manage]);
             $r->add('DELETE', '/api/admin/schedules/key', fn () => $this->forgetKey($app), [$manage]);
         });
@@ -129,10 +133,13 @@ return new class (__DIR__) extends BasePlugin {
         // The dates a rota names somebody on, in their own diary feed.
         $hooks->filter('calendar.entries', fn (array $entries, App $app, array $user) => [...$entries, ...$this->diaryEntries($app, (string) $user['id'])]);
         $hooks->on('jobs.register', function (Scheduler $s) use ($app): void {
-            // Before the reminders, so they go out on this morning's data
-            // rather than yesterday's.
+            // The sheets first thing, so everything downstream reads
+            // today's rota rather than yesterday's.
             $s->register('sync-schedules', 86400, fn (float $deadline) => $this->syncDue($app, $deadline), 20.0, '05:30');
-            $s->register('schedule-reminders', 86400, fn (float $deadline) => $this->remind($app), 10.0, '06:30');
+            // "You are on tomorrow" goes out in the evening. Sent in the
+            // morning it would arrive a day and a half early, which is long
+            // enough to be forgotten again by the time it matters.
+            $s->register('schedule-reminders', 86400, fn (float $deadline) => $this->remind($app), 10.0, '18:00');
         });
     }
 
@@ -940,6 +947,22 @@ return new class (__DIR__) extends BasePlugin {
      * account gets no reminder — the calendar is the source of truth, and
      * linking a name to an account is what turns reminders on.
      */
+    /** GET /api/admin/sheets/tabs?spreadsheetId=… */
+    private function sheetTabs(App $app, Request $req): Response
+    {
+        $spreadsheetId = $this->spreadsheetId((string) ($req->query('spreadsheetId') ?? ''));
+        if ($spreadsheetId === '') {
+            throw ApiError::invalid(t('schedules.noSpreadsheet'));
+        }
+        try {
+            return Response::json(['tabs' => Sheets::tabs($this->key($app), $spreadsheetId)]);
+        } catch (\RuntimeException $e) {
+            // The same shape the "test connection" button answers with: a
+            // sheet nobody shared is the ordinary case here, not a fault.
+            return Response::json(['ok' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
     private function remind(App $app): string
     {
         $db = $app->db();

@@ -87,6 +87,38 @@ final class Sheets
         return $rows;
     }
 
+    /**
+     * The tabs in a spreadsheet, in the order they sit along the bottom.
+     *
+     * So an admin picks the sheet rather than typing its name: a typo there
+     * reads as "no such range" from Google, which sounds like a permission
+     * problem and is not one.
+     *
+     * @param array<string, mixed> $account
+     * @return list<string>
+     */
+    public static function tabs(array $account, string $spreadsheetId): array
+    {
+        $url = self::API . rawurlencode($spreadsheetId) . '?fields=' . rawurlencode('sheets.properties.title');
+        $response = Http::request('GET', $url, ['Authorization' => 'Bearer ' . self::accessToken($account), 'Accept' => 'application/json']);
+        $body = $response->json() ?? [];
+        if (!$response->ok()) {
+            $message = (string) ($body['error']['message'] ?? 'Google answered ' . $response->status);
+            if ($response->status === 403 || $response->status === 404) {
+                $message .= ' — has the sheet been shared with ' . (string) ($account['client_email'] ?? 'the service account') . '?';
+            }
+            throw new \RuntimeException($message);
+        }
+        $tabs = [];
+        foreach ((array) ($body['sheets'] ?? []) as $sheet) {
+            $title = (array) $sheet === [] ? null : ($sheet['properties']['title'] ?? null);
+            if (is_string($title) && $title !== '') {
+                $tabs[] = $title;
+            }
+        }
+        return $tabs;
+    }
+
     /** Whether a key looks like a service account key at all, before anything is stored. */
     public static function looksLikeKey(mixed $decoded): bool
     {
