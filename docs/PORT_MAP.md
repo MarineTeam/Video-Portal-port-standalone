@@ -207,7 +207,7 @@ commit as the code it describes.
 | `/api/admin/events` | GET POST | done | `manage_events` |
 | `/api/admin/events/series/[id]` | PATCH DELETE | done | Changing the timing clears empty future dates and lays them down again; DELETE stops the repeat without deleting anybody's place |
 | `/api/admin/events/series` | GET POST | done | Takes the five shapes (`shape`, `days`, `interval`, `count`/`until`) or a raw `rule`; answers with the rule in words |
-| `/api/admin/files/[id]/contents` | GET PUT | todo | |
+| `/api/admin/files/[id]/contents` | GET PUT | done | plugins/book-reader; the contents box typed by hand, or read from the book's own bookmarks |
 | `/api/admin/files/[id]/lyrics` | GET PUT | todo | |
 | `/api/admin/files/[id]/replace` | POST | done | Takes a chunked upload id; the Bunny Storage pick arrives with that provider |
 | `/api/admin/files/[id]` | PATCH DELETE | done | PATCH also takes `move` |
@@ -313,7 +313,7 @@ commit as the code it describes.
 | `/api/events/[slug]/register` | POST DELETE | done | Under a row lock on the event, so the last place goes to one person; honeypot and a per-address limit for visitors |
 | `/api/favorites` | POST | done | `{seriesId}` or `{videoId}` toggles → `{favorited}`; 404 for what the member can't open; 403 `plugin_disabled` where a category switches it off |
 | `/api/files/[id]/content` | GET | done | ContentAccess per request; Range, ETag/304, private no-cache, ?download=1; X-Sendfile family via RangeStreamer |
-| `/api/files/[id]/search` | GET | todo | |
+| `/api/files/[id]/search` | GET | done | plugins/book-reader; the words inside one book, from the indexed text, with the hymn each hit falls inside |
 | `/api/forms/[slug]` | POST | done | `{answers: {fieldId: value}}`, honeypot and a per-address limit; the server decides what a valid answer is |
 | `/api/groups/[slug]/join` | POST DELETE | done | A full group takes the name in order; leaving frees a place and moves the list |
 | `/api/groups/[slug]/meetings` | GET POST | done | The roll: a member is given at most their own row, never a count |
@@ -351,9 +351,9 @@ commit as the code it describes.
 | `/api/push/unsubscribe` | POST | done | |
 | `/api/ratings` | GET POST | done | plugins/ratings: `?seriesId`/`?videoId` → `{average, count, mine}`; POST `{…, value: 1–5 or null}` (members) |
 | `/api/reactions` | GET POST | done | plugins/likes-dislikes: → `{likes, dislikes, mine}`; POST `{…, type: LIKE, DISLIKE or null}` (members) |
-| `/api/reading/marks/[id]` | PATCH DELETE | todo | |
-| `/api/reading/marks` | GET POST | todo | |
-| `/api/reading/progress` | POST | todo | |
+| `/api/reading/marks/[id]` | PATCH DELETE | done | plugins/book-reader; a mark is named by its own id and the book comes from the mark, so only its owner can reach one |
+| `/api/reading/marks` | GET POST | done | plugins/book-reader; `?fileId=` to read, `fileId` in the body to add. Private to whoever made them |
+| `/api/reading/progress` | POST | done | plugins/book-reader; one row per member per book, the percent clamped rather than stored as it came |
 | `/api/rota` | POST DELETE | done | One member's own: an answer, a cover request, taking a slot that is going begging, and blockouts (POST adds, DELETE removes) |
 | `/api/schedules/[id]/events` | GET | done | By id or by slug |
 | `/api/schedules` | GET | done | |

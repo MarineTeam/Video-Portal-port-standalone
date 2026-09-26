@@ -141,7 +141,7 @@ final class BookReaderTest extends ServerTestCase
 
     public function test_6_searching_answers_with_hymns_rather_than_page_numbers(): void
     {
-        $found = self::http('GET', '/api/books/' . self::$ids['book'] . '/search?q=herald', null, 'ruth');
+        $found = self::http('GET', '/api/files/' . self::$ids['book'] . '/search?q=herald', null, 'ruth');
         self::assertTrue($found['json']['indexed']);
         self::assertSame(4, $found['json']['hits'][0]['printedPage'], 'the page as the book prints it');
         self::assertSame('2 Hark the Herald', $found['json']['hits'][0]['inside'], 'and the hymn it falls inside');
@@ -166,7 +166,8 @@ final class BookReaderTest extends ServerTestCase
 
     public function test_7_marks_are_private_to_whoever_made_them(): void
     {
-        $made = self::api('POST', '/api/books/' . self::$ids['book'] . '/marks', [
+        $made = self::api('POST', '/api/reading/marks', [
+            'fileId' => self::$ids['book'],
             'kind' => 'HIGHLIGHT', 'location' => '11', 'excerpt' => 'and ransom captive Israel', 'note' => 'for Advent',
         ], 'ruth');
         self::assertSame(201, $made['status'], (string) $made['body']);
@@ -175,23 +176,23 @@ final class BookReaderTest extends ServerTestCase
 
         // A highlight with nothing selected is honestly a bookmark: in an
         // EPUB the selection lives in a frame the reader cannot read.
-        $bookmark = self::api('POST', '/api/books/' . self::$ids['book'] . '/marks', ['kind' => 'HIGHLIGHT', 'location' => 'epubcfi(/6/4!/2)'], 'ruth');
+        $bookmark = self::api('POST', '/api/reading/marks', ['fileId' => self::$ids['book'], 'kind' => 'HIGHLIGHT', 'location' => 'epubcfi(/6/4!/2)'], 'ruth');
         self::assertSame('BOOKMARK', $bookmark['json']['marks'][1]['kind']);
 
-        self::assertSame([], self::http('GET', '/api/books/' . self::$ids['book'] . '/marks', null, 'sam')['json']['marks']);
-        self::assertSame(404, self::api('DELETE', '/api/books/' . self::$ids['book'] . '/marks/' . self::$ids['mark'], null, 'sam')['status']);
-        self::assertSame(200, self::api('DELETE', '/api/books/' . self::$ids['book'] . '/marks/' . self::$ids['mark'], null, 'ruth')['status']);
+        self::assertSame([], self::http('GET', '/api/reading/marks?fileId=' . self::$ids['book'], null, 'sam')['json']['marks']);
+        self::assertSame(404, self::api('DELETE', '/api/reading/marks/' . self::$ids['mark'], null, 'sam')['status']);
+        self::assertSame(200, self::api('DELETE', '/api/reading/marks/' . self::$ids['mark'], null, 'ruth')['status']);
     }
 
     public function test_8_a_place_is_kept_and_reopened_at(): void
     {
-        self::assertSame(200, self::api('POST', '/api/books/' . self::$ids['book'] . '/progress', ['location' => '14', 'percent' => 250], 'ruth')['status']);
+        self::assertSame(200, self::api('POST', '/api/reading/progress', ['fileId' => self::$ids['book'], 'location' => '14', 'percent' => 250], 'ruth')['status']);
         $book = self::http('GET', '/api/books/' . self::$ids['book'], null, 'ruth');
         self::assertSame('14', $book['json']['progress']['location']);
         self::assertSame(100, $book['json']['progress']['percent'], 'clamped rather than stored as it came');
 
         // Saved once per member, however many times it is sent.
-        self::api('POST', '/api/books/' . self::$ids['book'] . '/progress', ['location' => '16', 'percent' => 60], 'ruth');
+        self::api('POST', '/api/reading/progress', ['fileId' => self::$ids['book'], 'location' => '16', 'percent' => 60], 'ruth');
         self::assertSame(1, (int) self::connect(self::prefix())->value('SELECT COUNT(*) FROM {{reading_progresses}} WHERE user_id = ?', [self::$ids['ruth']]));
         self::assertSame([], self::http('GET', '/api/books/' . self::$ids['book'], null, 'sam')['json']['progress'] ?? [], 'and it is this member’s place, not the book’s');
     }

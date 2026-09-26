@@ -80,7 +80,7 @@ ready(async () => {
   async function keepPlace() {
     if (!root.dataset.signedIn || !at.location) return;
     try {
-      await MT.api(`/api/books/${fileId}/progress`, { method: 'POST', body: { location: at.location, percent: at.percent } });
+      await MT.api('/api/reading/progress', { method: 'POST', body: { fileId, location: at.location, percent: at.percent } });
     } catch { /* a lost position is not worth an error on screen */ }
   }
   window.addEventListener('pagehide', keepPlace);
@@ -165,7 +165,7 @@ ready(async () => {
     results.textContent = '';
     let hits = [];
     if (book.searchable) {
-      hits = (await MT.api(`/api/books/${fileId}/search?q=${encodeURIComponent(query)}`)).hits;
+      hits = (await MT.api(`/api/files/${fileId}/search?q=${encodeURIComponent(query)}`)).hits;
     } else if (handle.search) {
       hits = (await handle.search(query)).map((hit) => ({ ...hit, page: null }));
     } else {
@@ -231,21 +231,21 @@ ready(async () => {
       remove.textContent = '×';
       remove.addEventListener('click', async () => {
         if (!window.confirm(labels.deleteMark)) return;
-        drawMarks((await MT.api(`/api/books/${fileId}/marks/${mark.id}`, { method: 'DELETE' })).marks);
+        drawMarks((await MT.api(`/api/reading/marks/${mark.id}`, { method: 'DELETE' })).marks);
       });
       item.append(open, remove);
       markList.appendChild(item);
     }
   }
   if (root.dataset.signedIn && markList) {
-    MT.api(`/api/books/${fileId}/marks`).then((answer) => drawMarks(answer.marks)).catch(() => {});
+    MT.api(`/api/reading/marks?fileId=${encodeURIComponent(fileId)}`).then((answer) => drawMarks(answer.marks)).catch(() => {});
   }
   root.querySelector('[data-reader-mark]')?.addEventListener('click', async () => {
     const chosen = handle.selection();
     if (!chosen) return;
-    const answer = await MT.api(`/api/books/${fileId}/marks`, {
+    const answer = await MT.api('/api/reading/marks', {
       method: 'POST',
-      body: { kind: chosen.excerpt ? 'HIGHLIGHT' : 'BOOKMARK', location: chosen.location, excerpt: chosen.excerpt },
+      body: { fileId, kind: chosen.excerpt ? 'HIGHLIGHT' : 'BOOKMARK', location: chosen.location, excerpt: chosen.excerpt },
     });
     drawMarks(answer.marks);
     say(labels.markSaved);

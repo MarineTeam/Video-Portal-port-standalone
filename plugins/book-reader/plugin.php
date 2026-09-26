@@ -69,12 +69,16 @@ return new class (__DIR__) extends BasePlugin {
 
             // What the reader itself asks for.
             $r->get('/api/books/[fileId]', fn (Request $req, array $p) => $this->bookJson($app, $req, (string) $p['fileId']));
-            $r->get('/api/books/[fileId]/search', fn (Request $req, array $p) => $this->searchInBook($app, $req, (string) $p['fileId']));
-            $r->get('/api/books/[fileId]/marks', fn (Request $req, array $p) => $this->marks($app, $req, (string) $p['fileId']), [$member]);
-            $r->post('/api/books/[fileId]/marks', fn (Request $req, array $p) => $this->addMark($app, $req, (string) $p['fileId']), [$member]);
-            $r->add('PATCH', '/api/books/[fileId]/marks/[markId]', fn (Request $req, array $p) => $this->editMark($app, $req, (string) $p['fileId'], (string) $p['markId']), [$member]);
-            $r->add('DELETE', '/api/books/[fileId]/marks/[markId]', fn (Request $req, array $p) => $this->deleteMark($app, (string) $p['fileId'], (string) $p['markId']), [$member]);
-            $r->post('/api/books/[fileId]/progress', fn (Request $req, array $p) => $this->saveProgress($app, $req, (string) $p['fileId']), [$member]);
+            // Searching inside one book, and a member's own marks and place
+            // in it. These keep the addresses the original used — a mark is
+            // named by its own id, not by the book it is in — because the
+            // service worker and anything anybody bookmarked know them.
+            $r->get('/api/files/[id]/search', fn (Request $req, array $p) => $this->searchInBook($app, $req, (string) $p['id']));
+            $r->get('/api/reading/marks', fn (Request $req) => $this->marks($app, $req, $this->askedFile($req)), [$member]);
+            $r->post('/api/reading/marks', fn (Request $req) => $this->addMark($app, $req, $this->askedFile($req)), [$member]);
+            $r->add('PATCH', '/api/reading/marks/[id]', fn (Request $req, array $p) => $this->editMark($app, $req, (string) $p['id']), [$member]);
+            $r->add('DELETE', '/api/reading/marks/[id]', fn (Request $req, array $p) => $this->deleteMark($app, (string) $p['id']), [$member]);
+            $r->post('/api/reading/progress', fn (Request $req) => $this->saveProgress($app, $req, $this->askedFile($req)), [$member]);
 
             // Kept on the device.
             $r->get('/api/offline/hymnal/[seriesId]', fn (Request $req, array $p) => $this->offlineHymnal($app, $req, (string) $p['seriesId']));
@@ -346,8 +350,44 @@ return new class (__DIR__) extends BasePlugin {
         });
     }
 
-    private function editMark(App $app, Request $req, string $fileId, string $markId): Response
+    /**
+     * The book a request names, from the query for a read and the body for a
+     * write. Whether the member may open it is still `guarded()`'s to say.
+     */
+    private function askedFile(Request $req): string
     {
+        $fromQuery = $req->query('fileId');
+        $fromBody = $req->input()['fileId'] ?? null;
+        $id = is_string($fromQuery) && $fromQuery !== '' ? $fromQuery : $fromBody;
+        if (!is_string($id) || !Id::isValid($id)) {
+            throw ApiError::invalid('Which book? This needs a fileId.');
+        }
+        return $id;
+    }
+
+    /**
+     * A mark this member owns, or nothing. The book it is in comes from the
+     * mark rather than from the caller: a mark is named by its own id here,
+     * and asking for a file id as well would only be a second thing to get
+     * wrong.
+     *
+     * @return array<string, mixed>
+     */
+    private function ownMark(App $app, string $markId): array
+    {
+        $mark = $app->db()->one(
+            'SELECT * FROM {{reading_marks}} WHERE id = ? AND user_id = ?',
+            [Id::isValid($markId) ? $markId : '', (string) $app->currentUser()->id()],
+        );
+        if ($mark === null) {
+            throw ApiError::notFound();
+        }
+        return $mark;
+    }
+
+    private function editMark(App $app, Request $req, string $markId): Response
+    {
+        $fileId = (string) $this->ownMark($app, $markId)['file_id'];
         $data = Validator::check($req->input(), ['note' => ['text', 'nullable', 'max' => 5000], 'color' => ['string', 'max' => 32]]);
         $set = [];
         foreach (['note' => 'note', 'color' => 'color'] as $in => $column) {
@@ -365,12 +405,10 @@ return new class (__DIR__) extends BasePlugin {
         return Response::json(['ok' => true, 'marks' => $this->marksOf($app, $fileId)]);
     }
 
-    private function deleteMark(App $app, string $fileId, string $markId): Response
+    private function deleteMark(App $app, string $markId): Response
     {
-        $done = $app->db()->delete('reading_marks', ['id' => Id::isValid($markId) ? $markId : '', 'user_id' => (string) $app->currentUser()->id(), 'file_id' => $fileId]);
-        if ($done === 0) {
-            throw ApiError::notFound();
-        }
+        $fileId = (string) $this->ownMark($app, $markId)['file_id'];
+        $app->db()->delete('reading_marks', ['id' => $markId, 'user_id' => (string) $app->currentUser()->id()]);
         return Response::json(['ok' => true, 'marks' => $this->marksOf($app, $fileId)]);
     }
 
