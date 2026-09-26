@@ -376,3 +376,9 @@ fieldset[disabled] { opacity: 0.6; }
 .live-chat-list li { line-height: 1.4; }
 .live-chat-body { margin-inline-start: 0.35rem; overflow-wrap: anywhere; }
 .live-chat form input[type=text] { flex: 1 1 10rem; }
+.hymn-words .hymn-verse { white-space: pre-line; margin: 0 0 1rem; }
+.present { text-align: center; }
+.present-verse { white-space: pre-line; font-size: clamp(1.4rem, 4vw, 2.6rem); line-height: 1.35; margin: 1.5rem auto; max-width: 40ch; }
+.present .row { justify-content: center; }
+.present-credit { margin-top: 2rem; }
+.book-frame { width: 100%; height: 75vh; border: 1px solid var(--sep); border-radius: var(--radius-sm); background: var(--panel); }

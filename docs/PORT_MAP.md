@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -111,17 +111,17 @@ commit as the code it describes.
 | `/admin/schedules/[id]` | todo | |
 | `/admin/series` | done | Scoped to the editor’s part of the library; filter, bulk publish/unpublish/move/delete, ↑↓ |
 | `/admin/series/[id]` | done | Publish now / Save as draft / Load draft, tags, slug rename leaves an alias, restricted viewing |
-| `/admin/services` | todo | |
-| `/admin/services/report` | todo | |
+| `/admin/services` | done | Service plans (`manage_files`), with What we sang beside them |
+| `/admin/services/report` | done | Every song in a window, how many services it was sung in, its CCLI number, author and copyright, and a CSV |
 | `/admin/share-links` | done | Filter active/revoked, revoke (audited), create for any series or video |
 | `/admin/speakers` | done |  |
-| `/admin/teams` | todo | |
+| `/admin/teams` | done | The pick-list a rota is built from |
 | `/admin/trash` | done | Restore; delete for good removes the provider asset first |
 | `/admin/users` | done | Roles (ADMIN only, never the last admin), pre-authorise by email, revoke; changing a role signs the person out |
 | `/admin/video-feeds` | done | Administrators only (a feed can file videos anywhere) |
 | `/admin/videos` | done | VideosAdmin: add by link or upload (tus, presigned PUT/multipart, resumable, chunked), Bunny import, bulk; edit page at /admin/videos/[id] (the port's) with thumbnail, captions, restricted viewing |
 | `/admin/webhooks` | done | plugins/webhooks |
-| `/books/[fileId]` | todo | |
+| `/books/[fileId]` | done | A book's contents, and where a `?hymn=` number lands, with the typed-out words when there are any (plugins/book-reader) |
 | `/calendar` | todo | |
 | `/categories/[slug]` | done | Children, series, standalone videos and files; generic title + sign-in page (401) for a members-only one |
 | `/directory` | done | plugins/profiles: name only by default, each contact detail its own yes, search by name and note only, noindex |
@@ -134,31 +134,31 @@ commit as the code it describes.
 | `/groups/[slug]` | done | The group, its requests for its leader, its conversation and its roll |
 | `/guides` | done | Published guides, counted in questions |
 | `/guides/[slug]` | done | The questions, the scripture and the notes; leader notes only for whoever leads a group |
-| `/hymns/[fileId]` | todo | |
+| `/hymns/[fileId]` | done | One hymn that is its own file: its words and its credits |
 | `/link` | todo | |
 | `/live` | done | Whatever is on now, a countdown to the next one otherwise, "Coming up" underneath, and the chat beside it |
 | `/playlists` | done | plugins/playlists |
 | `/playlists/[id]` | done | the owner's, or read-only for anyone once shareable (noindex); each reader sees only the videos they may watch |
 | `/prayer` | done | The wall as this reader may see it, the form to ask (honeypot, rate-limited), and "I prayed for this"; noindex |
-| `/present/[fileId]` | todo | |
+| `/present/[fileId]` | done | The words, big, one verse at a time, with the copyright line up throughout; refuses a hymn nobody has typed |
 | `/profile` | done | Overview: unread count and plugin cards (profile.overview) |
 | `/profile/devices` | todo | |
 | `/profile/downloads` | done | This device’s saved videos (self-healing), Wi-Fi-only choice, space used and the browser quota |
 | `/profile/events` | done | The member's own sign-ups, and cancelling from there |
 | `/profile/groups` | done | The member's own groups and asks |
 | `/profile/inbox` | done | Mark one/all read, open, delete one/all; push toggle slot for the notifications plugin |
-| `/profile/rota` | todo | |
+| `/profile/rota` | done | What this member is on for, answering, asking for cover, taking somebody's slot, and when they are away |
 | `/profile/settings` | done | This device (theme, language, autoplay, speed, reading, bottom bar), account fields by plugin, password and sign-out-elsewhere, download my data, delete account |
 | `/profile/shared-links` | done | The member’s own links |
-| `/read/[fileId]` | todo | |
+| `/read/[fileId]` | in progress | The file through the browser's own viewer; the in-app reader (pdf.js/epub.js, search, highlights, read-aloud, offline) is step 5.10 |
 | `/recently-added` | done | Newest series and videos |
 | `/recently-played` | done | plugins/watch-history |
 | `/scripture` | done | Books with a video the reader may open, in canonical order |
 | `/scripture/[book]` | done |  |
 | `/search` | done | Library\Search: ranked substring + FULLTEXT pass, fuzzy re-rank of ≤500 titles only on an empty result; category/speaker filters, newest sort; content.search_sources for plugins; 100-char cap |
 | `/series/[slug]` | done | Slug aliases 301; sequential unlock (series or its category); tags; files; BreadcrumbList |
-| `/services` | todo | |
-| `/services/[id]` | todo | |
+| `/services` | done | Published running orders |
+| `/services/[id]` | done | The order, each row resolved against the library as it stands now, and who is on — names for members, the shape for anybody |
 | `/share/unavailable` | done | Says revoked, expired or another account |
 | `/share/unlock/[token]` | done | Password first; nothing granted or counted until it’s right |
 | `/speakers` | done | With counts of videos the reader may open |
@@ -260,17 +260,17 @@ commit as the code it describes.
 | `/api/admin/series` | GET POST | done | ?q, ?categoryId, ?page; scoped |
 | `/api/admin/series/viewer-groups/[id]` | DELETE | done |  |
 | `/api/admin/series/viewers/[id]` | DELETE | done |  |
-| `/api/admin/services/[id]/rota` | GET | todo | |
-| `/api/admin/services/[id]` | PATCH DELETE | todo | |
-| `/api/admin/services/report` | GET | todo | |
-| `/api/admin/services` | GET POST | todo | |
+| `/api/admin/services/[id]/rota` | GET | done | Who is on, with the answer each gave |
+| `/api/admin/services/[id]` | PATCH DELETE | done | `items` replaces the order and `assignments` the rota, keeping the answers people already gave |
+| `/api/admin/services/report` | GET | done | `?from`, `?to`, `?format=csv` |
+| `/api/admin/services` | GET POST | done | `manage_files` |
 | `/api/admin/share-links/[id]` | PATCH DELETE | done | DELETE revokes (keeps the row) |
 | `/api/admin/share-links` | GET POST | done | GET ?state=active|revoked |
 | `/api/admin/sheets/tabs` | GET | todo | |
 | `/api/admin/speakers/[id]` | PATCH DELETE | done | Videos keep playing without a speaker |
 | `/api/admin/speakers` | GET POST | done |  |
-| `/api/admin/teams/[id]` | PATCH DELETE | todo | |
-| `/api/admin/teams` | GET POST | todo | |
+| `/api/admin/teams/[id]` | PATCH DELETE | done | `addEmail`/`addPosition` and `removeMemberId` keep the members on the same route |
+| `/api/admin/teams` | GET POST | done | |
 | `/api/admin/trash/[type]/[id]` | POST DELETE | done | POST restores; DELETE purges |
 | `/api/admin/trash` | GET | done | Only the kinds the reader manages site-wide |
 | `/api/admin/users/[id]` | PATCH DELETE | done | Last-admin guard; role change deletes sessions |
@@ -354,7 +354,7 @@ commit as the code it describes.
 | `/api/reading/marks/[id]` | PATCH DELETE | todo | |
 | `/api/reading/marks` | GET POST | todo | |
 | `/api/reading/progress` | POST | todo | |
-| `/api/rota` | POST DELETE | todo | |
+| `/api/rota` | POST DELETE | done | One member's own: an answer, a cover request, taking a slot that is going begging, and blockouts (POST adds, DELETE removes) |
 | `/api/schedules/[id]/events` | GET | todo | |
 | `/api/schedules` | GET | todo | |
 | `/api/share-links/[id]` | PATCH DELETE | done | PATCH note or revoked; DELETE revokes |
@@ -413,12 +413,12 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | BookPage | `book_pages` | todo | |
 | BookHymnDetail | `book_hymn_details` | todo | |
 | FileFavorite | `file_favorites` | todo | |
-| ServicePlan | `service_plans` | todo | |
-| ServiceTeam | `service_teams` | todo | |
-| ServiceTeamMember | `service_team_members` | todo | |
-| ServiceAssignment | `service_assignments` | todo | |
-| ServiceBlockout | `service_blockouts` | todo | |
-| ServicePlanItem | `service_plan_items` | todo | |
+| ServicePlan | `service_plans` | done | plugins/service-plans |
+| ServiceTeam | `service_teams` | done | |
+| ServiceTeamMember | `service_team_members` | done | |
+| ServiceAssignment | `service_assignments` | done | Cover is a flag on the slot, and `covered_for_id` keeps who had it |
+| ServiceBlockout | `service_blockouts` | done | Inclusive at both ends |
+| ServicePlanItem | `service_plan_items` | done | Replaced as a whole when the order is saved |
 | Comment | `comments` | done | the byline is the display name (Profiles on) or sign-in name, never an address |
 | CommentReport | `comment_reports` | done | |
 | WatchProgress | `watch_progresses` | todo | |
@@ -550,11 +550,11 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/reader.test.ts` | todo | |
 | `lib/recurrence.test.ts` | done | tests/Unit/Plugins/RecurrenceTest.php (every case) |
 | `lib/reorder.test.ts` | done | tests/Unit/Support/SupportTest.php |
-| `lib/rota.test.ts` | todo | |
+| `lib/rota.test.ts` | done | tests/Unit/Plugins/ServicesTest.php (every case) |
 | `lib/schedules/duplicates.test.ts` | todo | |
 | `lib/schedules/logic.test.ts` | todo | |
 | `lib/schedules/visibility.test.ts` | todo | |
-| `lib/services.test.ts` | todo | |
+| `lib/services.test.ts` | done | tests/Unit/Plugins/ServicesTest.php (every case) and tests/Integration/ServicePlansTest.php |
 | `lib/share-links.test.ts` | done | tests/Unit/Library/ShareLinksTest.php |
 | `lib/share-password.test.ts` | done | tests/Unit/SharePasswordTest.php, plus a hash made by Node |
 | `lib/sheets/dates.test.ts` | todo | |
@@ -667,6 +667,10 @@ met, with the reason.
 - **A name shown on a group page is never an email address**: the group's own byline rule, the same as comments and the live chat, so dev or imported data whose `name` holds an address shows "A member" instead.
 - **Guide items are edited through their own routes** (`POST /api/admin/guides/[id]/items`, `PATCH`/`DELETE` on one) rather than as a nested array on the guide: the same shape as a form's questions, and one save can't silently drop an item somebody else added.
 - **`/admin/guides` exists**, as the brief asks (the original has only the API).
+- **A plan's order and its rota are saved as wholes** (`items` and `assignments` on the plan's PATCH) rather than row at a time: an order is one thing, and moving a hymn up is the same act as adding one. An ask that is already there keeps the answer somebody gave; one that has gone is withdrawn.
+- **A row is named after the song, not the book it is in**: a number inside a book takes its title from the contents where there is one, on the plan and in What we sang.
+- **`/books`, `/hymns` and `/present` are the book-reader plugin's**, built here because a running order links straight into them; the in-app reader itself (pdf.js/epub.js, search, highlights, read-aloud, the offline copy, the contents editor and OCR) is still to come, and `/read/[fileId]` meanwhile hands the file to the browser's own viewer through the access-checked content route.
+- **Rota names need a sign-in, and the structure does not**: `/services/[id]` gives a signed-out reader the jobs and the teams with nobody's name on them, the same optional-field shape the group address uses.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -753,3 +757,14 @@ met, with the reason.
   member's shape. 92 new unit tests (groups, attendance, guides, thread —
   the original's four case lists) and 8 integration tests, plus a Chromium
   run of a stranger asking and a leader answering.
+- 2026-09-26 — service plans and the rota (plugins/service-plans), with the
+  hymn, book and presenter pages they link into (plugins/book-reader).
+  Where a row opens, what its number means and whether it can go on a
+  screen are decided in Services; a plan outlives the library it points at,
+  so every row is resolved against the file as it stands now. The rota
+  holds asks, answers, cover (a flag on the slot, keeping who had it) and
+  blockouts inclusive at both ends, reaches the member's own calendar feed,
+  and writes a declined date as CANCELLED rather than leaving it out. What
+  we sang counts each song and its services for a licence return, with a
+  CSV. 26 unit tests (the original's services and rota case lists) and 7
+  integration tests.
