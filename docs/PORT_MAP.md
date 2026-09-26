@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -102,13 +102,13 @@ commit as the code it describes.
 | `/admin/home-rows` | done | Library\Admin\HomeRowsAdmin: toggle, rename, reorder the built-in rows; add category and tag rows; says when a row's plugin is off |
 | `/admin/live` | done | Schedule a stream (title, embed address, cover, start/end), publish it, switch its chat on and set slow mode (manage_plugins) |
 | `/admin/media-check` | done | Library\Admin\MediaCheckAdmin (see Deviations): videos whose service is gone, whose host-disk file is missing, stuck or failed, failed transcriptions; local files missing; pasted links checked on request; unused host-disk video files (administrators may delete) |
-| `/admin/people` | todo | |
+| `/admin/people` | done | Names, their dates, the account a name signs in as, and near-duplicates offered for merging |
 | `/admin/permissions` | done | Groups (capabilities sanitised to the known list), assignments site-wide or scoped to a category/series, category and series editors |
 | `/admin/plugins` | done | Activate, per-category overrides, zip install/delete, auto-deactivation notices; never loads third-party plugins |
 | `/admin/prayer` | done | The queue, waiting first: let through, take down, mark answered with a line saying what happened, change the audience, delete (`moderate_prayer`) |
 | `/admin/query-monitor` | done | Reports the storage/config.php flag, toggles the bar (plugins row "query-monitor", fail-open) |
-| `/admin/schedules` | todo | |
-| `/admin/schedules/[id]` | todo | |
+| `/admin/schedules` | done | The rotas in the order the calendar shows them, and the one Google service account key |
+| `/admin/schedules/[id]` | done | Where it comes from, Test connection, and the dates typed in here |
 | `/admin/series` | done | Scoped to the editor’s part of the library; filter, bulk publish/unpublish/move/delete, ↑↓ |
 | `/admin/series/[id]` | done | Publish now / Save as draft / Load draft, tags, slug rename leaves an alias, restricted viewing |
 | `/admin/services` | done | Service plans (`manage_files`), with What we sang beside them |
@@ -122,7 +122,7 @@ commit as the code it describes.
 | `/admin/videos` | done | VideosAdmin: add by link or upload (tus, presigned PUT/multipart, resumable, chunked), Bunny import, bulk; edit page at /admin/videos/[id] (the port's) with thumbnail, captions, restricted viewing |
 | `/admin/webhooks` | done | plugins/webhooks |
 | `/books/[fileId]` | done | A book's contents, and where a `?hymn=` number lands, with the typed-out words when there are any (plugins/book-reader) |
-| `/calendar` | todo | |
+| `/calendar` | done | Chip row, Only mine, keep-on-device; noindex, and no names without a sign-in |
 | `/categories/[slug]` | done | Children, series, standalone videos and files; generic title + sign-in page (401) for a members-only one |
 | `/directory` | done | plugins/profiles: name only by default, each contact detail its own yes, search by name and note only, noindex |
 | `/events` | done | What's on; a members-only event is absent rather than refused |
@@ -190,7 +190,7 @@ commit as the code it describes.
 | `/api/admin/broadcasts/[id]/test` | POST | todo | |
 | `/api/admin/broadcasts` | GET POST | todo | |
 | `/api/admin/bunny-audit` | GET | todo | |
-| `/api/admin/calendar-events/[id]` | GET PATCH DELETE | todo | |
+| `/api/admin/calendar-events/[id]` | GET PATCH DELETE | done | |
 | `/api/admin/categories/[id]` | PATCH DELETE | done | `{move: up|down|n}` reorders; DELETE trashes |
 | `/api/admin/categories` | GET POST | done | Top-level creation for administrators only |
 | `/api/admin/comments/[id]` | PATCH | done | `{hidden}`; showing again clears the reports |
@@ -235,9 +235,9 @@ commit as the code it describes.
 | `/api/admin/home-rows` | GET POST | done | POST creates CATEGORY/TAG rows only |
 | `/api/admin/live/[id]` | PATCH DELETE | done | Publishing one fires `live.published`, which tells members after the response has gone |
 | `/api/admin/live` | GET POST | done | `manage_plugins`; an embed or cover address must be https |
-| `/api/admin/people/[id]` | PATCH DELETE | todo | |
-| `/api/admin/people/merge` | POST | todo | |
-| `/api/admin/people` | GET POST | todo | |
+| `/api/admin/people/[id]` | PATCH DELETE | done | A new spelling keeps the old one as an alias |
+| `/api/admin/people/merge` | POST | done | Moves the history, keeps the losing spelling as an alias; never automatic |
+| `/api/admin/people` | GET POST | done | |
 | `/api/admin/permission-groups/[id]` | PATCH DELETE | done | A group with scoped assignments can’t gain site-wide-only capabilities |
 | `/api/admin/permission-groups` | GET POST | done | Returns the capability list with the groups |
 | `/api/admin/plugins/[slug]/overrides` | POST | done |  |
@@ -247,12 +247,12 @@ commit as the code it describes.
 | `/api/admin/prayer/[id]` | PATCH DELETE | done | `{status, visibility, answeredNote}`; the decision is audited, the words never are |
 | `/api/admin/prayer` | GET | done | The same presenter as the wall, so an anonymous request is anonymous here too |
 | `/api/admin/query-monitor` | PATCH | done | `{enabled}` → `{enabled, configured}` |
-| `/api/admin/schedules/[id]/events` | GET POST | todo | |
-| `/api/admin/schedules/[id]` | GET PATCH DELETE | todo | |
-| `/api/admin/schedules/[id]/sync` | POST | todo | |
-| `/api/admin/schedules/[id]/validate` | POST | todo | |
-| `/api/admin/schedules/reorder` | POST | todo | |
-| `/api/admin/schedules` | GET POST | todo | |
+| `/api/admin/schedules/[id]/events` | GET POST | done | |
+| `/api/admin/schedules/[id]` | GET PATCH DELETE | done | The sheet source is saved with it, under `source` |
+| `/api/admin/schedules/[id]/sync` | POST | done | A failed import deletes nothing; an unchanged fingerprint writes nothing |
+| `/api/admin/schedules/[id]/validate` | POST | done | Test connection: the events as read, and every skipped row with its reason |
+| `/api/admin/schedules/reorder` | POST | done | |
+| `/api/admin/schedules` | GET POST | done | |
 | `/api/admin/series/[id]/draft` | GET PUT DELETE | done | One staged DraftRevision; any publish clears it |
 | `/api/admin/series/[id]` | GET PATCH DELETE | done | publish fields need publish_content; moving needs the capability in both places |
 | `/api/admin/series/[id]/viewer-groups` | GET POST | done |  |
@@ -296,7 +296,7 @@ commit as the code it describes.
 | `/api/admin/webhooks/[id]` | PATCH DELETE | done | plus POST `/api/admin/webhooks/[id]/test` (the port's: a test delivery, 502 with the reason when it fails) |
 | `/api/admin/webhooks` | GET POST | done | public addresses only; the secret encrypted, shown only as `secretSet` |
 | `/api/auth/registration-check` | POST | done | Bearer secret from settings, fails closed, {allowed} only, rate-limited, records SIGNUP refusals |
-| `/api/calendar-events` | GET | todo | |
+| `/api/calendar-events` | GET | done | Dates for anyone, people for members; a `personId` filter is a 403 signed out |
 | `/api/calendar/[token]/marine-team.ics` | GET | done | The member's own diary; the token is the whole of the authentication, `private, no-store`, `X-Robots-Tag: noindex`, and on the export's forbidden-key list. Plugins fill it through `calendar.entries` |
 | `/api/comments/[id]/report` | POST | done | once per member, never one's own |
 | `/api/comments/[id]` | DELETE | done | the author, or a moderator for that part of the library |
@@ -305,7 +305,7 @@ commit as the code it describes.
 | `/api/cron/extend-events` | GET | done | Job `extend-events`, daily at 02:20 UTC through /cron/run; keeps every series filled in six months ahead |
 | `/api/cron/notification-digest` | GET | done | Job `notification-digest`, daily at 13:00 UTC (plugins/notifications) |
 | `/api/cron/schedule-reminders` | GET | todo | |
-| `/api/cron/sync-schedules` | GET POST | todo | |
+| `/api/cron/sync-schedules` | GET POST | done | The `sync-schedules` job, 05:30 UTC, before the reminders |
 | `/api/cron/sync-video-feeds` | GET | done | Job `sync-video-feeds`, daily at 07:15 UTC as before |
 | `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min through /cron/run; abandoned upload placeholders marked FAILED after a day |
 | `/api/cron/transcribe` | GET | done | Job `transcribe` every 10 minutes through /cron/run, 20 s budget for starting work; stale RUNNING (30 min) re-queued |
@@ -334,7 +334,7 @@ commit as the code it describes.
 | `/api/notes` | GET POST | done | `?videoId`; `&format=text` downloads the sheet and the notes as one text file |
 | `/api/offline/hymnal/[seriesId]` | GET | todo | |
 | `/api/offline/service/[id]` | GET | todo | |
-| `/api/people` | GET | todo | |
+| `/api/people` | GET | done | 403 without a session |
 | `/api/playlists/[id]/items` | POST PATCH DELETE | done | `{videoId}`; PATCH `{videoId, move}` or `{order}` |
 | `/api/playlists/[id]` | GET PATCH DELETE | done | `{playlist, items}`; PATCH `{title, public}` |
 | `/api/playlists/for-video` | GET | done | `[{id, title, contains}]` for the Add to playlist menu |
@@ -355,13 +355,13 @@ commit as the code it describes.
 | `/api/reading/marks` | GET POST | todo | |
 | `/api/reading/progress` | POST | todo | |
 | `/api/rota` | POST DELETE | done | One member's own: an answer, a cover request, taking a slot that is going begging, and blockouts (POST adds, DELETE removes) |
-| `/api/schedules/[id]/events` | GET | todo | |
-| `/api/schedules` | GET | todo | |
+| `/api/schedules/[id]/events` | GET | done | By id or by slug |
+| `/api/schedules` | GET | done | |
 | `/api/share-links/[id]` | PATCH DELETE | done | PATCH note or revoked; DELETE revokes |
 | `/api/share-links` | GET POST | done | 20 new links an hour; private links email and inbox their recipients |
 | `/api/share-links/unlock` | POST | done | 10 wrong guesses in 15 minutes lock the link; also 30 tries per address per 15 minutes |
 | `/api/subscriptions` | POST PATCH | done | POST `{seriesId|categoryId}` toggles → `{following}`; PATCH `{…, muted}` → `{muted}` |
-| `/api/sync/snapshot` | GET | todo | |
+| `/api/sync/snapshot` | GET | done | Full or delta; signed out it is always full and nameless, and never cached by a shared cache |
 | `/api/tv/approve` | POST | todo | |
 | `/api/tv/feed.json` | GET | todo | |
 | `/api/tv/feed.xml` | GET | todo | |
@@ -465,12 +465,12 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | UnauthorizedAccessAttempt | `unauthorized_access_attempts` | done | Hourly alert dedupe, 90-day prune, /admin/access-attempts |
 | Notification | `notifications` | done | Inbox::add for plugins; /profile/inbox and /api/inbox |
 | BrandSettings | `brand_settings` | done | Painted as custom properties; /admin/branding |
-| Schedule | `schedules` | todo | |
-| ScheduleSource | `schedule_sources` | todo | |
-| Person | `people` | todo | |
-| PersonAlias | `person_aliases` | todo | |
-| CalendarEvent | `calendar_events` | todo | |
-| CalendarEventPerson | `calendar_event_people` | todo | |
+| Schedule | `schedules` | done | plugins/schedules |
+| ScheduleSource | `schedule_sources` | done | One per schedule; the key itself is a setting, not a column |
+| Person | `people` | done | The normalized name is the unique key, so two spellings are one person |
+| PersonAlias | `person_aliases` | done | What a merge or a rename leaves behind, so the next import resolves it |
+| CalendarEvent | `calendar_events` | done | `origin` says whether a sheet or somebody here put it there |
+| CalendarEventPerson | `calendar_event_people` | done | |
 | Event | `events` | done | plugins/events |
 | EventSeries | `event_series` | done | Generated dates are ordinary events; `SetNull` on stopping, never a cascade |
 | EventRegistration | `event_registrations` | done | Cancelling keeps the row, so signing up again reuses it |
@@ -534,9 +534,9 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/ics.test.ts` | done | tests/Unit/Support/IcsTest.php (every case) |
 | `lib/identity-linking.test.ts` | done | tests/Unit/Access/IdentityLinkingTest.php |
 | `lib/live-chat.test.ts` | done | tests/Unit/Plugins/LiveChatTest.php (every case) and tests/Integration/LiveTest.php |
-| `lib/names.test.ts` | todo | |
+| `lib/names.test.ts` | done | tests/Unit/Plugins/SchedulesNamesTest.php (every case) |
 | `lib/nav-tabs.test.ts` | done | tests/js/nav-tabs.test.mjs |
-| `lib/offline-calendar.test.ts` | todo | |
+| `lib/offline-calendar.test.ts` | done | tests/js/offline-calendar.test.mjs (every case), against public/assets/js/offline-calendar.js |
 | `lib/offline-shell.test.ts` | todo | |
 | `lib/outline.test.ts` | done | tests/Unit/Plugins/OutlineTest.php (every case) and tests/Integration/SermonNotesTest.php |
 | `lib/page-offset.test.ts` | todo | |
@@ -551,14 +551,14 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/recurrence.test.ts` | done | tests/Unit/Plugins/RecurrenceTest.php (every case) |
 | `lib/reorder.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/rota.test.ts` | done | tests/Unit/Plugins/ServicesTest.php (every case) |
-| `lib/schedules/duplicates.test.ts` | todo | |
-| `lib/schedules/logic.test.ts` | todo | |
-| `lib/schedules/visibility.test.ts` | todo | |
+| `lib/schedules/duplicates.test.ts` | done | tests/Unit/Plugins/SchedulesLogicTest.php |
+| `lib/schedules/logic.test.ts` | done | tests/Unit/Plugins/SchedulesLogicTest.php (every case) |
+| `lib/schedules/visibility.test.ts` | done | tests/Unit/Plugins/SchedulesLogicTest.php, and proved over HTTP in tests/Integration/SchedulesTest.php |
 | `lib/services.test.ts` | done | tests/Unit/Plugins/ServicesTest.php (every case) and tests/Integration/ServicePlansTest.php |
 | `lib/share-links.test.ts` | done | tests/Unit/Library/ShareLinksTest.php |
 | `lib/share-password.test.ts` | done | tests/Unit/SharePasswordTest.php, plus a hash made by Node |
-| `lib/sheets/dates.test.ts` | todo | |
-| `lib/sheets/parse.test.ts` | todo | |
+| `lib/sheets/dates.test.ts` | done | tests/Unit/Plugins/SheetParseTest.php |
+| `lib/sheets/parse.test.ts` | done | tests/Unit/Plugins/SheetParseTest.php (both layouts, skip-and-report) |
 | `lib/slug.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/sms.test.ts` | todo | |
 | `lib/toc-nav.test.ts` | todo | |
@@ -672,6 +672,12 @@ met, with the reason.
 - **`/books`, `/hymns` and `/present` are the book-reader plugin's**, built here because a running order links straight into them; the in-app reader itself (pdf.js/epub.js, search, highlights, read-aloud, the offline copy, the contents editor and OCR) is still to come, and `/read/[fileId]` meanwhile hands the file to the browser's own viewer through the access-checked content route.
 - **Rota names need a sign-in, and the structure does not**: `/services/[id]` gives a signed-out reader the jobs and the teams with nobody's name on them, the same optional-field shape the group address uses.
 - **A cover request is a conditional write**: the hand-over updates the row only while it is still open and still held by whoever asked, so two people pressing "I'll take it" in the same second get one winner and the other is told somebody got there first. Being already on that service refuses with the reason said plainly; being away only warns; and the old note does not follow the slot.
+- **The schedules import removes a date only inside the stretch the sheet covered.** A successful sync takes off the dates the sheet no longer lists, but only between the first and last date it carried: a schedule whose window has moved on has history behind it that nothing deleted, and an import is not the place to lose it. A failed sync removes nothing at all, and an unchanged fingerprint writes nothing.
+- **`/api/people` answers 403, not the usual 401**, signed out. It is not "sign in to continue": the list of who is on the rotas is not a stranger's to ask for, and a `personId` filter on the event and snapshot endpoints is refused for the same reason — "which days is this id on" is "who is this", sideways.
+- **`mergeSnapshot` lives in `public/assets/js/offline-calendar.js` and imports nothing**, so it can be tested in Node where there is no `window`; what the module needs of `MT` it reads lazily off the page. The two rules a delta cannot state are the device's: a disabled schedule takes its dates with it, and a day that has fallen out behind the window is dropped.
+- **A signed-out snapshot is always full.** A delta would let a copy saved on a shared laptop while somebody was signed in keep those names for ever, because no row changed; asking for the lot replaces them with a nameless copy on the next update.
+- **A person's spelling is changed in place and the old one kept as an alias**, the same as after a merge, so the next import resolves it rather than making the duplicate again.
+- **Renaming a schedule does not re-slug it.** The slug is made once, from the first name, because `/api/schedules/[id]` answers to either and a changed slug would break a link somebody kept.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -769,3 +775,15 @@ met, with the reason.
   we sang counts each song and its services for a licence return, with a
   CSV. 26 unit tests (the original's services and rota case lists) and 7
   integration tests.
+
+- 2026-09-26 — schedules and Google Sheets: `/calendar` with the chip row,
+  Only mine and keep-on-device; `/admin/schedules`, `/admin/schedules/[id]`
+  with Test connection, and `/admin/people` with merging; the sheet client
+  (RS256 service-account assertion), the two layouts, forgiving dates, the
+  import that deletes nothing on failure and writes nothing when unchanged;
+  the offline snapshot and `mergeSnapshot`; the 05:30 sync and the morning
+  reminder. The rule under test throughout is that the dates are public and
+  the names need a sign-in: proved over HTTP for the page, the event
+  endpoints, `/api/people` and the snapshot, and in Chromium for the saved
+  copy, which holds no names when it was saved signed out. 886 unit, 107
+  integration, 37 browser-module tests.

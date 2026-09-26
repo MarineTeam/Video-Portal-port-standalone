@@ -80,7 +80,7 @@ abstract class ServerTestCase extends DatabaseTestCase
     /**
      * @param array<string, string>|string|null $body a form, or a JSON string
      * @param array<string, string> $headers
-     * @return array{status: int, body: string, location: ?string, json: mixed}
+     * @return array{status: int, body: string, location: ?string, json: mixed, headers: array<string, string>}
      */
     protected static function http(string $method, string $path, array|string|null $body = null, string $who = 'admin', array $headers = []): array
     {
@@ -110,7 +110,14 @@ abstract class ServerTestCase extends DatabaseTestCase
         $head = substr($raw, 0, $headerSize);
         preg_match('/^Location:\s*(\S+)/mi', $head, $m);
         $text = substr($raw, $headerSize);
-        return ['status' => $status, 'body' => $text, 'location' => $m[1] ?? null, 'json' => json_decode($text, true)];
+        $headers = [];
+        foreach (preg_split('/\r?\n/', $head) ?: [] as $line) {
+            if (str_contains($line, ':')) {
+                [$name, $value] = explode(':', $line, 2);
+                $headers[strtolower(trim($name))] = trim($value);
+            }
+        }
+        return ['status' => $status, 'body' => $text, 'location' => $m[1] ?? null, 'json' => json_decode($text, true), 'headers' => $headers];
     }
 
     protected static function csrf(string $path, string $who = 'admin'): string
@@ -122,7 +129,7 @@ abstract class ServerTestCase extends DatabaseTestCase
     /**
      * A JSON API call as $who, with the CSRF header the page's meta tag carries.
      *
-     * @return array{status: int, body: string, location: ?string, json: mixed}
+     * @return array{status: int, body: string, location: ?string, json: mixed, headers: array<string, string>}
      */
     protected static function api(string $method, string $path, mixed $payload = null, string $who = 'admin'): array
     {

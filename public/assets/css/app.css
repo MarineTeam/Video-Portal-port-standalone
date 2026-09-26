@@ -382,3 +382,17 @@ fieldset[disabled] { opacity: 0.6; }
 .present .row { justify-content: center; }
 .present-credit { margin-top: 2rem; }
 .book-frame { width: 100%; height: 75vh; border: 1px solid var(--sep); border-radius: var(--radius-sm); background: var(--panel); }
+
+/* The calendar's rota chips: an accent each, so a row of dates reads as
+   which rota at a glance rather than by reading every label. */
+.chip.on { background: var(--accent); color: var(--accent-ink, #fff); }
+.chip:is(button) { border: 1px solid var(--line); cursor: pointer; font: inherit; }
+.badge.rota-slate, .chip.rota-slate { background: #64748b; color: #fff; }
+.badge.rota-blue, .chip.rota-blue { background: #2563eb; color: #fff; }
+.badge.rota-green, .chip.rota-green { background: #15803d; color: #fff; }
+.badge.rota-amber, .chip.rota-amber { background: #b45309; color: #fff; }
+.badge.rota-rose, .chip.rota-rose { background: #be123c; color: #fff; }
+.badge.rota-violet, .chip.rota-violet { background: #6d28d9; color: #fff; }
+.badge.rota-teal, .chip.rota-teal { background: #0f766e; color: #fff; }
+.chip.on:is(.rota-slate, .rota-blue, .rota-green, .rota-amber, .rota-rose, .rota-violet, .rota-teal) { outline: 2px solid var(--ink); }
+.calendar [data-calendar-days] > li { margin-bottom: 0.6rem; }

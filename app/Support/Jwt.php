@@ -172,6 +172,23 @@ final class Jwt
     }
 
     /**
+     * RS256, for a Google service account: the assertion it exchanges for
+     * an access token is a JWT this app signs with the account's own key.
+     *
+     * @param array<string, mixed> $header
+     * @param array<string, mixed> $payload
+     */
+    public static function signRs256(array $header, array $payload, string $privateKeyPem): string
+    {
+        $signed = self::b64e((string) json_encode(['alg' => 'RS256', 'typ' => 'JWT'] + $header, JSON_UNESCAPED_SLASHES)) . '.' . self::b64e((string) json_encode($payload, JSON_UNESCAPED_SLASHES));
+        $key = openssl_pkey_get_private($privateKeyPem);
+        if ($key === false || !openssl_sign($signed, $signature, $key, OPENSSL_ALGO_SHA256)) {
+            throw new JwtException('The private key couldn’t sign.');
+        }
+        return $signed . '.' . self::b64e($signature);
+    }
+
+    /**
      * HS256, for tests and for a provider that shares a secret.
      *
      * @param array<string, mixed> $payload
