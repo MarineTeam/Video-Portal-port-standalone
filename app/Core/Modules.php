@@ -30,6 +30,8 @@ final class Modules
         \App\Modules\Uploads\Uploads::class,
         \App\Modules\Push\Push::class,
         \App\Modules\Sms\Callbacks::class,
+        \App\Modules\Api\Routes::class,
+        \App\Modules\Api\AdminRoutes::class,
     ];
 
     public static function register(App $app): void

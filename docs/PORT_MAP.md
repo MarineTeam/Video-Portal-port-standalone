@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers, the book and hymnal reader) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers, the book and hymnal reader, the read API and API keys; the Next.js import remains) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -32,9 +32,9 @@ commit as the code it describes.
 | Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | partial | Installer done and covered by the smoke test; /admin/update done (maintenance, resumable migrations, signed release zips with rollback; verified end to end against a scratch install); /admin/tools backup (.sql.gz a step per request, restores exactly — BackupTest) and files in 100 MB parts done; the Next.js import pending |
 | Services registry and Admin → Services | core | partial | Registry, generated forms, signed test-then-switch at /admin/providers; auth trial-mode switch arrives with external providers |
 | Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | done | Admin, providers, player, public pages, search, feeds, sitemap, JSON-LD, share links, downloads, video feeds, home rows, chapters, transcription, media check; the library's plugins (comments, related, up next…) come with step 4 |
-| Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | todo | |
+| Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | partial | API keys done (/admin/api-keys, hashed at rest, scopes, per-key rate limit); the rest with the auth work |
 | Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | partial | Branding, i18n, nav, device settings, per-device bottom bar, inbox, profile shell, data export, query monitor done; video feeds with the Library (step 3) |
-| Read API `/api/v1` | core | todo | |
+| Read API `/api/v1` | core | done | Eleven endpoints, bearer keys, six scopes, keyset paging, `assertExportSafe` over every payload |
 | PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
@@ -83,7 +83,7 @@ commit as the code it describes.
 | `/admin/access-attempts` | done | Filter by address, reason, date and unreviewed; mark reviewed; prune past 90 days |
 | `/admin/analytics` | todo | |
 | `/admin/announcements` | done | plugins/announcements |
-| `/admin/api-keys` | todo | |
+| `/admin/api-keys` | done | The key is shown once at creation and never again; revoking keeps the row and its history |
 | `/admin/audit` | done | Paged, filterable; CSV/JSON export streamed, cells that start with = + - @ are quoted |
 | `/admin/authorized-emails` | done | Allowlist with search and status filter; never suspends or removes the last active entry; organisation exemption per address; guest-login switch |
 | `/admin/branding` | done | Name, short name, three colours with live preview, logo by URL or upload (re-encoded by GD, served from storage/media) |
@@ -177,8 +177,8 @@ commit as the code it describes.
 | `/api/admin/analytics/export` | GET | todo | |
 | `/api/admin/announcements/[id]` | PATCH DELETE | done | plugins/announcements |
 | `/api/admin/announcements` | GET POST | done | message, active, publishAt/expiresAt window, audience ALL/GUESTS/MEMBERS |
-| `/api/admin/api-keys/[id]` | DELETE | todo | |
-| `/api/admin/api-keys` | GET POST | todo | |
+| `/api/admin/api-keys/[id]` | DELETE | done | Revokes (sets `revoked_at`); the row stays so audit and last-used survive |
+| `/api/admin/api-keys` | GET POST | done | POST returns the one and only plaintext copy; GET lists prefixes, scopes, last use |
 | `/api/admin/assignments` | POST DELETE | todo | |
 | `/api/admin/audit/export` | GET | done | ?format=csv|json, streamed |
 | `/api/admin/audit` | GET | done | Paged, filter by actor/action/entity/date |
@@ -368,18 +368,18 @@ commit as the code it describes.
 | `/api/tv/lookup` | POST | done | What is behind a code, for the approval screen. Members only, rate-limited |
 | `/api/tv/pair` | POST | done | A code for the screen and the secret that redeems it, stored hashed |
 | `/api/tv/poll` | POST | done | Claiming is a conditional update, so concurrent polls cannot both mint a token |
-| `/api/v1/analytics` | GET | todo | |
-| `/api/v1/calendar-events` | GET | todo | |
-| `/api/v1/categories` | GET | todo | |
-| `/api/v1/events/[id]/registrations` | GET | todo | |
-| `/api/v1/events` | GET | todo | |
-| `/api/v1/files` | GET | todo | |
-| `/api/v1/groups` | GET | todo | |
-| `/api/v1/me` | GET | todo | |
-| `/api/v1` | GET | todo | |
-| `/api/v1/schedules` | GET | todo | |
-| `/api/v1/series` | GET | todo | |
-| `/api/v1/videos` | GET | todo | |
+| `/api/v1/analytics` | GET | done | Counts only — videos, series, files, members. `analytics:read` |
+| `/api/v1/calendar-events` | GET | done | `schedules:read`; a personal scope, so it answers for the key's own member |
+| `/api/v1/categories` | GET | done | `content:read` |
+| `/api/v1/events/[id]/registrations` | GET | done | `events:registrations`, its own scope: this is the one endpoint that names people |
+| `/api/v1/events` | GET | done | `events:read`; counts of who is registered, never the names |
+| `/api/v1/files` | GET | done | `content:read`; `?addedSince=` for an incremental pull |
+| `/api/v1/groups` | GET | done | `groups:read`. Never an address and never who is in one — `memberCount` only, at any scope |
+| `/api/v1/me` | GET | done | The calling key describes itself: name, prefix, scopes, expiry, rate limit. No scope needed |
+| `/api/v1` | GET | done | Self-describing index, and the one v1 route that needs no key |
+| `/api/v1/schedules` | GET | done | `schedules:read` |
+| `/api/v1/series` | GET | done | `content:read` |
+| `/api/v1/videos` | GET | done | `content:read`; drafts and members-only included, each flagged |
 | `/api/videos/outline` | PUT | done | plugins/sermon-notes: `{videoId, outlineVersion, answers}`; 409 `outline_changed` against an older sheet |
 | `/api/view-events` | POST | done | 30-minute cookie (mt_views) plus the HMAC address throttle; counts only what the caller may open |
 | `/api/watch-later` | POST | done | `{categoryId|seriesId|videoId}` toggles → `{saved}` |
@@ -425,7 +425,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | FileAsset | `file_assets` | todo | |
 | ReadingProgress | `reading_progresses` | done | `location` is opaque: only the engine that wrote one parses it |
 | ReadingMark | `reading_marks` | done | Per member and private to them; a highlight with nothing selected is saved as a bookmark |
-| ApiKey | `api_keys` | todo | |
+| ApiKey | `api_keys` | done | Only the SHA-256 hash and a 16-character prefix are stored; `window_started_at`/`window_count` carry the per-key limit |
 | AuditLog | `audit_logs` | done | Audit::log; /admin/audit with export |
 | Plugin | `plugins` | done | Plus bundled, version, deactivation columns |
 | PluginCategoryOverride | `plugin_category_overrides` | done |  |
@@ -502,8 +502,8 @@ Each becomes a PHPUnit test class with the original case names.
 |---|---|---|
 | `lib/active-path.test.ts` | done | tests/Unit/Admin/ActivePathTest.php |
 | `lib/admin-nav.test.ts` | done | tests/Unit/Admin/AdminNavTest.php |
-| `lib/api-keys.test.ts` | todo | |
-| `lib/api-v1.test.ts` | todo | |
+| `lib/api-keys.test.ts` | done | tests/Unit/Api/KeysTest.php (every case) |
+| `lib/api-v1.test.ts` | done | tests/Unit/Api/V1Test.php; over HTTP in tests/Integration/ReadApiTest.php |
 | `lib/attendance.test.ts` | done | tests/Unit/Plugins/AttendanceTest.php (every case) |
 | `lib/authorization.test.ts` | done | tests/Unit/Access/AuthorizationTest.php; the guest-login cases in tests/Integration/GuestLoginTest.php |
 | `lib/book-contents.test.ts` | done | tests/Unit/Support/BookContentsTest.php (every case) |
@@ -597,6 +597,12 @@ met, with the reason.
 - **`sw.js` and `offline.html` derive the base path** (from the service worker's own URL) and prefix their literal paths with it. At a domain root they behave byte-for-byte as before.
 - **Schema additions:** `users.password_hash`, `email_verified_at`, `pending_email` (local accounts); `file_assets.backend`, `storage_path` (was `bunnyPath`), `upload_pending`; `push_subscriptions.endpoint_hash` (the unique index; a push URL can outrun an index prefix); `broadcast_recipients.provider`, `provider_message_id`, `delivery_status`, `delivered_at` (SMS receipts); plus `series_tags`, `video_scripture_books`, `sessions`, `services`, `settings`, `jobs`, `email_log`, `auth_tokens`, `rate_limits`, `uploads`. Tables are plural snake_case (`watch_progresses`, `people`).
 - **`/auth/recover`** is new under `/auth/*`: with `storage/enable-local-login` present it sets an administrator's password against a code written to `storage/recovery.key` — the lockout path when email isn't set up.
+- **v1 cursors are base64url, not the raw sort value.** The cursor is
+  `"<sortValue>|<id>"` encoded, because the sort value is a datetime with a
+  space in it and a bare one does not survive a query string.
+- **A refused v1 request still spends a rate-limit token.** An expired key or
+  a missing scope costs the same lookup as a good one, so counting only
+  successes would leave the cheapest way to hammer the database uncounted.
 - **Browser-module tests run under `node --test`** in CI (development only; nothing Node ships).
 - **`MT_STORAGE_DIR`** overrides the storage directory for the test suite only.
 - **A release is signed through its manifest.** The brief signs "the archive's checksum"; a zip can't carry its own checksum, so the build signs `MANIFEST.json` (Ed25519, `MANIFEST.sig` beside it) and the manifest lists every file's SHA-256. One upload is then self-contained, and the check is the same: nothing is unpacked until the signature verifies, and every unpacked file must match. The installed `MANIFEST.json` stays at the root so the next release can remove what it drops. The public key is `app/release-key.pub`, empty until the maintainers generate one (`tools/release/keygen.php`); without it the page says to upload by FTP.
@@ -840,3 +846,22 @@ met, with the reason.
   saved a highlight, reopened where it left off, and saved the book and
   pdf.js into Cache Storage under the paths the offline shell reads.
   1067 unit, 137 integration, 62 browser-module tests.
+
+- 2026-09-26 — the read API (`/api/v1`) and API keys. Eleven read-only
+  endpoints behind bearer keys: a key is generated once, shown once, and
+  stored only as a SHA-256 hash beside a 16-character prefix, so a lost key
+  is replaced rather than recovered. Six scopes with no hierarchy, two of
+  them (`events:registrations`, `schedules:read`) marked personal in the
+  admin screen because they answer with people. Paging is keyset over
+  `(updated_at, id)`, so a row edited mid-read moves to the end of the run
+  instead of being skipped, and the cursor is base64url because the sort
+  value is a datetime with a space in it. Every payload goes through
+  `DataExport::assertExportSafe` before it is sent — which caught the
+  envelope's own `data` key and an `auth` field in the self-description
+  during the build, both renamed rather than exempted. The per-key limit is
+  one atomic UPDATE that rolls the window and counts in the same statement;
+  a refusal counts too, since it cost the same lookup. Proved over HTTP
+  with a real key: cursor paging across pages, `/api/v1/groups` returning a
+  count and never an address at any scope, and the limit rolling over
+  rather than locking a key out. 1099 unit, 147 integration, 62
+  browser-module tests.
