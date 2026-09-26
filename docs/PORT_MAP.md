@@ -412,7 +412,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | BookHymn | `book_hymns` | done | Pages stored as PDF pages; the printed number derived at the edge |
 | BookPage | `book_pages` | done | Written a few pages at a time, so an hour-long OCR run is resumable |
 | BookHymnDetail | `book_hymn_details` | todo | |
-| FileFavorite | `file_favorites` | todo | |
+| FileFavorite | `file_favorites` | done | plugins/favorites; saved from a file's own page (page.file.panels) and listed at /favorites |
 | ServicePlan | `service_plans` | done | plugins/service-plans |
 | ServiceTeam | `service_teams` | done | |
 | ServiceTeamMember | `service_team_members` | done | |

@@ -39,6 +39,14 @@ final class MemberListsTest extends ServerTestCase
         self::$ids['draft'] = $new('series', ['title' => 'Draft series', 'slug' => 'draft', 'published' => 0, 'tags' => []]);
         self::$ids['songs'] = $new('series', ['title' => 'Kids songs', 'slug' => 'kids-songs', 'published' => 1, 'tags' => [], 'category_id' => self::$ids['kids']]);
         self::$ids['video'] = $new('videos', ['title' => 'Romans 1', 'slug' => 'romans-1', 'published' => 1, 'status' => 'READY', 'provider' => 'direct', 'external_id' => 'x1', 'scripture_refs' => [], 'provider_data' => ['url' => 'https://cdn.example.org/r1.mp4'], 'series_id' => self::$ids['romans']]);
+        self::$ids['file'] = $new('file_assets', [
+            'title' => 'Order of service', 'backend' => 'local', 'storage_path' => 'files/order.pdf',
+            'published' => 1, 'mime_type' => 'application/pdf', 'series_id' => self::$ids['romans'],
+        ]);
+        self::$ids['hiddenFile'] = $new('file_assets', [
+            'title' => 'Not published yet', 'backend' => 'local', 'storage_path' => 'files/draft.pdf',
+            'published' => 0, 'mime_type' => 'application/pdf', 'series_id' => self::$ids['romans'],
+        ]);
         // Favorites off under Kids only.
         $plugin = (string) $db->value("SELECT id FROM {{plugins}} WHERE slug = 'favorites'");
         $new('plugin_category_overrides', ['plugin_id' => $plugin, 'category_id' => self::$ids['kids'], 'enabled' => 0]);
@@ -53,11 +61,13 @@ final class MemberListsTest extends ServerTestCase
         self::assertSame(['favorited' => false], self::api('POST', '/api/favorites', $body, 'ruth')['json']);
         self::assertSame(['favorited' => true], self::api('POST', '/api/favorites', $body, 'ruth')['json']);
         self::assertSame(['favorited' => true], self::api('POST', '/api/favorites', ['videoId' => self::$ids['video']], 'ruth')['json']);
+        self::assertSame(['favorited' => true], self::api('POST', '/api/favorites', ['fileId' => self::$ids['file']], 'ruth')['json']);
 
         $page = self::http('GET', '/favorites', null, 'ruth');
         self::assertSame(200, $page['status']);
         self::assertStringContainsString('Romans 1', $page['body']);
         self::assertStringContainsString('>Romans<', $page['body']);
+        self::assertStringContainsString('Order of service', $page['body'], 'a saved file is listed beside the series and videos');
         // The button shows its state on the page.
         self::assertMatchesRegularExpression('/data-api="\/api\/favorites"[^>]*\n?[^>]*aria-pressed="true"/', self::http('GET', '/series/romans', null, 'ruth')['body']);
     }
@@ -69,6 +79,7 @@ final class MemberListsTest extends ServerTestCase
         self::assertSame(404, self::api('POST', '/api/favorites', ['seriesId' => self::$ids['draft']], 'ruth')['status']);
         self::assertSame(404, self::api('POST', '/api/favorites', ['seriesId' => Id::new()], 'ruth')['status']);
         self::assertSame(400, self::api('POST', '/api/favorites', [], 'ruth')['status']);
+        self::assertSame(404, self::api('POST', '/api/favorites', ['fileId' => self::$ids['hiddenFile']], 'ruth')['status'], 'a file nobody may open cannot be saved');
         self::assertStringNotContainsString('/api/favorites', self::http('GET', '/series/romans', null, 'guest')['body']);
     }
 

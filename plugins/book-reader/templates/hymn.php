@@ -8,9 +8,12 @@
  * @var array{title: string, slug: string}|null $series
  * @var string $opened
  * @var string $openedScript
+ * @var array{actions: list<string>, top: list<string>, below: list<string>} $panels from plugins (page.file.panels)
  */
 ?>
 <div hidden data-opened="<?= e($opened) ?>"></div>
+<?php if ($panels['actions'] !== []): ?><p class="row"><?php foreach ($panels['actions'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?></p><?php endif ?>
+<?php foreach ($panels['top'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>
 <?php if ($series !== null): ?><p><a href="<?= e(url('/series/' . $series['slug'])) ?>">← <?= e($series['title']) ?></a></p><?php endif ?>
 <h1><?php if ($file['number'] !== null): ?><span class="chapter-time"><?= e((string) $file['number']) ?></span> <?php endif ?><?= e((string) $file['title']) ?></h1>
 <?php if ($file['group'] !== null && $file['group'] !== ''): ?><p class="small muted"><?= e((string) $file['group']) ?></p><?php endif ?>
@@ -29,4 +32,5 @@
   <a class="button small" href="<?= e(url('/api/files/' . $file['id'] . '/content')) ?>" download><?= e(t('books.download')) ?></a>
 </p>
 <?= $v->partial('book-reader/credits', ['credits' => $credits]) ?>
+<?php foreach ($panels['below'] as $html): ?><?= $v->raw($html) ?><?php endforeach ?>
 <script type="module" src="<?= e($openedScript) ?>"></script>

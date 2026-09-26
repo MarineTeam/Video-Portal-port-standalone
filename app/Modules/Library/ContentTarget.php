@@ -28,7 +28,7 @@ final class ContentTarget
     ) {
     }
 
-    /** "series_id", "video_id", "category_id". */
+    /** "series_id", "video_id", "category_id", "file_id". */
     public function column(): string
     {
         return $this->kind . '_id';
@@ -36,7 +36,7 @@ final class ContentTarget
 
     /**
      * @param array<string, mixed> $input
-     * @param list<'category'|'series'|'video'> $kinds the ones this action accepts, most specific first
+     * @param list<'category'|'series'|'video'|'file'> $kinds the ones this action accepts, most specific first
      * @param ?string $plugin refuse with 403 plugin_disabled where this plugin is off
      */
     public static function from(App $app, array $input, array $kinds, ?string $plugin = null): self
@@ -46,7 +46,7 @@ final class ContentTarget
             $rules[$kind . 'Id'] = ['id', 'nullable'];
         }
         $data = Validator::check(array_intersect_key($input, $rules), $rules);
-        foreach (['video', 'series', 'category'] as $kind) {
+        foreach (['video', 'file', 'series', 'category'] as $kind) {
             if (in_array($kind, $kinds, true) && isset($data[$kind . 'Id'])) {
                 return self::resolve($app, $kind, (string) $data[$kind . 'Id'], $plugin);
             }
@@ -69,6 +69,11 @@ final class ContentTarget
             $row = $db->one('SELECT * FROM {{series}} WHERE id = ? AND deleted_at IS NULL', [$id]);
             $ok = $row !== null && $access->series($row) === ContentAccess::OK;
             $categoryId = $row['category_id'] ?? null;
+        } elseif ($kind === 'file') {
+            $row = $db->one('SELECT * FROM {{file_assets}} WHERE id = ? AND deleted_at IS NULL', [$id]);
+            $series = $row !== null && $row['series_id'] !== null ? $db->one('SELECT * FROM {{series}} WHERE id = ?', [$row['series_id']]) : null;
+            $ok = $row !== null && $access->file($row, $series) === ContentAccess::OK;
+            $categoryId = $row['category_id'] ?? ($series['category_id'] ?? null);
         } elseif ($kind === 'video') {
             $row = $db->one('SELECT * FROM {{videos}} WHERE id = ? AND deleted_at IS NULL', [$id]);
             $series = $row !== null && $row['series_id'] !== null ? $db->one('SELECT * FROM {{series}} WHERE id = ?', [$row['series_id']]) : null;

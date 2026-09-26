@@ -41,6 +41,15 @@ final class BookReaderTest extends ServerTestCase
             'published' => 1, 'page_offset' => 10, 'series_id' => self::$ids['series'],
         ]);
 
+        // A hymn that is its own file, which is what /hymns/[id] is for.
+        self::$ids['single'] = \App\Core\Id::new();
+        $db->insert('file_assets', [
+            'id' => self::$ids['single'], 'title' => 'Be Thou My Vision', 'backend' => 'local',
+            'storage_path' => 'files/vision.pdf', 'mime_type' => 'application/pdf',
+            'published' => 1, 'page_number' => 4, 'series_id' => self::$ids['series'],
+            'lyrics_text' => "Be thou my vision, O Lord of my heart\n\nBe thou my wisdom, and thou my true word",
+        ]);
+
         // A members-only hymnal, to prove the gate is the file's own.
         self::$ids['closed'] = \App\Core\Id::new();
         $db->insert('file_assets', [
@@ -227,5 +236,21 @@ final class BookReaderTest extends ServerTestCase
         $db->run('UPDATE {{file_assets}} SET lyrics_text = ? WHERE series_id = ? AND page_number = 1', ['Amazing grace! how sweet the sound', $series]);
         self::flushCache();
         self::assertNotSame($saved['json']['fingerprint'], self::http('GET', "/api/offline/hymnal/$series?probe=1", null, 'guest')['json']['fingerprint']);
+    }
+
+    public function test_10_a_hymn_page_offers_the_plugins_a_place_to_put_something(): void
+    {
+        // page.file.panels exists so a file can be acted on at all: the
+        // reader's pages are the only ones a file has of its own.
+        $page = self::http('GET', '/hymns/' . self::$ids['single'], null, 'ruth');
+        self::assertSame(200, $page['status'], (string) $page['body']);
+        self::assertStringContainsString('data-api="/api/favorites"', $page['body'], 'the favourites button reached the page through the hook');
+        self::assertStringContainsString('aria-pressed="false"', $page['body']);
+
+        self::assertSame(['favorited' => true], self::api('POST', '/api/favorites', ['fileId' => self::$ids['single']], 'ruth')['json']);
+        self::assertStringContainsString('aria-pressed="true"', self::http('GET', '/hymns/' . self::$ids['single'], null, 'ruth')['body']);
+
+        // And a stranger is offered nothing to press.
+        self::assertStringNotContainsString('/api/favorites', self::http('GET', '/hymns/' . self::$ids['single'], null, 'guest')['body']);
     }
 }

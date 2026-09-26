@@ -7,5 +7,6 @@ return [
     'favorites.saved' => 'En favoritos',
     'favorites.series' => 'Series',
     'favorites.videos' => 'Vídeos',
+    'favorites.files' => 'Archivos',
     'favorites.empty' => 'Aún no hay nada. Usa Favorito en una serie o un vídeo para guardarlo aquí.',
 ];

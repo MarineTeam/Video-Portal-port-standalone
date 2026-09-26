@@ -135,6 +135,7 @@ value and returns it (changed or not). Lower priority runs first.
 | `home.row` | filter | `?array $row, string $type, array $context` | fill a plugin-owned homepage row (`RECOMMENDATIONS`, `TRENDING`): return `['series' => list, 'title'?, 'href'?]`, or null for none; `$context`: `browse`, `title` (the admin's, or null), `db` |
 | `related.items` | filter | `array $items, string $kind, array $context` | the Related content plugin's rows (series or videos) before they are shown |
 | `page.video.panels` | filter | `array $panels, array $context` | add to a video page; `$context`: `video`, `series`, `siblings`, `categoryId`, `viewer`, `locked`, `player`, `plugins`, `app` |
+| `page.file.panels` | filter | `array $panels, array $context` | add to a file's own page (the reader's `/hymns/[id]`); `$context`: `file`, `series`, `categoryId`, `viewer`, `plugins` |
 | `sitemap.urls` | filter | `array $urls, App` | add to the sitemap: `['loc', 'lastmod'?, 'changefreq'?, 'priority'?]` |
 | `calendar.entries` | filter | `array $entries, App, ?array $user` | add to the member's calendar and its feed |
 | `content.search_sources` | filter | `array $sources, string $q, array $filters, App` | add a section to site search |

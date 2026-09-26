@@ -28,6 +28,9 @@ use App\Core\Validator;
 use App\Modules\Audit\Audit;
 use App\Modules\Library\Browse;
 use App\Modules\Library\ContentAccess;
+use App\Modules\Library\Panels;
+use App\Modules\Library\Viewer;
+use App\Modules\Plugins\PluginStates;
 use App\Modules\Plugins\BasePlugin;
 use App\Support\BookContents;
 use App\Support\Hymnal;
@@ -753,6 +756,15 @@ return new class (__DIR__) extends BasePlugin {
             'series' => $series === null ? null : ['title' => (string) $series['title'], 'slug' => (string) $series['slug']],
             'opened' => $this->openedMarker((string) $file['id'], null, 'hymn'),
             'openedScript' => $this->asset('opened.js'),
+            // The only pages a file has of its own, so this is where a
+            // plugin gets to put something against one.
+            'panels' => Panels::collect($app, 'page.file.panels', [
+                'file' => $file,
+                'series' => $series,
+                'categoryId' => $file['category_id'] === null ? null : (string) $file['category_id'],
+                'viewer' => Viewer::current($app),
+                'plugins' => PluginStates::forCategory($app->db(), $file['category_id'] === null ? null : (string) $file['category_id']),
+            ]),
         ]));
     }
 

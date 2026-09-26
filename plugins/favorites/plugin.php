@@ -32,7 +32,11 @@ use App\Modules\Plugins\BasePlugin;
  * still open. Written against the hook API and the library's classes only.
  */
 return new class (__DIR__) extends BasePlugin {
-    private const TABLES = ['series' => ['series_favorites', 'series_id'], 'video' => ['video_favorites', 'video_id']];
+    private const TABLES = [
+        'series' => ['series_favorites', 'series_id'],
+        'video' => ['video_favorites', 'video_id'],
+        'file' => ['file_favorites', 'file_id'],
+    ];
 
     public function boot(Hooks $hooks, App $app): void
     {
@@ -45,6 +49,7 @@ return new class (__DIR__) extends BasePlugin {
         $hooks->filter('nav.sections', fn (array $nav, ?array $user) => $user === null ? $nav : [...$nav, ['href' => '/favorites', 'label' => t('favorites.nav'), 'icon' => 'star']]);
         $hooks->filter('page.series.panels', fn (array $panels, array $ctx) => [...$panels, ...$this->button($app, $ctx, 'series', (string) $ctx['series']['id'])]);
         $hooks->filter('page.video.panels', fn (array $panels, array $ctx) => [...$panels, ...$this->button($app, $ctx, 'video', (string) $ctx['video']['id'])]);
+        $hooks->filter('page.file.panels', fn (array $panels, array $ctx) => [...$panels, ...$this->button($app, $ctx, 'file', (string) $ctx['file']['id'])]);
         $hooks->filter('profile.overview', function (array $cards, array $user) use ($app): array {
             $n = 0;
             foreach (self::TABLES as [$table]) {
@@ -73,7 +78,7 @@ return new class (__DIR__) extends BasePlugin {
 
     private function toggle(App $app, Request $req): Response
     {
-        $target = ContentTarget::from($app, $req->input(), ['series', 'video'], 'favorites');
+        $target = ContentTarget::from($app, $req->input(), ['series', 'video', 'file'], 'favorites');
         [$table, $column] = self::TABLES[$target->kind];
         $db = $app->db();
         $userId = (string) $app->currentUser()->id();
@@ -92,6 +97,32 @@ return new class (__DIR__) extends BasePlugin {
         $series = $order === [] ? [] : $browse->seriesWhere('s.id IN (SELECT series_id FROM {{series_favorites}} WHERE user_id = ?)', [$userId], 's.title', 500);
         usort($series, fn ($a, $b) => ($order[$a['id']] ?? 0) <=> ($order[$b['id']] ?? 0));
         $videos = $browse->videosWhere('1 = 1', [], 'f.created_at DESC', 500, 'JOIN {{video_favorites}} f ON f.video_id = v.id AND f.user_id = ?', [$userId]);
-        return $app->page('favorites/page', ['title' => t('favorites.title'), 'series' => $series, 'videos' => $videos]);
+        return $app->page('favorites/page', [
+            'title' => t('favorites.title'),
+            'series' => $series,
+            'videos' => $videos,
+            'files' => $this->favoriteFiles($app, $userId),
+        ]);
+    }
+
+    /**
+     * The saved files this member may still open.
+     *
+     * Access is checked now rather than when it was saved: a file that has
+     * since been made members-only, or moved into a series somebody has been
+     * taken off, simply stops appearing.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function favoriteFiles(App $app, string $userId): array
+    {
+        [$where, $params] = (new ContentAccess($app, Viewer::current($app)))->fileListSql('f', 's');
+        return $app->db()->all(
+            "SELECT f.* FROM {{file_assets}} f
+               JOIN {{file_favorites}} fav ON fav.file_id = f.id AND fav.user_id = ?
+               LEFT JOIN {{series}} s ON s.id = f.series_id
+              WHERE $where ORDER BY fav.created_at DESC LIMIT 500",
+            [$userId, ...$params],
+        );
     }
 };
