@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/Services.php';
 require_once __DIR__ . '/src/Rota.php';
+require_once __DIR__ . '/src/Cover.php';
 
 use App\Core\ApiError;
 use App\Core\App;
@@ -30,7 +31,9 @@ use App\Modules\Audit\Audit;
 use App\Modules\Library\ContentAccess;
 use App\Modules\Plugins\BasePlugin;
 use App\Modules\Profile\Inbox;
+use App\Modules\Push\Push;
 use App\Support\Ics;
+use MarineTeam\Plugins\ServicePlans\Cover;
 use MarineTeam\Plugins\ServicePlans\Rota;
 use MarineTeam\Plugins\ServicePlans\Services;
 
@@ -90,6 +93,11 @@ return new class (__DIR__) extends BasePlugin {
             ),
             'href' => '/profile/rota',
         ]]);
+    }
+
+    private function today(): string
+    {
+        return gmdate('Y-m-d');
     }
 
     private function canManage(App $app): bool
@@ -356,17 +364,26 @@ return new class (__DIR__) extends BasePlugin {
             $set['responded_at'] = Db::now();
             $set['note'] = $data['note'] ?? null;
         }
+        $askedNow = false;
         if (array_key_exists('coverWanted', $data)) {
             // Asking for cover is a flag on the slot: what is being asked
             // for is this slot, and covering it means it changes hands.
+            $plan = (array) $db->one('SELECT * FROM {{service_plans}} WHERE id = ?', [$assignment['plan_id']]);
+            if ($data['coverWanted'] && !Cover::canAskForCover($assignment, $userId, $plan, $this->today())) {
+                throw ApiError::invalid(t('services.cannotAsk'));
+            }
             $set['cover_wanted'] = (int) (bool) $data['coverWanted'];
             $set['cover_note'] = $data['coverWanted'] ? ($data['note'] ?? null) : null;
             $set['cover_asked_at'] = $data['coverWanted'] ? Db::now() : null;
+            $askedNow = (bool) $data['coverWanted'];
         }
         if ($set === []) {
             throw ApiError::invalid(t('services.nothingToDo'));
         }
         $db->update('service_assignments', $set, ['id' => $assignment['id']]);
+        if ($askedNow) {
+            $this->tellTheTeam($app, $assignment);
+        }
         return Response::json(['ok' => true] + $set);
     }
 
@@ -380,27 +397,57 @@ return new class (__DIR__) extends BasePlugin {
     private function takeCover(App $app, array $assignment, string $userId): Response
     {
         $db = $app->db();
-        if (!(bool) $assignment['cover_wanted']) {
-            throw ApiError::invalid(t('services.notGoingBegging'));
-        }
-        if ((string) $assignment['user_id'] === $userId) {
-            throw ApiError::invalid(t('services.alreadyYours'));
+        $plan = (array) $db->one('SELECT * FROM {{service_plans}} WHERE id = ?', [$assignment['plan_id']]);
+        $theirs = $db->all('SELECT id, status FROM {{service_assignments}} WHERE plan_id = ? AND user_id = ?', [$assignment['plan_id'], $userId]);
+        $blockouts = $db->all('SELECT * FROM {{service_blockouts}} WHERE user_id = ?', [$userId]);
+        $state = Cover::coverState($assignment, $userId, $plan, $theirs, $blockouts, $this->today());
+        if (Cover::refuses($state)) {
+            // The reason said plainly, rather than a caught database constraint.
+            throw ApiError::invalid(Cover::takeMessage($state));
         }
         if ($db->value('SELECT 1 FROM {{service_team_members}} WHERE team_id = ? AND user_id = ?', [$assignment['team_id'], $userId]) === null) {
             throw ApiError::forbidden();
         }
-        $db->update('service_assignments', [
-            'user_id' => $userId,
-            'status' => Rota::ACCEPTED,
-            'responded_at' => Db::now(),
-            'cover_wanted' => 0,
-            'cover_note' => null,
-            'covered_for_id' => $assignment['user_id'],
-            'covered_at' => Db::now(),
-        ], ['id' => $assignment['id']]);
-        $plan = $db->one('SELECT * FROM {{service_plans}} WHERE id = ?', [$assignment['plan_id']]);
+        // The slot changes hands once: two people pressing "I'll take it" in
+        // the same second is not rare on a Sunday morning, so the write is
+        // conditional on the slot still being open and still being held by
+        // whoever asked.
+        $taken = $db->run(
+            'UPDATE {{service_assignments}} SET user_id = ?, status = ?, responded_at = ?, note = NULL,
+                    cover_wanted = 0, cover_note = NULL, covered_for_id = ?, covered_at = ?
+             WHERE id = ? AND cover_wanted = 1 AND user_id = ?',
+            [$userId, Rota::ACCEPTED, Db::now(), $assignment['user_id'], Db::now(), $assignment['id'], $assignment['user_id']],
+        )->rowCount();
+        if ($taken === 0) {
+            throw ApiError::conflict(t('services.someoneBeatYou'));
+        }
         Inbox::add($db, (string) $assignment['user_id'], t('services.coveredTitle'), (string) ($plan['title'] ?? ''), Url::absolute('/profile/rota'));
-        return Response::json(['ok' => true, 'covered' => true]);
+        return Response::json(['ok' => true, 'covered' => true, 'warned' => $state === Cover::AWAY]);
+    }
+
+    /**
+     * A cover request is addressed to the people who could do the job:
+     * everybody else on that team, told once.
+     *
+     * @param array<string, mixed> $assignment
+     */
+    private function tellTheTeam(App $app, array $assignment): void
+    {
+        $db = $app->db();
+        $plan = $db->one('SELECT * FROM {{service_plans}} WHERE id = ?', [$assignment['plan_id']]);
+        $asker = $db->one('SELECT name, display_name FROM {{users}} WHERE id = ?', [$assignment['user_id']]);
+        $name = Cover::askerName((array) $asker);
+        $team = array_map('strval', $db->column(
+            'SELECT user_id FROM {{service_team_members}} WHERE team_id = ? AND user_id <> ?',
+            [$assignment['team_id'], $assignment['user_id']],
+        ));
+        $title = t('services.coverWantedTitle');
+        $body = ($name === '' ? '' : $name . ' — ') . (string) ($plan['title'] ?? '');
+        $url = Url::absolute('/profile/rota');
+        foreach ($team as $memberId) {
+            Inbox::add($db, $memberId, $title, $body, $url);
+        }
+        Push::send($app, $team, ['title' => $title, 'body' => $body, 'url' => $url]);
     }
 
     private function removeBlockout(App $app, Request $req): Response

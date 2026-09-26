@@ -36,5 +36,8 @@ return [
     'services.nothingToDo' => 'Di qué hay que cambiar.',
     'services.notGoingBegging' => 'Nadie ha pedido sustituto para eso.',
     'services.alreadyYours' => 'Ese ya es tuyo.',
+    'services.cannotAsk' => 'No puedes pedir sustituto para eso.',
+    'services.someoneBeatYou' => 'Alguien se te ha adelantado: ese turno ya está tomado.',
+    'services.coverWantedTitle' => 'Hace falta sustituto',
     'services.noSuchMember' => 'Aquí no hay nadie con la dirección {email}.',
 ];

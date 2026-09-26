@@ -179,6 +179,12 @@ final class ServicePlansTest extends ServerTestCase
         self::assertFalse($after['coverWanted']);
         self::assertSame('Ruth', $after['coveredFor'], 'the rota still shows what happened');
         self::assertContains('Somebody has taken your slot', array_column((array) self::http('GET', '/api/inbox', null, 'ruth')['json']['notifications'], 'title'));
+        self::assertContains('Cover wanted', array_column((array) self::http('GET', '/api/inbox', null, 'boaz')['json']['notifications'], 'title'), 'the rest of the team was told once');
+        // The old note doesn't follow the slot: it was the previous
+        // person's aside to the organiser.
+        self::assertNull(((array) self::api('GET', "/api/admin/services/$plan/rota")['json'])[0]['note']);
+        // And a second "I'll take it" is told somebody got there first.
+        self::assertSame(400, self::api('POST', '/api/rota', ['assignmentId' => $assignment, 'takeCover' => true], 'ruth')['status']);
 
         // Names are for members: the shape is public, the names are not.
         $page = self::http('GET', "/services/$plan", null, 'guest');

@@ -36,5 +36,8 @@ return [
     'services.nothingToDo' => 'Say what to change.',
     'services.notGoingBegging' => 'Nobody has asked for cover on that one.',
     'services.alreadyYours' => 'That one is already yours.',
+    'services.cannotAsk' => 'You can\'t ask for cover on that one.',
+    'services.someoneBeatYou' => 'Somebody got there first — that slot has been taken.',
+    'services.coverWantedTitle' => 'Cover wanted',
     'services.noSuchMember' => 'There is nobody here with the address {email}.',
 ];

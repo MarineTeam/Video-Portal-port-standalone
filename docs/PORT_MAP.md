@@ -513,7 +513,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/client-bundle.test.ts` | todo | |
 | `lib/content-language.test.ts` | todo | |
 | `lib/content.test.ts` | done | tests/Unit/Library/ContentTest.php; the DB-backed checks in tests/Integration/ContentAccessTest.php |
-| `lib/cover.test.ts` | todo | |
+| `lib/cover.test.ts` | done | tests/Unit/Plugins/CoverTest.php (every case) and tests/Integration/ServicePlansTest.php |
 | `lib/cron-guard.test.ts` | done | tests/Unit/Jobs/CronGuardTest.php (no development exception: see Deviations) |
 | `lib/cron.test.ts` | todo | |
 | `lib/cross-site.test.ts` | todo | |
@@ -671,6 +671,7 @@ met, with the reason.
 - **A row is named after the song, not the book it is in**: a number inside a book takes its title from the contents where there is one, on the plan and in What we sang.
 - **`/books`, `/hymns` and `/present` are the book-reader plugin's**, built here because a running order links straight into them; the in-app reader itself (pdf.js/epub.js, search, highlights, read-aloud, the offline copy, the contents editor and OCR) is still to come, and `/read/[fileId]` meanwhile hands the file to the browser's own viewer through the access-checked content route.
 - **Rota names need a sign-in, and the structure does not**: `/services/[id]` gives a signed-out reader the jobs and the teams with nobody's name on them, the same optional-field shape the group address uses.
+- **A cover request is a conditional write**: the hand-over updates the row only while it is still open and still held by whoever asked, so two people pressing "I'll take it" in the same second get one winner and the other is told somebody got there first. Being already on that service refuses with the reason said plainly; being away only warns; and the old note does not follow the slot.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
