@@ -28,6 +28,8 @@ jobs:
         run: php tools/ci/check-banned.php
       - name: Every template output escaped
         run: php tools/ci/check-templates.php
+      - name: Every service provider documented
+        run: php tools/ci/check-docs.php
 
   unit:
     name: Unit tests and static analysis

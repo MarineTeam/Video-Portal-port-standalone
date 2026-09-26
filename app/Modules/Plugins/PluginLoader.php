@@ -207,6 +207,13 @@ final class PluginLoader
             $this->deactivate($slug, 'requirements', "Needs PHP {$header['requiresPhp']}; this host runs " . PHP_VERSION . '.');
             return;
         }
+        // The same question about the site itself. A plugin written against a
+        // hook that does not exist here fatals on its first request
+        // otherwise, on a site somebody has already upgraded halfway.
+        if ((string) $header['requiresApp'] !== '' && version_compare(App::VERSION, (string) $header['requiresApp'], '<')) {
+            $this->deactivate($slug, 'requirements', "Needs version {$header['requiresApp']} of the site; this is " . App::VERSION . '.');
+            return;
+        }
         $marker = $this->marker();
         if (!is_dir(dirname($marker))) {
             @mkdir(dirname($marker), 0775, true);

@@ -135,6 +135,15 @@ value and returns it (changed or not). Lower priority runs first.
 | `home.row` | filter | `?array $row, string $type, array $context` | fill a plugin-owned homepage row (`RECOMMENDATIONS`, `TRENDING`): return `['series' => list, 'title'?, 'href'?]`, or null for none; `$context`: `browse`, `title` (the admin's, or null), `db` |
 | `related.items` | filter | `array $items, string $kind, array $context` | the Related content plugin's rows (series or videos) before they are shown |
 | `page.video.panels` | filter | `array $panels, array $context` | add to a video page; `$context`: `video`, `series`, `siblings`, `categoryId`, `viewer`, `locked`, `player`, `plugins`, `app` |
+| `sitemap.urls` | filter | `array $urls, App` | add to the sitemap: `['loc', 'lastmod'?, 'changefreq'?, 'priority'?]` |
+| `calendar.entries` | filter | `array $entries, App, ?array $user` | add to the member's calendar and its feed |
+| `content.search_sources` | filter | `array $sources, string $q, array $filters, App` | add a section to site search |
+| `series.saved` / `video.saved` / `file.saved` | action | `array $row, App` | after a create or an edit, with the row as it now is |
+| `series.published` / `video.published` / `file.published` / `live.published` | action | `array $row, App` | the moment it becomes visible — this is the one to hang a notification on |
+| `series.trashed` / `video.trashed` / `file.trashed` | action | `array $row, App` | and the matching `*.restored` and `*.purged` |
+| `file.replaced` | action | `array $row, App` | the same file row now points at new bytes (a re-scanned hymnal) |
+| `library.changed` | action | `string $action, string $type, string $id, App` | one hook for all of the above, for a cache or an index that does not care which |
+| `video.progress` | action | `array{videoId, userId, positionSeconds, completed, toggle}, App` | somebody watched a little more |
 
 A panel is `['area' => 'actions' | 'top' | 'below', 'html' => string, 'order' => int]`:
 `actions` is the row of buttons under the title, `top` just under that and
@@ -153,14 +162,27 @@ To put something in a member's inbox — the record kept whether or not push
 or email reached them — call `App\Modules\Profile\Inbox::add($db, $userId,
 $title, $body, $url)`.
 
-### Arriving with the modules that fire them
+### Four hooks the brief named that do not exist
 
-These are part of the API and will fire from the library, access and profile
-modules as they are ported (see `docs/PORT_MAP.md`): `content.can_view`,
-`admin.menu`, `settings.register`,
-`plugin.category_override`. (`series.saved`, `video.saved`, `file.saved`,
-`*.published`, `*.trashed`, `*.restored`, `*.purged` and
-`content.search_sources` fire already.)
+`content.can_view`, `admin.menu`, `settings.register` and
+`plugin.category_override` were planned and then not built, because each
+turned out to be a worse version of something a plugin can already do:
+
+- **`content.can_view`** — visibility is `Library\Viewer`, and a plugin that
+  could widen it from a hook could hand a stranger a members-only sermon by
+  accident. Grants are data (share links, viewer lists, download policies),
+  not callbacks. A plugin that needs to *narrow* what it shows reads
+  `$context['viewer']` on the page hooks above.
+- **`admin.menu`** — `nav.sections` already adds to the admin sidebar, and a
+  second menu hook meant two places to look when an item did not appear.
+- **`settings.register`** — a plugin's settings screen is one of its own
+  routes, registered through `routes.register`, which costs a plugin one
+  template and gives it a page it fully controls instead of a form generated
+  from a schema.
+- **`plugin.category_override`** — the per-category on/off state is resolved
+  by the core and handed to a plugin as `$context['plugins']['your-slug']`.
+  Letting a plugin answer that question for itself would make "off for this
+  category" advisory.
 
 ## What a plugin may and may not do
 

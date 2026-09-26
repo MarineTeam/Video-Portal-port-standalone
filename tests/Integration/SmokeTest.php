@@ -75,7 +75,7 @@ final class SmokeTest extends ServerTestCase
     public function testBrokenPlugins(): void
     {
         $root = dirname(__DIR__, 2);
-        $slugs = ['throws-on-load', 'parse-error', 'exhausts-memory', 'good-plugin'];
+        $slugs = ['throws-on-load', 'parse-error', 'exhausts-memory', 'needs-the-future', 'good-plugin'];
         foreach ($slugs as $slug) {
             \App\Modules\Plugins\PackageInstaller::removeTree("$root/plugins/$slug");
             mkdir("$root/plugins/$slug", 0775, true);
@@ -93,12 +93,14 @@ final class SmokeTest extends ServerTestCase
         }
         self::assertSame(200, self::http('GET', '/')['status']);
         $rows = [];
-        foreach ($db->all('SELECT slug, enabled, deactivated_reason FROM {{plugins}} WHERE slug IN (?, ?, ?, ?)', $slugs) as $row) {
+        foreach ($db->all('SELECT slug, enabled, deactivated_reason FROM {{plugins}} WHERE slug IN (?, ?, ?, ?, ?)', $slugs) as $row) {
             $rows[$row['slug']] = $row;
         }
         self::assertSame('load_error', $rows['throws-on-load']['deactivated_reason']);
         self::assertSame('load_error', $rows['parse-error']['deactivated_reason']);
         self::assertSame('fatal_error', $rows['exhausts-memory']['deactivated_reason']);
+        // Its boot() throws, so reaching it at all would be the failure.
+        self::assertSame('requirements', $rows['needs-the-future']['deactivated_reason']);
         self::assertSame(1, (int) $rows['good-plugin']['enabled']);
         self::assertSame('hello from a plugin', self::http('GET', '/hello-plugin')['body']);
         // The plugin list is reachable, and says what happened.

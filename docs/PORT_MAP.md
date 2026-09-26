@@ -22,7 +22,7 @@ commit as the code it describes.
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers, the book and hymnal reader, the read API and API keys, the Next.js export and import) |
-| 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
+| 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | in progress (SERVICES.md rewritten with a row per provider and a CI check that it cannot drift; PLUGINS.md's hook table brought up to date; UPGRADING.md written; the security walk remains) |
 
 ## Areas (Feature inventory)
 
@@ -601,6 +601,11 @@ met, with the reason.
   Files were uploaded there under their own names, and "Hymnal Scan
   (2019).pdf" is not a name a local store will take; nothing outside the row
   reads that column, so the copy gets the port's own `files/<id>.<ext>`.
+- **Four hooks the brief named do not exist.** `content.can_view`,
+  `admin.menu`, `settings.register` and `plugin.category_override` were each
+  a worse version of something already available (`Library\Viewer`,
+  `nav.sections`, a plugin's own route, `$context['plugins'][…]`); PLUGINS.md
+  says so per hook rather than leaving them looking unfinished.
 - **v1 cursors are base64url, not the raw sort value.** The cursor is
   `"<sortValue>|<id>"` encoded, because the sort value is a datetime with a
   space in it and a bare one does not survive a query string.
@@ -893,3 +898,19 @@ met, with the reason.
   reported with the database's own words while the rest went in, and the
   paired television was left behind with the reason. 1114 unit, 160
   integration, 62 browser-module tests.
+
+- 2026-09-26 — step 6 begins with the documents. SERVICES.md was written at
+  step 2 and said "planned (step 3)" against things that have been working
+  for weeks; it is rewritten with a row per provider in all five slots — 39
+  of them — carrying each provider's own `limits()` sentence, and
+  `tools/ci/check-docs.php` now fails the build when a provider has no row or
+  a row no longer matches the code, so it cannot go stale the same way twice.
+  PLUGINS.md's hook table gained the nine it had grown without (sitemap,
+  calendar, search sources, the saved/published/trashed family, video
+  progress) and lost the promise of four that were never built, each replaced
+  by a line saying what to use instead. UPGRADING.md is new: what a version
+  number promises, what a migration may do, what is covered for plugin and
+  theme authors, and where the rollback stops being a button and becomes the
+  backup. Writing it turned up a real gap — `Requires App:` in a plugin
+  header was parsed and never checked — now enforced beside the PHP one, with
+  a fixture whose boot() throws to prove it is never reached.
