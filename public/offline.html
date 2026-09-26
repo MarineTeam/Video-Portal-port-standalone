@@ -163,12 +163,15 @@ const MIN_READING_SCALE = 0.75;
 const MAX_READING_SCALE = 2;
 const READING_SCALE_STEP = 0.1;
 const TOC_PREFIX = "marine-toc-v1:";
-const PDFJS_URL = BASE + "/pdfjs/pdf.min.mjs";
-const PDFJS_WORKER_URL = BASE + "/pdfjs/pdf.worker.min.mjs";
+// The port keeps its committed libraries under /vendor-js, beside hls.js and
+// tus: these are the addresses the app saves them under too, and the same
+// address is what lets the service worker answer for them with no network.
+const PDFJS_URL = BASE + "/vendor-js/pdfjs/pdf.mjs";
+const PDFJS_WORKER_URL = BASE + "/vendor-js/pdfjs/pdf.worker.mjs";
 // epub.js's dist build is UMD and expects JSZip as a global, so the two load
 // in this order or neither works.
-const JSZIP_URL = BASE + "/epubjs/jszip.min.js";
-const EPUBJS_URL = BASE + "/epubjs/epub.min.js";
+const JSZIP_URL = BASE + "/vendor-js/epubjs/jszip.js";
+const EPUBJS_URL = BASE + "/vendor-js/epubjs/epub.js";
 
 // Copied from src/components/icons.tsx — same 24-unit box, same 1.75 stroke —
 // so the bar offline is the bar the app draws. Keep in sync by hand.

@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers, the book and hymnal reader) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -150,7 +150,7 @@ commit as the code it describes.
 | `/profile/rota` | done | What this member is on for, answering, asking for cover, taking somebody's slot, and when they are away |
 | `/profile/settings` | done | This device (theme, language, autoplay, speed, reading, bottom bar), account fields by plugin, password and sign-out-elsewhere, download my data, delete account |
 | `/profile/shared-links` | done | The member’s own links |
-| `/read/[fileId]` | in progress | The file through the browser's own viewer; the in-app reader (pdf.js/epub.js, search, highlights, read-aloud, offline) is step 5.10 |
+| `/read/[fileId]` | done | The in-app reader: pdf.js or epub.js behind one handle, contents, in-book search, marks, read-aloud, and a copy kept on the device. A browser too old to draw the pages gets the book in its own viewer, at the page it was on |
 | `/recently-added` | done | Newest series and videos |
 | `/recently-played` | done | plugins/watch-history |
 | `/scripture` | done | Books with a video the reader may open, in canonical order |
@@ -322,8 +322,8 @@ commit as the code it describes.
 | `/api/groups/[slug]/requests/[memberId]` | PATCH | done | The leader's answer. Only a yes is a notification |
 | `/api/groups/[slug]/requests` | GET | done | The group's own leaders, without a capability |
 | `/api/groups` | GET | done | Every group through `presentGroup`, so no answer can carry an address it shouldn't |
-| `/api/hymnals/search` | GET | todo | |
-| `/api/hymns/lookup` | POST | todo | |
+| `/api/hymnals/search` | GET | done | Across every book this reader may open: by title, by printed number, and by the words inside a scan |
+| `/api/hymns/lookup` | POST | done | One number across the shelf |
 | `/api/inbox` | GET PATCH DELETE | done | `{notifications, hasMore, unreadCount}`; PATCH/DELETE take `{ids}` or `{all: true}` |
 | `/api/live/[id]/chat/[messageId]` | DELETE | done | The author's own, or anybody's for a moderator; hidden rather than deleted |
 | `/api/live/[id]/chat/mute` | POST | done | `{messageId, muted?}` — the person is named by their message, so no account id travels to a chat |
@@ -332,7 +332,7 @@ commit as the code it describes.
 | `/api/manifest` | GET | done | From branding, base-path aware |
 | `/api/notes/[id]` | PATCH DELETE | done | the member's own |
 | `/api/notes` | GET POST | done | `?videoId`; `&format=text` downloads the sheet and the notes as one text file |
-| `/api/offline/hymnal/[seriesId]` | GET | todo | |
+| `/api/offline/hymnal/[seriesId]` | GET | done | A hymn-per-file series as JSON, with `?probe=1` answering only its fingerprint |
 | `/api/offline/service/[id]` | GET | todo | |
 | `/api/people` | GET | done | 403 without a session |
 | `/api/playlists/[id]/items` | POST PATCH DELETE | done | `{videoId}`; PATCH `{videoId, move}` or `{order}` |
@@ -409,8 +409,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | Speaker | `speakers` | partial | Admin CRUD; public pages with 3.4 |
 | SeriesFavorite | `series_favorites` | done | plugins/favorites |
 | VideoFavorite | `video_favorites` | done | plugins/favorites |
-| BookHymn | `book_hymns` | todo | |
-| BookPage | `book_pages` | todo | |
+| BookHymn | `book_hymns` | done | Pages stored as PDF pages; the printed number derived at the edge |
+| BookPage | `book_pages` | done | Written a few pages at a time, so an hour-long OCR run is resumable |
 | BookHymnDetail | `book_hymn_details` | todo | |
 | FileFavorite | `file_favorites` | todo | |
 | ServicePlan | `service_plans` | done | plugins/service-plans |
@@ -423,8 +423,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | CommentReport | `comment_reports` | done | |
 | WatchProgress | `watch_progresses` | todo | |
 | FileAsset | `file_assets` | todo | |
-| ReadingProgress | `reading_progresses` | todo | |
-| ReadingMark | `reading_marks` | todo | |
+| ReadingProgress | `reading_progresses` | done | `location` is opaque: only the engine that wrote one parses it |
+| ReadingMark | `reading_marks` | done | Per member and private to them; a highlight with nothing selected is saved as a bookmark |
 | ApiKey | `api_keys` | todo | |
 | AuditLog | `audit_logs` | done | Audit::log; /admin/audit with export |
 | Plugin | `plugins` | done | Plus bundled, version, deactivation columns |
@@ -506,7 +506,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/api-v1.test.ts` | todo | |
 | `lib/attendance.test.ts` | done | tests/Unit/Plugins/AttendanceTest.php (every case) |
 | `lib/authorization.test.ts` | done | tests/Unit/Access/AuthorizationTest.php; the guest-login cases in tests/Integration/GuestLoginTest.php |
-| `lib/book-contents.test.ts` | todo | |
+| `lib/book-contents.test.ts` | done | tests/Unit/Support/BookContentsTest.php (every case) |
 | `lib/branding.test.ts` | done | tests/Unit/Branding/BrandingTest.php |
 | `lib/broadcast.test.ts` | done | tests/Unit/Plugins/BroadcastTest.php (every case) |
 | `lib/bunny.test.ts` | done | tests/Unit/Video/BunnyTest.php |
@@ -529,7 +529,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/group-messages.test.ts` | done | tests/Unit/Plugins/ThreadTest.php (every case) |
 | `lib/groups.test.ts` | done | tests/Unit/Plugins/GroupsTest.php (every case) and tests/Integration/GroupsTest.php |
 | `lib/guides.test.ts` | done | tests/Unit/Plugins/GuidesTest.php (every case) |
-| `lib/hymnal.test.ts` | todo | |
+| `lib/hymnal.test.ts` | done | tests/Unit/Support/HymnalTest.php (every case) |
 | `lib/i18n/i18n.test.ts` | done | tests/Unit/I18n/I18nTest.php |
 | `lib/ics.test.ts` | done | tests/Unit/Support/IcsTest.php (every case) |
 | `lib/identity-linking.test.ts` | done | tests/Unit/Access/IdentityLinkingTest.php |
@@ -539,7 +539,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/offline-calendar.test.ts` | done | tests/js/offline-calendar.test.mjs (every case), against public/assets/js/offline-calendar.js |
 | `lib/offline-shell.test.ts` | todo | |
 | `lib/outline.test.ts` | done | tests/Unit/Plugins/OutlineTest.php (every case) and tests/Integration/SermonNotesTest.php |
-| `lib/page-offset.test.ts` | todo | |
+| `lib/page-offset.test.ts` | done | tests/Unit/Support/PageOffsetTest.php (every case) |
 | `lib/permissions.test.ts` | done | tests/Unit/Access/PermissionsTest.php |
 | `lib/plugins.test.ts` | done | tests/Unit/Plugins/PluginStatesTest.php |
 | `lib/podcast-mirror.test.ts` | done | tests/Unit/PodcastMirrorTest.php |
@@ -547,7 +547,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/public-url.test.ts` | done | tests/Unit/Core/PublicUrlTest.php |
 | `lib/push-endpoint.test.ts` | done | tests/Unit/Push/PushEndpointTest.php |
 | `lib/reader-cache.test.ts` | todo | |
-| `lib/reader.test.ts` | todo | |
+| `lib/reader.test.ts` | done | tests/Unit/Support/ReaderTest.php (every case) |
 | `lib/recurrence.test.ts` | done | tests/Unit/Plugins/RecurrenceTest.php (every case) |
 | `lib/reorder.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/rota.test.ts` | done | tests/Unit/Plugins/ServicesTest.php (every case) |
@@ -561,7 +561,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/sheets/parse.test.ts` | done | tests/Unit/Plugins/SheetParseTest.php (both layouts, skip-and-report) |
 | `lib/slug.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/sms.test.ts` | done | tests/Unit/Support/SmsTest.php and tests/js/sms.test.mjs (every case, both halves) |
-| `lib/toc-nav.test.ts` | todo | |
+| `lib/toc-nav.test.ts` | done | tests/Unit/Support/BookContentsTest.php (every case) |
 | `lib/transcribe-worker.test.ts` | done | tests/Integration/TranscriptionTest.php (claim, DONE/FAILED, stale sweep, deadline) |
 | `lib/transcribe.test.ts` | done | tests/Integration/TranscriptionTest.php (multipart shape, model/language fields, size limit, the settings test) |
 | `lib/tv-feed.test.ts` | done | tests/Unit/Plugins/TvFeedTest.php (every case) |
@@ -569,7 +569,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/tv-pairing.test.ts` | done | tests/Unit/Plugins/TvPairingTest.php (every case) |
 | `lib/upload-types.test.ts` | done | tests/Unit/Files/UploadTypesTest.php |
 | `lib/validation/schemas.test.ts` | todo | |
-| `lib/verses.test.ts` | todo | |
+| `lib/verses.test.ts` | done | tests/Unit/Support/HymnalTest.php (every case) |
 | `lib/video-feed-sync.test.ts` | done | tests/Unit/Video/VideoFeedSyncTest.php, plus the fetchers against recorded answers |
 | `lib/video-source.test.ts` | done | tests/Unit/Library/VideoSourceTest.php |
 | `lib/view-key.test.ts` | done | tests/Unit/Library/ViewKeyTest.php |
@@ -689,6 +689,11 @@ met, with the reason.
 - **An event audience is texted only on numbers members typed in themselves.** The number on a public sign-up form is copied nowhere near the text channel: it is not consent, and treating it as such is the mistake this rule exists to prevent.
 - **`/api/people`-style secrets for callbacks**: an SMS provider with no signature scheme (ClickSend, Textlocal, BulkSMS, Sinch, the JSON webhook) is given a per-install secret in its callback address, derived with the app key rather than stored, and compared in constant time.
 - **The composer's cost and the server's cost are the same code twice**: `app/Support/Sms.php` and `public/assets/js/sms.js`, tested against one case list, so the number on the screen is the number that goes out.
+- **The reader libraries are committed under `public/vendor-js/`**, beside hls.js and tus, rather than copied out of `node_modules` at install time: this app installs by unzipping onto shared hosting, where there is no npm to copy from. `public/offline.html`'s four viewer constants were repointed at those addresses, which is the same address the app caches them under — the whole point of the path being fixed.
+- **pdf.js's character maps are left out** (a megabyte and a half, and only for CJK encodings), and only tesseract's LSTM cores are vendored rather than the legacy engine as well. The English training data is vendored too, because a library that fetches it from a CDN on first use is exactly what the brief's "not a public CDN" is about.
+- **The contents box is parsed on the server** (`App\Support\BookContents`), not in the browser as `lib/book-contents.ts` was: the rows it produces go straight into the database, and a second implementation in JavaScript would be a second set of rules for what a page is. The editor gets the problems back with the line numbers the typist sees.
+- **Reading position is saved a couple of seconds after somebody stops turning pages**, not on every page, and once more on `pagehide` — a hymnal is flicked through, and one write per page would be a write per second.
+- **A highlight with nothing selected is stored as a bookmark**, and says so. In an EPUB the selection lives in a frame the reader cannot read; saving an empty excerpt and calling it a highlight would be pretending otherwise.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -819,3 +824,19 @@ met, with the reason.
   SMTP conversation: the reach line and the skip reasons as the composer is
   filled in, and a send that reports what it sent. 973 unit, 128
   integration, 62 browser-module tests.
+
+- 2026-09-26 — the book and hymnal reader: pdf.js and epub.js vendored and
+  put behind one handle, so nothing above them knows a page number from a
+  CFI; contents, in-book search, marks, read-aloud, and a copy kept on the
+  device under the offline shell's own keys. Plus the three indexing passes
+  that run in the admin's browser because that is where pdf.js is — the
+  book's own bookmarks, the contents box typed by hand, and every page's
+  text from the text layer or by OCR through the vendored tesseract. Six
+  pure modules with the brief's case lists (page offsets, contents, toc
+  navigation, reader helpers, hymnal ordering, verses). Verified in
+  Chromium against a real PDF: the outline pass read its bookmarks, the
+  reader drew and turned its pages, zoomed, jumped from the contents,
+  searched from the indexed text with the hymn each hit falls inside,
+  saved a highlight, reopened where it left off, and saved the book and
+  pdf.js into Cache Storage under the paths the offline shell reads.
+  1067 unit, 137 integration, 62 browser-module tests.

@@ -27,6 +27,7 @@ final class AdminNav
                 ['href' => '/admin/series', 'label' => 'Series', 'needs' => 'manage_series'],
                 ['href' => '/admin/videos', 'label' => 'Videos', 'needs' => 'manage_videos'],
                 ['href' => '/admin/files', 'label' => 'Files', 'needs' => 'manage_files'],
+                ['href' => '/admin/books', 'label' => 'Books and hymnals', 'needs' => 'manage_files'],
                 ['href' => '/admin/speakers', 'label' => 'Speakers', 'needs' => 'manage_videos'],
                 ['href' => '/admin/video-feeds', 'label' => 'Video feeds', 'needs' => 'admin'],
                 ['href' => '/admin/home-rows', 'label' => 'Homepage rows', 'needs' => 'manage_plugins'],

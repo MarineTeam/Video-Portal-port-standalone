@@ -424,3 +424,23 @@ body.tv { margin: 0; background: #000; color: #fff; font-size: clamp(18px, 1.6vw
 .tv-player { aspect-ratio: 16 / 9; width: 100%; background: #000; }
 .tv-back { color: #b4b4b4; }
 @media (prefers-reduced-motion: reduce) { .tv-tile:focus { transform: none; } }
+
+/* The reader. The page fills what is left beside the contents, and the
+   contents column folds under it on a phone, where a sidebar would leave a
+   hymnal four inches wide. */
+.reader-bar { position: sticky; top: 0; z-index: 2; background: var(--bg); padding-bottom: 0.4rem; }
+.reader-bar p { margin: 0.2rem 0; }
+.reader-body { display: flex; gap: 1.2rem; align-items: flex-start; }
+.reader-side { flex: 0 0 16rem; max-height: 80vh; overflow-y: auto; }
+.reader-stage { flex: 1 1 auto; min-width: 0; }
+.reader-toc button.on { font-weight: 600; }
+.reader-page { display: block; max-width: 100%; margin: 0 auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25); background: #fff; }
+/* epub.js renders into a frame of its own, which needs a height to fill. */
+[data-reader-page] { min-height: 60vh; }
+[data-reader-page] iframe { width: 100%; min-height: 70vh; border: 0; }
+.linkish { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-align: left; }
+@media (max-width: 48rem) {
+  .reader-body { flex-direction: column; }
+  .reader-side { flex: 1 1 auto; max-height: none; width: 100%; order: 2; }
+  .reader-stage { order: 1; width: 100%; }
+}
