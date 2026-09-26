@@ -22,7 +22,7 @@ commit as the code it describes.
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers, the book and hymnal reader, the read API and API keys, the Next.js export and import) |
-| 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | in progress (SERVICES.md rewritten with a row per provider and a CI check that it cannot drift; PLUGINS.md's hook table brought up to date; UPGRADING.md written; the security walk remains) |
+| 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | in progress (SERVICES.md rewritten with a row per provider and a CI check that it cannot drift; PLUGINS.md's hook table brought up to date; UPGRADING.md written; the security walk done as a test) |
 
 ## Areas (Feature inventory)
 
@@ -576,12 +576,40 @@ Each becomes a PHPUnit test class with the original case names.
 
 ## Security review (route by route)
 
-Filled in during step 6: each route above against the Security requirements
-of the brief (CSRF, validation allowlist, capability, rate limit, headers,
-output escaping, SSRF). No rows yet.
+Done as `tests/Integration/RouteAuditTest.php` rather than as a table here,
+because a table of three hundred routes is out of date the week after it is
+written and a test is not. It boots the whole site — core modules and the
+bundled plugins — reads every route back out of the router with the
+middleware it was given, and asserts:
 
-| Route | Result | Notes |
-|---|---|---|
+1. **Every `/admin` and `/api/admin` route is behind a capability.** The five
+   whose check is inside the handler are listed in the test with the reason
+   (the trash needs *any one of* four content capabilities, which
+   `Middleware::can` cannot express).
+2. **Every write open to a stranger is one we wrote down.** Twenty-six of
+   them, each with what stands in for a sign-in — a rate limit, a single-use
+   token, a provider's signature, an ownership check. A new one fails the
+   test until somebody explains it.
+3. **Every write that skips the CSRF token is one we wrote down**, and every
+   prefix in `Csrf::EXEMPT` has a reason against it — checked both ways, so
+   neither a new exemption nor a stale one passes.
+4. **`/api/v1` is read-only**, which is what makes its CSRF exemption free.
+
+The other requirements of the brief are enforced where they cannot be
+forgotten rather than reviewed per route: output escaping by
+`tools/ci/check-templates.php` over every template; the validation allowlist
+by `Validator::check`, which drops what it was not told about; the headers by
+one place in `App`; SSRF by `Http::fetchUntrusted` and the resolver behind it.
+
+| What | Where it is proved |
+|---|---|
+| Capability on every admin route | `RouteAuditTest::test_2` |
+| Public writes all accounted for | `RouteAuditTest::test_3` |
+| CSRF exemptions all accounted for | `RouteAuditTest::test_4`, `test_6` |
+| The read API cannot write | `RouteAuditTest::test_5` |
+| Every template output escaped | `tools/ci/check-templates.php` (CI) |
+| Every provider documented | `tools/ci/check-docs.php` (CI) |
+| No process functions in shipped code | `tools/ci/check-banned.php` (CI) |
 
 ## Deviations
 
@@ -914,3 +942,17 @@ met, with the reason.
   backup. Writing it turned up a real gap — `Requires App:` in a plugin
   header was parsed and never checked — now enforced beside the PHP one, with
   a fixture whose boot() throws to prove it is never reached.
+
+- 2026-09-26 — the security walk, as `tests/Integration/RouteAuditTest.php`
+  rather than a table. It boots the core and the bundled plugins, reads every
+  route back out of the router with the middleware it was given (a closure is
+  identified by the line of Middleware.php that made it), and asserts that
+  every admin route is behind a capability, that every write a stranger may
+  make is one we wrote down with what stands in for a sign-in, that every
+  write skipping the CSRF token is written down — and the other way too, that
+  every prefix in `Csrf::EXEMPT` has a reason against it — and that /api/v1
+  cannot write, which is what makes its exemption free. Writing it meant
+  reading twenty-six public endpoints and the five whose check is inside the
+  handler; all of them held, and the trash was the interesting one: its
+  capability is *any one of* four, which `Middleware::can` cannot say, so it
+  guards itself. 1114 unit, 166 integration, 62 browser-module tests.
