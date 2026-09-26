@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -135,14 +135,14 @@ commit as the code it describes.
 | `/guides` | done | Published guides, counted in questions |
 | `/guides/[slug]` | done | The questions, the scripture and the notes; leader notes only for whoever leads a group |
 | `/hymns/[fileId]` | done | One hymn that is its own file: its words and its credits |
-| `/link` | todo | |
+| `/link` | done | Type the code from the screen, and be asked by name whether to sign that television in |
 | `/live` | done | Whatever is on now, a countdown to the next one otherwise, "Coming up" underneath, and the chat beside it |
 | `/playlists` | done | plugins/playlists |
 | `/playlists/[id]` | done | the owner's, or read-only for anyone once shareable (noindex); each reader sees only the videos they may watch |
 | `/prayer` | done | The wall as this reader may see it, the form to ask (honeypot, rate-limited), and "I prayed for this"; noindex |
 | `/present/[fileId]` | done | The words, big, one verse at a time, with the copyright line up throughout; refuses a hymn nobody has typed |
 | `/profile` | done | Overview: unread count and plugin cards (profile.overview) |
-| `/profile/devices` | todo | |
+| `/profile/devices` | done | The televisions signed in to this account, and signing one out |
 | `/profile/downloads` | done | This device’s saved videos (self-healing), Wi-Fi-only choice, space used and the browser quota |
 | `/profile/events` | done | The member's own sign-ups, and cancelling from there |
 | `/profile/groups` | done | The member's own groups and asks |
@@ -165,7 +165,7 @@ commit as the code it describes.
 | `/speakers/[slug]` | done | Person JSON-LD |
 | `/subscriptions` | done | plugins/subscriptions: follows with mute and unfollow |
 | `/tags/[tag]` | done | Series carrying the tag (series_tags) |
-| `/tv` | todo | |
+| `/tv` | done | The library at arm's length: rows of tiles walked with four arrows, over the app chrome rather than beside it. `/tv/[slug]` plays one |
 | `/videos/[slug]` | done | Aliases 301 keeping ?t=; resume from progress unless ?t=; premiere and lock placeholders; mark watched; share-at; VideoObject + BreadcrumbList JSON-LD |
 | `/watch-later` | done | plugins/watch-later (categories, series, videos) |
 
@@ -343,8 +343,8 @@ commit as the code it describes.
 | `/api/prayer/[id]` | DELETE | done | The writer's, and the moderator's; anybody else gets 404 |
 | `/api/prayer` | GET POST | done | Every read goes through `Prayer::visibleTo`; asking is open to visitors, with a honeypot and a per-address and per-account limit |
 | `/api/profile/calendar` | POST DELETE | done | Makes, replaces or stops the member's calendar link |
-| `/api/profile/devices/[id]` | DELETE | todo | |
-| `/api/profile/devices` | GET | todo | |
+| `/api/profile/devices/[id]` | DELETE | done | Takes effect on the set's next request, not whenever a session lapses |
+| `/api/profile/devices` | GET | done | |
 | `/api/profile/export` | GET | done | Every member-keyed table, scoped queries, assertExportSafe, 2/min from the audit log |
 | `/api/profile` | PATCH DELETE | done | PATCH: fields owned by active plugins only; DELETE `{confirm: email}`, never the last admin |
 | `/api/push/subscribe` | POST | done | App\Modules\Push: push services only, eight per member, 409 until Web Push is set up |
@@ -362,12 +362,12 @@ commit as the code it describes.
 | `/api/share-links/unlock` | POST | done | 10 wrong guesses in 15 minutes lock the link; also 30 tries per address per 15 minutes |
 | `/api/subscriptions` | POST PATCH | done | POST `{seriesId|categoryId}` toggles → `{following}`; PATCH `{…, muted}` → `{muted}` |
 | `/api/sync/snapshot` | GET | done | Full or delta; signed out it is always full and nameless, and never cached by a shared cache |
-| `/api/tv/approve` | POST | todo | |
-| `/api/tv/feed.json` | GET | todo | |
-| `/api/tv/feed.xml` | GET | todo | |
-| `/api/tv/lookup` | POST | todo | |
-| `/api/tv/pair` | POST | todo | |
-| `/api/tv/poll` | POST | todo | |
+| `/api/tv/approve` | POST | done | A member's yes or no; conditional on the pairing still being pending |
+| `/api/tv/feed.json` | GET | done | Roku Direct Publisher. Public content only, cached an hour both sides |
+| `/api/tv/feed.xml` | GET | done | The same catalogue as MRSS, leaving out exactly what the JSON leaves out |
+| `/api/tv/lookup` | POST | done | What is behind a code, for the approval screen. Members only, rate-limited |
+| `/api/tv/pair` | POST | done | A code for the screen and the secret that redeems it, stored hashed |
+| `/api/tv/poll` | POST | done | Claiming is a conditional update, so concurrent polls cannot both mint a token |
 | `/api/v1/analytics` | GET | todo | |
 | `/api/v1/calendar-events` | GET | todo | |
 | `/api/v1/categories` | GET | todo | |
@@ -492,7 +492,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | VideoFeed | `video_feeds` | done | |
 | LiveChatMessage | `live_chat_messages` | done | Taken down = `hidden`, never deleted |
 | LiveChatMute | `live_chat_mutes` | done | Per stream: muted for the evening, not for ever |
-| TvDevice | `tv_devices` | todo | |
+| TvDevice | `tv_devices` | done | plugins/tv; `token_hash` is the set's own long-lived credential, which does not expire on its own |
 
 ## Test files (Appendix D) — 73
 
@@ -564,9 +564,9 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/toc-nav.test.ts` | todo | |
 | `lib/transcribe-worker.test.ts` | done | tests/Integration/TranscriptionTest.php (claim, DONE/FAILED, stale sweep, deadline) |
 | `lib/transcribe.test.ts` | done | tests/Integration/TranscriptionTest.php (multipart shape, model/language fields, size limit, the settings test) |
-| `lib/tv-feed.test.ts` | todo | |
-| `lib/tv-nav.test.ts` | todo | |
-| `lib/tv-pairing.test.ts` | todo | |
+| `lib/tv-feed.test.ts` | done | tests/Unit/Plugins/TvFeedTest.php (every case) |
+| `lib/tv-nav.test.ts` | done | tests/js/tv-nav.test.mjs (every case), against plugins/tv/assets/tv-nav.js |
+| `lib/tv-pairing.test.ts` | done | tests/Unit/Plugins/TvPairingTest.php (every case) |
 | `lib/upload-types.test.ts` | done | tests/Unit/Files/UploadTypesTest.php |
 | `lib/validation/schemas.test.ts` | todo | |
 | `lib/verses.test.ts` | todo | |
@@ -678,6 +678,11 @@ met, with the reason.
 - **A signed-out snapshot is always full.** A delta would let a copy saved on a shared laptop while somebody was signed in keep those names for ever, because no row changed; asking for the lot replaces them with a nameless copy on the next update.
 - **A person's spelling is changed in place and the old one kept as an alias**, the same as after a merge, so the next import resolves it rather than making the duplicate again.
 - **Renaming a schedule does not re-slug it.** The slug is made once, from the first name, because `/api/schedules/[id]` answers to either and a changed slug would break a link somebody kept.
+- **A television's durable credential is the pairing, not a session.** A session here lapses after a month, and a set in a hall used on Sundays would otherwise need re-pairing for no reason anybody in the room could see; so `tv_devices.token_hash` is a year-long `mt_tv` cookie, and the session is a cache of it, renewed from the pairing on each television request. That is also what makes signing a set out take effect at once: every `/tv` request looks the pairing up rather than trusting the session, and a cookie whose pairing has gone takes the session with it.
+- **A poll that finds the pairing already claimed answers GONE, not READY.** Claiming is `UPDATE … WHERE status = APPROVED AND token_hash IS NULL`, so of two polls arriving together exactly one changes a row and exactly one token exists; the loser is told the pairing is gone rather than handed a second one. Proved with four concurrent polls over HTTP.
+- **The user code's alphabet has no digits and no vowels** (`BCFGHJKLMNPRSTVWXZ`): no digit can be misread as a letter across a room, no code is ever a word, and `normalizeUserCode` forgives a lookalike typed for a character the screen never showed (1/I → L, 5 → S, 8 → B, 6 → G, 2 → Z, U → V). 18^6 is thirty-four million against a code that lives fifteen minutes behind a rate-limited lookup.
+- **`/tv` never prints an email address**, the same rule the comments and group pages keep — it is the most public screen in the building, so a member whose name is missing or is an address is "a member".
+- **The television feed needs a stream, not an embed.** A set-top box has no browser to put an iframe in, so `streamUrl` is Bunny's HLS playlist (`Bunny::hlsUrl`, signed for a day where token authentication is on) or a file-based provider's own URL; a video available only as an embed falls back to its source's own page, and one with neither drops out of the feed rather than becoming a tile with nothing behind it.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -787,3 +792,13 @@ met, with the reason.
   endpoints, `/api/people` and the snapshot, and in Chromium for the saved
   copy, which holds no names when it was saved signed out. 886 unit, 107
   integration, 37 browser-module tests.
+
+- 2026-09-26 — television: `/tv` and `/tv/[slug]` over the app chrome, walked
+  with four arrows; `/link` and the approval a member is asked by name;
+  `/profile/devices`; the Roku Direct Publisher and MRSS catalogues; and the
+  hourly prune of pairings nobody completed. Verified in two browsers at
+  once: a set showing a code, a phone approving it, the set letting itself
+  in seconds later, and signing it out from the phone putting the code back
+  on the screen — plus the four arrows stopping at the end of a row, OK
+  opening a tile and Back leaving it. Four concurrent polls yield exactly
+  one token. 923 unit, 115 integration, 50 browser-module tests.

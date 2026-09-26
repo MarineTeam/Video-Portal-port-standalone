@@ -152,6 +152,18 @@ final class BunnyStreamProvider extends BaseVideoProvider
         return $key !== '' ? $key : null;
     }
 
+    /**
+     * The adaptive stream a television can play by itself, rather than the
+     * embed a set-top box has no browser for. Signed for a day where token
+     * authentication is on, which outlives the hour a platform caches a
+     * catalogue for.
+     */
+    public function hlsUrl(VideoRef $video): ?string
+    {
+        $url = Bunny::hlsUrl($this->str('cdnHostname'), $video->id);
+        return $url === '' ? null : Bunny::signCdnUrl($url, $this->cdnKey(), Bunny::expiry(86400, time()));
+    }
+
     public function thumbnailUrl(VideoRef $video, ?string $file): ?string
     {
         $host = Bunny::host($this->str('cdnHostname'));

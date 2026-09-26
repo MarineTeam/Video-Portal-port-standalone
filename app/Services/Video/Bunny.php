@@ -73,6 +73,17 @@ final class Bunny
         return 'https://' . $host . '/' . rawurlencode($videoId) . '/play_' . $height . 'p.mp4';
     }
 
+    /**
+     * https://<cdn>/<video>/playlist.m3u8 — the adaptive stream, which is
+     * what a television plays. Empty when no CDN hostname is configured,
+     * because there is then no address at all rather than a broken one.
+     */
+    public static function hlsUrl(string $cdnHostname, string $videoId): string
+    {
+        $host = self::host($cdnHostname);
+        return $host === '' || $videoId === '' ? '' : 'https://' . $host . '/' . rawurlencode($videoId) . '/playlist.m3u8';
+    }
+
     public static function host(string $hostname): string
     {
         $host = strtolower(trim((string) preg_replace('#^https?://#i', '', trim($hostname)), '/'));

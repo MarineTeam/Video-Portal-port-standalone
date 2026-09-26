@@ -396,3 +396,28 @@ fieldset[disabled] { opacity: 0.6; }
 .badge.rota-teal, .chip.rota-teal { background: #0f766e; color: #fff; }
 .chip.on:is(.rota-slate, .rota-blue, .rota-green, .rota-amber, .rota-rose, .rota-violet, .rota-teal) { outline: 2px solid var(--ink); }
 .calendar [data-calendar-days] > li { margin-bottom: 0.6rem; }
+
+/* The television. Sized for somebody across a room, with a safe area that
+   survives a set's overscan, and a focus ring heavy enough to find from the
+   sofa — on a television the focus ring is the pointer. */
+body.tv { margin: 0; background: #000; color: #fff; font-size: clamp(18px, 1.6vw, 28px); }
+.tv-safe { padding: 5vh 5vw; max-width: none; }
+.tv-title { font-size: 2em; margin: 0; }
+.tv-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.tv-who { color: #b4b4b4; margin: 0; }
+.tv-lead { font-size: 1.2em; }
+.tv-hint { color: #b4b4b4; }
+.tv-code { font-size: 3.5em; letter-spacing: 0.15em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0.2em 0; }
+.tv-pair { margin: 2rem 0 3rem; }
+.tv-row { margin: 0 0 2.5rem; }
+.tv-row-title { font-size: 1.2em; margin: 0 0 0.6rem; }
+/* Nothing wraps: a row scrolls sideways under focus instead. */
+.tv-tiles { display: flex; gap: 1.2rem; list-style: none; padding: 0 0 0.5rem; margin: 0; overflow-x: auto; scrollbar-width: none; }
+.tv-tiles::-webkit-scrollbar { display: none; }
+.tv-tile { display: block; width: 20rem; max-width: 42vw; color: inherit; text-decoration: none; border-radius: 0.5rem; outline-offset: 4px; }
+.tv-tile img, .tv-tile-blank { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 0.5rem; background: #1c1c1c; }
+.tv-tile-title { display: block; margin-top: 0.5rem; line-height: 1.3; }
+.tv-tile:focus-visible, .tv-tile:focus { outline: 4px solid #fff; transform: scale(1.04); transition: transform 120ms ease-out; }
+.tv-player { aspect-ratio: 16 / 9; width: 100%; background: #000; }
+.tv-back { color: #b4b4b4; }
+@media (prefers-reduced-motion: reduce) { .tv-tile:focus { transform: none; } }
