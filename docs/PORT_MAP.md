@@ -22,7 +22,7 @@ commit as the code it describes.
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
 | 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers, the book and hymnal reader, the read API and API keys, the Next.js export and import) |
-| 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | in progress (SERVICES.md rewritten with a row per provider and a CI check that it cannot drift; PLUGINS.md's hook table brought up to date; UPGRADING.md written; the security walk done as a test) |
+| 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | in progress (the documents rewritten and kept honest by CI; the security walk done as a test; every todo row in this map now closed, which turned up eight endpoints that were never built and five on addresses of my own) |
 
 ## Areas (Feature inventory)
 
@@ -40,10 +40,10 @@ commit as the code it describes.
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
 | Member plugins (favorites … downloads, 21 of Appendix E) | plugins | done | all 21 in plugins/, each against the page hooks (page.category/series/video.panels, home.row, render.page_top, related.items) and the library's classes; integration tests through a real server (tests/Integration/*Test.php extending ServerTestCase) |
 | Live streaming and chat | plugin | done | plugins/live-streaming: /live, the "Live now" banner and nav entry, /admin/live, and a polling chat that opens half an hour early and closes an hour after |
-| Book reader, hymnals, service plans, rota | plugins | todo | |
-| Schedules and Google Sheets | plugin | todo | |
-| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall, events with repeats and calendar feeds, forms, and small groups with attendance, guides and the thread (plugins/groups) done; broadcasts and SMS todo |
-| Television | plugin | todo | |
+| Book reader, hymnals, service plans, rota | plugins | done | plugins/book-reader (pdf.js and epub.js behind one handle, contents, in-book search, marks, read-aloud, the three indexing passes, the words typed in) and plugins/service-plans (the order, the rota, blockouts, the report, and the order kept on a device) |
+| Schedules and Google Sheets | plugin | done | plugins/schedules: two layouts parsed forgivingly, skip-and-report, a failed sync deletes nothing, the tabs offered rather than typed, reminders at 18:00, the calendar and its feed |
+| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | All done: prayer wall, events with repeats and calendar feeds, forms, small groups with attendance, guides and the thread, the directory, and broadcasts with eleven SMS providers |
+| Television | plugin | done | plugins/tv: pairing by code, the four-arrow screen, the feed, and a device list a member can sign out of |
 | Data import from the Next.js deployment (`tools/export-from-nextjs`, `/admin/tools/import`) | core | done | export.mjs (pg, a server-side cursor, its own zip writer, no dependency but pg) and the three-phase resumable importer on /admin/tools; counts checked against the manifest; files still in Bunny Storage pulled across in batches |
 
 ### Service providers
@@ -389,7 +389,7 @@ commit as the code it describes.
 | `/events/[slug]/event.ics` | GET | done | A members-only event refuses this outright: a calendar application has nobody to check |
 | `/events/calendar.ics` | GET | done | The public feed; member-only events are absent |
 | `/feed.xml` | GET | done | Built as a visitor sees the site, whoever asks |
-| `/s/[token]` | GET | todo | |
+| `/s/[token]` | GET | done | Redeems a share link into an httpOnly cookie, re-checked against the database on every request so revoking is immediate |
 | `/series/[slug]/podcast.xml` | GET | done | Opted-in audio only; 404 for a members-only series; enclosure is /api/files/[id]/content until the Bunny public zone arrives (3.6) |
 
 ## Models (Appendix B) — 95
@@ -404,14 +404,14 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | SeriesEditor | `series_editors` | done | Honoured by Permissions; managed at /admin/permissions |
 | Category | `categories` | partial | Admin CRUD, tree, trash; public pages with 3.4 |
 | Series | `series` | partial | Admin CRUD, drafts, tags (series_tags), aliases, viewers; public pages with 3.4 |
-| Video | `videos` | todo | |
+| Video | `videos` | done | The library's centre: ten providers, the player, chapters, transcripts, downloads, feeds and the read API all read this row |
 | Chapter | `chapters` | done | listed in time order; editor on /admin/videos/[id]; the video page's list (Chapters plugin) seeks the player and copies a ?t= link |
 | Speaker | `speakers` | partial | Admin CRUD; public pages with 3.4 |
 | SeriesFavorite | `series_favorites` | done | plugins/favorites |
 | VideoFavorite | `video_favorites` | done | plugins/favorites |
 | BookHymn | `book_hymns` | done | Pages stored as PDF pages; the printed number derived at the edge |
 | BookPage | `book_pages` | done | Written a few pages at a time, so an hour-long OCR run is resumable |
-| BookHymnDetail | `book_hymn_details` | todo | |
+| BookHymnDetail | `book_hymn_details` | done | The words and credits of a hymn printed inside a book, kept per number; written at /api/admin/files/[id]/lyrics |
 | FileFavorite | `file_favorites` | done | plugins/favorites; saved from a file's own page (page.file.panels) and listed at /favorites |
 | ServicePlan | `service_plans` | done | plugins/service-plans |
 | ServiceTeam | `service_teams` | done | |
@@ -421,8 +421,8 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | ServicePlanItem | `service_plan_items` | done | Replaced as a whole when the order is saved |
 | Comment | `comments` | done | the byline is the display name (Profiles on) or sign-in name, never an address |
 | CommentReport | `comment_reports` | done | |
-| WatchProgress | `watch_progresses` | todo | |
-| FileAsset | `file_assets` | todo | |
+| WatchProgress | `watch_progresses` | done | The player's heartbeat: resume, “watched”, the up-next order, and the watch-through rate on /admin/analytics |
+| FileAsset | `file_assets` | done | Files and books: two backends, the reader, hymnals, podcast audio, favourites and the plans that name them |
 | ReadingProgress | `reading_progresses` | done | `location` is opaque: only the engine that wrote one parses it |
 | ReadingMark | `reading_marks` | done | Per member and private to them; a highlight with nothing selected is saved as a bookmark |
 | ApiKey | `api_keys` | done | Only the SHA-256 hash and a 16-character prefix are stored; `window_started_at`/`window_count` carry the per-key limit |
@@ -510,13 +510,13 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/branding.test.ts` | done | tests/Unit/Branding/BrandingTest.php |
 | `lib/broadcast.test.ts` | done | tests/Unit/Plugins/BroadcastTest.php (every case) |
 | `lib/bunny.test.ts` | done | tests/Unit/Video/BunnyTest.php |
-| `lib/client-bundle.test.ts` | todo | |
-| `lib/content-language.test.ts` | todo | |
+| `lib/client-bundle.test.ts` | dropped | It walks client components' imports to catch one reaching PrismaClient and bundling it into the browser. There are no client components and no bundler here: a template runs on the server or it is a plain ES module, so the bug it guards against cannot happen |
+| `lib/content-language.test.ts` | dropped | The BCP-47 tag on a video and a series is stored and shown, and read by the podcast feed; nothing chooses or falls back on it, so there is no rule left to test. The member's own language is `lib/i18n.test.ts` |
 | `lib/content.test.ts` | done | tests/Unit/Library/ContentTest.php; the DB-backed checks in tests/Integration/ContentAccessTest.php |
 | `lib/cover.test.ts` | done | tests/Unit/Plugins/CoverTest.php (every case) and tests/Integration/ServicePlansTest.php |
 | `lib/cron-guard.test.ts` | done | tests/Unit/Jobs/CronGuardTest.php (no development exception: see Deviations) |
-| `lib/cron.test.ts` | todo | |
-| `lib/cross-site.test.ts` | todo | |
+| `lib/cron.test.ts` | done | tests/Unit/Jobs/CronGuardTest.php, plus the scheduler in tests/Integration/SmokeTest.php |
+| `lib/cross-site.test.ts` | done | tests/Unit/Core/CrossSiteTest.php |
 | `lib/data-export.test.ts` | done | tests/Unit/Profile/DataExportTest.php (+ a schema completeness check) and tests/Integration/DataExportTest.php |
 | `lib/device-settings.test.ts` | done | tests/js/device-settings.test.mjs |
 | `lib/directory.test.ts` | done | tests/Unit/Plugins/DirectoryTest.php (every case) and tests/Integration/DiscoveryPluginsTest.php |
@@ -537,7 +537,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/names.test.ts` | done | tests/Unit/Plugins/SchedulesNamesTest.php (every case) |
 | `lib/nav-tabs.test.ts` | done | tests/js/nav-tabs.test.mjs |
 | `lib/offline-calendar.test.ts` | done | tests/js/offline-calendar.test.mjs (every case), against public/assets/js/offline-calendar.js |
-| `lib/offline-shell.test.ts` | todo | |
+| `lib/offline-shell.test.ts` | manual | Verified in Chromium (step 5.10): the shell opened with the network off and rendered a saved book. Not a node test — sw.js and offline.html are a service worker and a page, and the modules beside them import `mt.js`, which needs a browser |
 | `lib/outline.test.ts` | done | tests/Unit/Plugins/OutlineTest.php (every case) and tests/Integration/SermonNotesTest.php |
 | `lib/page-offset.test.ts` | done | tests/Unit/Support/PageOffsetTest.php (every case) |
 | `lib/permissions.test.ts` | done | tests/Unit/Access/PermissionsTest.php |
@@ -546,7 +546,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/prayer.test.ts` | done | tests/Unit/Plugins/PrayerTest.php (every case) and tests/Integration/PrayerTest.php |
 | `lib/public-url.test.ts` | done | tests/Unit/Core/PublicUrlTest.php |
 | `lib/push-endpoint.test.ts` | done | tests/Unit/Push/PushEndpointTest.php |
-| `lib/reader-cache.test.ts` | todo | |
+| `lib/reader-cache.test.ts` | manual | Verified in Chromium (step 5.10): Cache Storage held the book and pdf.js under the offline shell's own paths. `offline-books.js` imports `mt.js`, so node cannot load it |
 | `lib/reader.test.ts` | done | tests/Unit/Support/ReaderTest.php (every case) |
 | `lib/recurrence.test.ts` | done | tests/Unit/Plugins/RecurrenceTest.php (every case) |
 | `lib/reorder.test.ts` | done | tests/Unit/Support/SupportTest.php |
@@ -568,7 +568,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/tv-nav.test.ts` | done | tests/js/tv-nav.test.mjs (every case), against plugins/tv/assets/tv-nav.js |
 | `lib/tv-pairing.test.ts` | done | tests/Unit/Plugins/TvPairingTest.php (every case) |
 | `lib/upload-types.test.ts` | done | tests/Unit/Files/UploadTypesTest.php |
-| `lib/validation/schemas.test.ts` | todo | |
+| `lib/validation/schemas.test.ts` | done | tests/Unit/Core/ValidatorTest.php |
 | `lib/verses.test.ts` | done | tests/Unit/Support/HymnalTest.php (every case) |
 | `lib/video-feed-sync.test.ts` | done | tests/Unit/Video/VideoFeedSyncTest.php, plus the fetchers against recorded answers |
 | `lib/video-source.test.ts` | done | tests/Unit/Library/VideoSourceTest.php |
@@ -956,3 +956,20 @@ met, with the reason.
   handler; all of them held, and the trash was the interesting one: its
   capability is *any one of* four, which `Middleware::can` cannot say, so it
   guards itself. 1114 unit, 166 integration, 62 browser-module tests.
+
+- 2026-09-26 — closing the last of this map's todo rows, which turned out not
+  to be bookkeeping. Checking each against the router found five endpoints
+  built under addresses of my own rather than the original's, and eight never
+  built at all: /admin/analytics and its export, the hymn counting behind it,
+  /api/admin/sheets/tabs, /api/admin/bunny-audit, /api/offline/service/[id],
+  and the lyrics and text endpoints — without which a hymn's words could not
+  be typed in at all, so the projector could never show anything. Two more
+  gaps came out of the same pass: FileFavorite had no writer, and a plugin
+  header's `Requires App:` was parsed and never checked. The rota reminder ran
+  at 06:30 rather than 18:00, telling people about tomorrow a day and a half
+  early. Validator and the cross-site check — the two things the security
+  walk leans on hardest — had no unit tests and now have 29 between them.
+  Four rows are closed as dropped or manual with the reason in the row: two
+  guard bugs this port cannot have, and two that are a service worker and its
+  Cache Storage, verified in Chromium because node cannot load a module that
+  imports `mt.js`. 1151 unit, 191 integration, 62 browser-module tests.
