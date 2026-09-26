@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -42,7 +42,7 @@ commit as the code it describes.
 | Live streaming and chat | plugin | done | plugins/live-streaming: /live, the "Live now" banner and nav entry, /admin/live, and a polling chat that opens half an hour early and closes an hour after |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
-| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall (plugins/prayer) and events with repeats and calendar feeds (plugins/events) done; the rest todo |
+| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall (plugins/prayer), events with repeats and calendar feeds (plugins/events) and forms (plugins/forms) done; groups, the directory's group side and broadcasts todo |
 | Television | plugin | todo | |
 | Data import from the Next.js deployment (`tools/export-from-nextjs`, `/admin/tools/import`) | core | todo | |
 
@@ -95,8 +95,8 @@ commit as the code it describes.
 | `/admin/events` | done | The diary, the add form, and the repeats (`manage_events`) |
 | `/admin/events/[id]` | done | One event's fields and the list for the door, on screen and as a CSV with a column saying who is a member |
 | `/admin/files` | done | FilesAdmin: chunked upload stored with the Files slot, inline edit, replace, bulk (incl. podcast), kind filter |
-| `/admin/forms` | todo | |
-| `/admin/forms/[id]` | todo | |
+| `/admin/forms` | done | The list, and adding one (`manage_events`) |
+| `/admin/forms/[id]` | done | Its settings, its questions (add, rename, reorder, retire) and every response, with the CSV beside them |
 | `/admin/groups` | todo | |
 | `/admin/groups/[id]` | todo | |
 | `/admin/home-rows` | done | Library\Admin\HomeRowsAdmin: toggle, rename, reorder the built-in rows; add category and tag rows; says when a row's plugin is off |
@@ -128,8 +128,8 @@ commit as the code it describes.
 | `/events` | done | What's on; a members-only event is absent rather than refused |
 | `/events/[slug]` | done | The event, sign-up (no account needed), "Add to my calendar", and the next few dates of its repeat |
 | `/favorites` | done | plugins/favorites |
-| `/forms` | todo | |
-| `/forms/[slug]` | todo | |
+| `/forms` | done | The published forms this reader may open |
+| `/forms/[slug]` | done | The form as its rows describe it; a members-only one is absent rather than refused |
 | `/groups` | todo | |
 | `/groups/[slug]` | todo | |
 | `/guides` | todo | |
@@ -216,12 +216,12 @@ commit as the code it describes.
 | `/api/admin/files/bunny-storage` | GET | done | ?dir=, marks what is already imported |
 | `/api/admin/files/import` | POST | done | Objects stay where they are; each becomes a file row |
 | `/api/admin/files` | GET POST | done | POST takes a chunked upload id (the port's uploader; the original posted the file) |
-| `/api/admin/forms/[id]/fields/[fieldId]` | PATCH DELETE | todo | |
-| `/api/admin/forms/[id]/fields` | POST | todo | |
-| `/api/admin/forms/[id]` | GET PATCH DELETE | todo | |
-| `/api/admin/forms/[id]/submissions/[submissionId]` | PATCH DELETE | todo | |
-| `/api/admin/forms/[id]/submissions` | GET | todo | |
-| `/api/admin/forms` | GET POST | todo | |
+| `/api/admin/forms/[id]/fields/[fieldId]` | PATCH DELETE | done | Renaming keeps the answers; DELETE retires a question that has any and removes one that has none |
+| `/api/admin/forms/[id]/fields` | POST | done | The ten kinds; a question offering a choice is refused without choices, before anything is written |
+| `/api/admin/forms/[id]` | GET PATCH DELETE | done | Notify addresses are checked, so a typo is not stored as one |
+| `/api/admin/forms/[id]/submissions/[submissionId]` | PATCH DELETE | done | `{handled}` records who dealt with it, by name |
+| `/api/admin/forms/[id]/submissions` | GET | done | `?format=csv`; live questions first, retired ones after, so an export never silently drops what somebody said |
+| `/api/admin/forms` | GET POST | done | `manage_events` |
 | `/api/admin/group-assignments/[id]` | DELETE | done |  |
 | `/api/admin/group-assignments` | GET POST | done | By userId or email; category xor series scope |
 | `/api/admin/groups/[id]/members/[memberId]` | DELETE | todo | |
@@ -314,7 +314,7 @@ commit as the code it describes.
 | `/api/favorites` | POST | done | `{seriesId}` or `{videoId}` toggles → `{favorited}`; 404 for what the member can't open; 403 `plugin_disabled` where a category switches it off |
 | `/api/files/[id]/content` | GET | done | ContentAccess per request; Range, ETag/304, private no-cache, ?download=1; X-Sendfile family via RangeStreamer |
 | `/api/files/[id]/search` | GET | todo | |
-| `/api/forms/[slug]` | POST | todo | |
+| `/api/forms/[slug]` | POST | done | `{answers: {fieldId: value}}`, honeypot and a per-address limit; the server decides what a valid answer is |
 | `/api/groups/[slug]/join` | POST DELETE | todo | |
 | `/api/groups/[slug]/meetings` | GET POST | todo | |
 | `/api/groups/[slug]/messages/[messageId]` | DELETE | todo | |
@@ -474,10 +474,10 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | Event | `events` | done | plugins/events |
 | EventSeries | `event_series` | done | Generated dates are ordinary events; `SetNull` on stopping, never a cascade |
 | EventRegistration | `event_registrations` | done | Cancelling keeps the row, so signing up again reuses it |
-| Form | `forms` | todo | |
-| FormField | `form_fields` | todo | |
-| FormSubmission | `form_submissions` | todo | |
-| FormAnswer | `form_answers` | todo | |
+| Form | `forms` | done | plugins/forms |
+| FormField | `form_fields` | done | Retired rather than deleted once it has answers |
+| FormSubmission | `form_submissions` | done | `handled_at`/`handled_by`, so follow-up isn't done twice or not at all |
+| FormAnswer | `form_answers` | done | Every answer is text; a multi-choice is its chosen options joined by a newline |
 | PrayerRequest | `prayer_requests` | done | plugins/prayer |
 | PrayerIntercession | `prayer_intercessions` | done | Unique per request and member |
 | SmallGroup | `small_groups` | todo | |
@@ -525,7 +525,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/event-series.test.ts` | done | tests/Unit/Plugins/EventSeriesTest.php (every case) |
 | `lib/events.test.ts` | done | tests/Unit/Plugins/EventsTest.php (every case) and tests/Integration/EventsTest.php |
 | `lib/filename.test.ts` | done | tests/Unit/Support/SupportTest.php |
-| `lib/forms.test.ts` | todo | |
+| `lib/forms.test.ts` | done | tests/Unit/Plugins/FormsTest.php (every case) and tests/Integration/FormsTest.php |
 | `lib/group-messages.test.ts` | todo | |
 | `lib/groups.test.ts` | todo | |
 | `lib/guides.test.ts` | todo | |
@@ -659,6 +659,9 @@ met, with the reason.
 - **An event with no stated finish is over at the end of its own day**, which is what `registrationState` counts as "over" — it is not over the minute it starts.
 - **A visitor's sign-up is limited to 20 an hour per address, with a honeypot**; a signed-in member's is not, since the account is the limit. Cancelling and signing up again reuse the same row, which is the record that they were coming.
 - **`/admin/events/[id]` is the port's own screen** (the original has the page, not the shape): one event's fields and the list for the door, with the CSV beside it.
+- **A form question nobody has answered is deleted rather than retired.** The brief's rule protects answers; a question added by mistake five minutes ago has none, and leaving it in the export's columns for ever is the worse outcome. The answer says which happened (`{retired: true|false}`).
+- **"Only once" is enforced per account.** A visitor has no account to count against, so a form that may be sent only once still takes a second card from an unsigned-in visitor; the brief's example (a camp application) is a members' form in practice.
+- **A form's notify addresses are checked when they are saved**, and a typo is refused there rather than silently failing at the first submission.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -723,3 +726,12 @@ met, with the reason.
   what's on, one event, and the member's own diary behind a token
   (App\Support\Ics and App\Modules\Profile\Calendar, both core). 103 new
   unit tests (recurrence, events, series, ics) and 6 integration tests.
+- 2026-09-26 — forms (plugins/forms): /forms, /forms/[slug], /admin/forms and
+  /admin/forms/[id], with the questions as rows. The server has the last word
+  on a valid answer (a crafted fourth answer to a three-way question is
+  refused, uninvited multi-choice options are dropped, an unticked lone box
+  is an answer rather than silence), renaming a question keeps its answers,
+  retiring one keeps its column after the live ones in the table and the CSV,
+  and responses are marked dealt with by name. 14 unit tests (the original's
+  case list) and 4 integration tests, plus a Chromium run of a visitor
+  filling one in and the office marking it dealt with.
