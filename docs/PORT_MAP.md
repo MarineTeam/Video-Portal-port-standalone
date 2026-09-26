@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -42,7 +42,7 @@ commit as the code it describes.
 | Live streaming and chat | plugin | done | plugins/live-streaming: /live, the "Live now" banner and nav entry, /admin/live, and a polling chat that opens half an hour early and closes an hour after |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
-| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall done (plugins/prayer); the rest todo |
+| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall (plugins/prayer) and events with repeats and calendar feeds (plugins/events) done; the rest todo |
 | Television | plugin | todo | |
 | Data import from the Next.js deployment (`tools/export-from-nextjs`, `/admin/tools/import`) | core | todo | |
 
@@ -92,8 +92,8 @@ commit as the code it describes.
 | `/admin/categories/[id]` | done | Every field incl. parent (cycle-guarded), cover upload, three-way downloads |
 | `/admin/comments` | done | plugins/comments: the reported-or-hidden queue, scoped to the moderator's part of the library |
 | `/admin/downloads` | done | Who (any member, or roles and people) and where (web, app, both), suggested space |
-| `/admin/events` | todo | |
-| `/admin/events/[id]` | todo | |
+| `/admin/events` | done | The diary, the add form, and the repeats (`manage_events`) |
+| `/admin/events/[id]` | done | One event's fields and the list for the door, on screen and as a CSV with a column saying who is a member |
 | `/admin/files` | done | FilesAdmin: chunked upload stored with the Files slot, inline edit, replace, bulk (incl. podcast), kind filter |
 | `/admin/forms` | todo | |
 | `/admin/forms/[id]` | todo | |
@@ -125,8 +125,8 @@ commit as the code it describes.
 | `/calendar` | todo | |
 | `/categories/[slug]` | done | Children, series, standalone videos and files; generic title + sign-in page (401) for a members-only one |
 | `/directory` | done | plugins/profiles: name only by default, each contact detail its own yes, search by name and note only, noindex |
-| `/events` | todo | |
-| `/events/[slug]` | todo | |
+| `/events` | done | What's on; a members-only event is absent rather than refused |
+| `/events/[slug]` | done | The event, sign-up (no account needed), "Add to my calendar", and the next few dates of its repeat |
 | `/favorites` | done | plugins/favorites |
 | `/forms` | todo | |
 | `/forms/[slug]` | todo | |
@@ -144,7 +144,7 @@ commit as the code it describes.
 | `/profile` | done | Overview: unread count and plugin cards (profile.overview) |
 | `/profile/devices` | todo | |
 | `/profile/downloads` | done | This device’s saved videos (self-healing), Wi-Fi-only choice, space used and the browser quota |
-| `/profile/events` | todo | |
+| `/profile/events` | done | The member's own sign-ups, and cancelling from there |
 | `/profile/groups` | todo | |
 | `/profile/inbox` | done | Mark one/all read, open, delete one/all; push toggle slot for the notifications plugin |
 | `/profile/rota` | todo | |
@@ -201,12 +201,12 @@ commit as the code it describes.
 | `/api/admin/editors` | GET | done |  |
 | `/api/admin/editors/series/[id]` | DELETE | done |  |
 | `/api/admin/editors/series` | POST | done | By email |
-| `/api/admin/events/[id]/registrations/[registrationId]` | DELETE | todo | |
-| `/api/admin/events/[id]/registrations` | GET | todo | |
-| `/api/admin/events/[id]` | PATCH DELETE | todo | |
-| `/api/admin/events` | GET POST | todo | |
-| `/api/admin/events/series/[id]` | PATCH DELETE | todo | |
-| `/api/admin/events/series` | GET POST | todo | |
+| `/api/admin/events/[id]/registrations/[registrationId]` | DELETE | done | Cancels the place and moves the waiting list |
+| `/api/admin/events/[id]/registrations` | GET | done | `?format=csv` for the door; no account id in either shape |
+| `/api/admin/events/[id]` | PATCH DELETE | done | Raising the capacity moves the waiting list; deleting one date of a series adds it to the exclusion list in the same transaction |
+| `/api/admin/events` | GET POST | done | `manage_events` |
+| `/api/admin/events/series/[id]` | PATCH DELETE | done | Changing the timing clears empty future dates and lays them down again; DELETE stops the repeat without deleting anybody's place |
+| `/api/admin/events/series` | GET POST | done | Takes the five shapes (`shape`, `days`, `interval`, `count`/`until`) or a raw `rule`; answers with the rule in words |
 | `/api/admin/files/[id]/contents` | GET PUT | todo | |
 | `/api/admin/files/[id]/lyrics` | GET PUT | todo | |
 | `/api/admin/files/[id]/replace` | POST | done | Takes a chunked upload id; the Bunny Storage pick arrives with that provider |
@@ -297,12 +297,12 @@ commit as the code it describes.
 | `/api/admin/webhooks` | GET POST | done | public addresses only; the secret encrypted, shown only as `secretSet` |
 | `/api/auth/registration-check` | POST | done | Bearer secret from settings, fails closed, {allowed} only, rate-limited, records SIGNUP refusals |
 | `/api/calendar-events` | GET | todo | |
-| `/api/calendar/[token]/marine-team.ics` | GET | todo | |
+| `/api/calendar/[token]/marine-team.ics` | GET | done | The member's own diary; the token is the whole of the authentication, `private, no-store`, `X-Robots-Tag: noindex`, and on the export's forbidden-key list. Plugins fill it through `calendar.entries` |
 | `/api/comments/[id]/report` | POST | done | once per member, never one's own |
 | `/api/comments/[id]` | DELETE | done | the author, or a moderator for that part of the library |
 | `/api/comments` | GET POST | done | GET for anybody who may open the page; POST `{seriesId|videoId, body, parentId?}` members, one level of replies, 10 a minute |
 | `/api/cron/broadcasts` | GET | todo | |
-| `/api/cron/extend-events` | GET | todo | |
+| `/api/cron/extend-events` | GET | done | Job `extend-events`, daily at 02:20 UTC through /cron/run; keeps every series filled in six months ahead |
 | `/api/cron/notification-digest` | GET | done | Job `notification-digest`, daily at 13:00 UTC (plugins/notifications) |
 | `/api/cron/schedule-reminders` | GET | todo | |
 | `/api/cron/sync-schedules` | GET POST | todo | |
@@ -310,7 +310,7 @@ commit as the code it describes.
 | `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min through /cron/run; abandoned upload placeholders marked FAILED after a day |
 | `/api/cron/transcribe` | GET | done | Job `transcribe` every 10 minutes through /cron/run, 20 s budget for starting work; stale RUNNING (30 min) re-queued |
 | `/api/downloads/[videoId]` | GET | done | Four gates after canViewVideo; an MP4 link or the specific reason there isn’t one |
-| `/api/events/[slug]/register` | POST DELETE | todo | |
+| `/api/events/[slug]/register` | POST DELETE | done | Under a row lock on the event, so the last place goes to one person; honeypot and a per-address limit for visitors |
 | `/api/favorites` | POST | done | `{seriesId}` or `{videoId}` toggles → `{favorited}`; 404 for what the member can't open; 403 `plugin_disabled` where a category switches it off |
 | `/api/files/[id]/content` | GET | done | ContentAccess per request; Range, ETag/304, private no-cache, ?download=1; X-Sendfile family via RangeStreamer |
 | `/api/files/[id]/search` | GET | todo | |
@@ -342,7 +342,7 @@ commit as the code it describes.
 | `/api/prayer/[id]/pray` | POST | done | Members; a number, never a list of names; twice is not two |
 | `/api/prayer/[id]` | DELETE | done | The writer's, and the moderator's; anybody else gets 404 |
 | `/api/prayer` | GET POST | done | Every read goes through `Prayer::visibleTo`; asking is open to visitors, with a honeypot and a per-address and per-account limit |
-| `/api/profile/calendar` | POST DELETE | todo | |
+| `/api/profile/calendar` | POST DELETE | done | Makes, replaces or stops the member's calendar link |
 | `/api/profile/devices/[id]` | DELETE | todo | |
 | `/api/profile/devices` | GET | todo | |
 | `/api/profile/export` | GET | done | Every member-keyed table, scoped queries, assertExportSafe, 2/min from the audit log |
@@ -386,8 +386,8 @@ commit as the code it describes.
 | `/api/watch-progress/mark-watched` | POST | done | The one way to clear a completion |
 | `/api/watch-progress` | POST | done | Only ever sets completed; never clears it |
 | `/auth/guest` | GET | partial | 404s unless the switch is open and the primary provider can build a guest URL (Auth0, step 3) |
-| `/events/[slug]/event.ics` | GET | todo | |
-| `/events/calendar.ics` | GET | todo | |
+| `/events/[slug]/event.ics` | GET | done | A members-only event refuses this outright: a calendar application has nobody to check |
+| `/events/calendar.ics` | GET | done | The public feed; member-only events are absent |
 | `/feed.xml` | GET | done | Built as a visitor sees the site, whoever asks |
 | `/s/[token]` | GET | todo | |
 | `/series/[slug]/podcast.xml` | GET | done | Opted-in audio only; 404 for a members-only series; enclosure is /api/files/[id]/content until the Bunny public zone arrives (3.6) |
@@ -471,9 +471,9 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | PersonAlias | `person_aliases` | todo | |
 | CalendarEvent | `calendar_events` | todo | |
 | CalendarEventPerson | `calendar_event_people` | todo | |
-| Event | `events` | todo | |
-| EventSeries | `event_series` | todo | |
-| EventRegistration | `event_registrations` | todo | |
+| Event | `events` | done | plugins/events |
+| EventSeries | `event_series` | done | Generated dates are ordinary events; `SetNull` on stopping, never a cascade |
+| EventRegistration | `event_registrations` | done | Cancelling keeps the row, so signing up again reuses it |
 | Form | `forms` | todo | |
 | FormField | `form_fields` | todo | |
 | FormSubmission | `form_submissions` | todo | |
@@ -522,8 +522,8 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/directory.test.ts` | done | tests/Unit/Plugins/DirectoryTest.php (every case) and tests/Integration/DiscoveryPluginsTest.php |
 | `lib/download-source.test.ts` | done | tests/Unit/Video/DownloadSourceTest.php |
 | `lib/downloads.test.ts` | done | tests/Unit/DownloadsTest.php |
-| `lib/event-series.test.ts` | todo | |
-| `lib/events.test.ts` | todo | |
+| `lib/event-series.test.ts` | done | tests/Unit/Plugins/EventSeriesTest.php (every case) |
+| `lib/events.test.ts` | done | tests/Unit/Plugins/EventsTest.php (every case) and tests/Integration/EventsTest.php |
 | `lib/filename.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/forms.test.ts` | todo | |
 | `lib/group-messages.test.ts` | todo | |
@@ -531,7 +531,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/guides.test.ts` | todo | |
 | `lib/hymnal.test.ts` | todo | |
 | `lib/i18n/i18n.test.ts` | done | tests/Unit/I18n/I18nTest.php |
-| `lib/ics.test.ts` | todo | |
+| `lib/ics.test.ts` | done | tests/Unit/Support/IcsTest.php (every case) |
 | `lib/identity-linking.test.ts` | done | tests/Unit/Access/IdentityLinkingTest.php |
 | `lib/live-chat.test.ts` | done | tests/Unit/Plugins/LiveChatTest.php (every case) and tests/Integration/LiveTest.php |
 | `lib/names.test.ts` | todo | |
@@ -548,7 +548,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/push-endpoint.test.ts` | done | tests/Unit/Push/PushEndpointTest.php |
 | `lib/reader-cache.test.ts` | todo | |
 | `lib/reader.test.ts` | todo | |
-| `lib/recurrence.test.ts` | todo | |
+| `lib/recurrence.test.ts` | done | tests/Unit/Plugins/RecurrenceTest.php (every case) |
 | `lib/reorder.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/rota.test.ts` | todo | |
 | `lib/schedules/duplicates.test.ts` | todo | |
@@ -652,6 +652,13 @@ met, with the reason.
 - **Whoever asks for prayer chooses who may see it, a visitor included.** The brief gives the three audiences to whoever writes the request without saying that a visitor is excluded, and "this shouldn't be a wall at all" is a visitor's decision as much as a member's. Members are the default, and nothing is shown to anybody until a moderator has read it.
 - **The prayer wall's limits are 5 requests an hour per account and 20 per address.** The brief asks for both; the numbers are the port's. A single address is the looser of the two because a church shares one office network.
 - **"Take down" and "delete" are different acts on the wall**: taking one down sets `HIDDEN` and keeps the row (the decision survives, and the same words can't be reposted past it), while delete removes it — the writer's own, or a moderator's for good. Only the second is a delete.
+- **iCalendar writing is core (`App\Support\Ics`), not the events plugin's**, because three different features answer "who is this for" with a calendar: what's on, one event, and the member's own diary. The personal feed and its token live in the profile area (`App\Modules\Profile\Calendar`), and plugins fill it through the `calendar.entries` filter, so a rota can add to the same file later without the events plugin knowing.
+- **A repeat is described in words by the server**, and the form offers the five shapes rather than an RRULE box; `Series::ruleFromChoices` is the only thing that writes a rule, and it round-trips through the parser before it is stored, so a rule this app can't expand can't be saved.
+- **A rule this app can't compute is refused rather than ignored**: `BYSETPOS`, `BYWEEKNO`, `BYYEARDAY`, a `WKST` other than Monday, and combinations that don't mean what they look like (a numbered weekday with `FREQ=WEEKLY`, `BYMONTHDAY` with a weekly rule, `COUNT` and `UNTIL` together). Ignoring a part answers a question nobody asked.
+- **An occurrence list is capped at 500 days and gives up after 400 empty periods.** The brief asks for both without naming the numbers; a rule that can never land again (the 30th of February) answers with its start date alone.
+- **An event with no stated finish is over at the end of its own day**, which is what `registrationState` counts as "over" — it is not over the minute it starts.
+- **A visitor's sign-up is limited to 20 an hour per address, with a honeypot**; a signed-in member's is not, since the account is the limit. Cancelling and signing up again reuse the same row, which is the record that they were coming.
+- **`/admin/events/[id]` is the port's own screen** (the original has the page, not the shape): one event's fields and the list for the door, with the CSV beside it.
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -706,3 +713,13 @@ met, with the reason.
   the request's words kept out of the audit log. 19 unit tests (the
   original's case list) and 6 integration tests, plus a Chromium run of a
   visitor asking, a moderator letting it through and a member praying.
+- 2026-09-26 — events (plugins/events): /events, /events/[slug], /admin/events
+  and /admin/events/[id], sign-up without an account under a row lock on the
+  event (a four-way simultaneous burst through curl_multi gets one yes and
+  three places on the list), guests counted as places, a waiting list that
+  moves on a drop-out or a raised capacity and stops at the first party that
+  doesn't fit, repeats from real RRULEs with the five shapes a diary
+  contains, the daily extend-events job, and the three calendar feeds —
+  what's on, one event, and the member's own diary behind a token
+  (App\Support\Ics and App\Modules\Profile\Calendar, both core). 103 new
+  unit tests (recurrence, events, series, ics) and 6 integration tests.

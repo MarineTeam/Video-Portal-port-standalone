@@ -62,6 +62,7 @@ final class Routes
         $r->add('PATCH', '/api/profile', [$self, 'update'], [$member]);
         $r->add('DELETE', '/api/profile', [$self, 'deleteAccount'], [$member]);
         $r->get('/api/profile/export', [$self, 'export'], [$member]);
+        Calendar::register($r, $app, $member);
         // The port's additions for local accounts.
         $r->post('/api/profile/password', [$self, 'changePassword'], [$member]);
         $r->add('DELETE', '/api/profile/sessions', [$self, 'signOutElsewhere'], [$member]);
@@ -155,6 +156,7 @@ final class Routes
             'email' => (string) $user['email'],
             'hasPassword' => ($user['password_hash'] ?? null) !== null,
             'otherSessions' => (int) $this->db()->value('SELECT COUNT(*) FROM {{sessions}} WHERE user_id = ? AND id_hash <> ?', [$this->userId(), $this->app->session()->idHash()]),
+            'calendarUrl' => Calendar::url(Calendar::tokenFor($this->db(), $this->userId())),
             'extra' => $this->capture('profile.settings'),
         ]);
     }

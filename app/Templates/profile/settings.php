@@ -7,6 +7,7 @@
  * @var string $email
  * @var bool $hasPassword
  * @var int $otherSessions
+ * @var ?string $calendarUrl the member's own diary feed, once they ask for one
  * @var string $extra what plugins add
  */
 $has = static fn (string $key): bool => array_key_exists($key, $fields);
@@ -110,6 +111,20 @@ $has = static fn (string $key): bool => array_key_exists($key, $fields);
   <?php if ($otherSessions > 0): ?>
     <p class="small"><?= e(t('settings.otherSessions', ['count' => $otherSessions])) ?></p>
     <div><button class="button small" type="button" data-api="/api/profile/sessions" data-method="DELETE"><?= e(t('settings.signOutElsewhere')) ?></button></div>
+  <?php endif ?>
+</section>
+
+<section class="card stack narrow">
+  <h2><?= e(t('settings.calendar')) ?></h2>
+  <p class="small muted"><?= e(t('settings.calendarHint')) ?></p>
+  <?php if ($calendarUrl !== null): ?>
+    <p><input type="text" readonly value="<?= e($calendarUrl) ?>" aria-label="<?= e(t('settings.calendar')) ?>" data-copy-link="<?= e($calendarUrl) ?>"></p>
+    <div class="row">
+      <button class="button small" type="button" data-api="/api/profile/calendar" data-method="POST" data-confirm="<?= e(t('settings.calendarReplaceConfirm')) ?>"><?= e(t('settings.calendarReplace')) ?></button>
+      <button class="button small danger" type="button" data-api="/api/profile/calendar" data-method="DELETE" data-confirm="<?= e(t('settings.calendarStopConfirm')) ?>"><?= e(t('settings.calendarStop')) ?></button>
+    </div>
+  <?php else: ?>
+    <div><button class="button" type="button" data-api="/api/profile/calendar" data-method="POST"><?= e(t('settings.calendarMake')) ?></button></div>
   <?php endif ?>
 </section>
 
