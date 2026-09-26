@@ -88,7 +88,8 @@ function finished(state) {
   if (state.unknown.length) lines.push(`The export also held ${state.unknown.join(', ')}, which this site has no table for.`);
   for (const one of state.dropped) lines.push(`${one.model}: no column here for ${one.fields.join(', ')}.`);
   if (state.errors.length) {
-    lines.push(`${state.errors.length} row${state.errors.length === 1 ? '' : 's'} were refused, the first being: ${state.errors[0].model} ${state.errors[0].id} — ${state.errors[0].message}`);
+    const n = state.errors.length;
+    lines.push(`${n} row${n === 1 ? ' was' : 's were'} refused, the first being: ${state.errors[0].model} ${state.errors[0].id} — ${state.errors[0].message}`);
   }
   importStatus.textContent = lines.join(' ');
 }
@@ -122,5 +123,56 @@ importForm?.addEventListener('submit', async (event) => {
     importError.hidden = false;
   } finally {
     button.disabled = false;
+  }
+});
+
+// Files the old site kept in Bunny Storage, copied here a batch per request.
+const pullBox = document.querySelector('[data-pull]');
+const pullStart = pullBox?.querySelector('[data-pull-start]');
+const pullProgress = pullBox?.querySelector('[data-pull-progress]');
+const pullStatus = pullBox?.querySelector('[data-pull-status]');
+const pullFailures = pullBox?.querySelector('[data-pull-failures]');
+const pullError = pullBox?.querySelector('[data-error]');
+
+pullStart?.addEventListener('click', async () => {
+  pullStart.disabled = true;
+  pullError.hidden = true;
+  pullProgress.hidden = false;
+  // Keyed by id: a file that fails is left where it is, so the next
+  // request tries it again and would otherwise be counted twice.
+  const failures = new Map();
+  let moved = 0;
+  let bytes = 0;
+  try {
+    // The first answer says how many are left, which is what the bar is a
+    // fraction of; before that there is nothing to be a fraction of.
+    let total = null;
+    for (;;) {
+      const result = await MT.api('/api/admin/tools/pull-files', { method: 'POST' });
+      moved += result.moved;
+      bytes += result.bytes;
+      for (const one of result.failures) failures.set(one.id, one);
+      total ??= result.left + result.moved;
+      pullProgress.value = total ? Math.round(((total - result.left) / total) * 100) : 100;
+      pullStatus.textContent = `${moved.toLocaleString()} copied (${size(bytes)}), ${result.left.toLocaleString()} to go…`;
+      // Everything that is left is something already known to fail.
+      if (result.left <= failures.size) break;
+    }
+    pullStatus.textContent = failures.size === 0
+      ? `Done: ${moved.toLocaleString()} files (${size(bytes)}) are now kept here.`
+      : `${moved.toLocaleString()} copied (${size(bytes)}). ${failures.size} could not be read and still point at the old storage:`;
+    if (failures.size) {
+      pullFailures.replaceChildren(...[...failures.values()].map((one) => {
+        const li = document.createElement('li');
+        li.textContent = `${one.title} — ${one.why}`;
+        return li;
+      }));
+      pullFailures.hidden = false;
+    }
+  } catch (error) {
+    pullError.textContent = error.message;
+    pullError.hidden = false;
+  } finally {
+    pullStart.disabled = false;
   }
 });

@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers, the book and hymnal reader, the read API and API keys; the Next.js import remains) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups, service plans and the rota, schedules and Google Sheets, television, broadcasts and the SMS providers, the book and hymnal reader, the read API and API keys, the Next.js export and import) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -29,7 +29,7 @@ commit as the code it describes.
 | Area | Kind | Status | Notes |
 |---|---|---|---|
 | Core framework (Router, Db, View, Session, Csrf, Http, Hooks, Cache, Jobs, Migrator, Log, errors) | core | done | app/Core; PHPStan level 6 clean |
-| Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | partial | Installer done and covered by the smoke test; /admin/update done (maintenance, resumable migrations, signed release zips with rollback; verified end to end against a scratch install); /admin/tools backup (.sql.gz a step per request, restores exactly — BackupTest) and files in 100 MB parts done; the Next.js import pending |
+| Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | partial | Installer done and covered by the smoke test; /admin/update done (maintenance, resumable migrations, signed release zips with rollback; verified end to end against a scratch install); /admin/tools backup (.sql.gz a step per request, restores exactly — BackupTest) and files in 100 MB parts done; the Next.js import done (see the row below) |
 | Services registry and Admin → Services | core | partial | Registry, generated forms, signed test-then-switch at /admin/providers; auth trial-mode switch arrives with external providers |
 | Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | done | Admin, providers, player, public pages, search, feeds, sitemap, JSON-LD, share links, downloads, video feeds, home rows, chapters, transcription, media check; the library's plugins (comments, related, up next…) come with step 4 |
 | Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | partial | API keys done (/admin/api-keys, hashed at rest, scopes, per-key rate limit); the rest with the auth work |
@@ -44,7 +44,7 @@ commit as the code it describes.
 | Schedules and Google Sheets | plugin | todo | |
 | Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall, events with repeats and calendar feeds, forms, and small groups with attendance, guides and the thread (plugins/groups) done; broadcasts and SMS todo |
 | Television | plugin | todo | |
-| Data import from the Next.js deployment (`tools/export-from-nextjs`, `/admin/tools/import`) | core | todo | |
+| Data import from the Next.js deployment (`tools/export-from-nextjs`, `/admin/tools/import`) | core | done | export.mjs (pg, a server-side cursor, its own zip writer, no dependency but pg) and the three-phase resumable importer on /admin/tools; counts checked against the manifest; files still in Bunny Storage pulled across in batches |
 
 ### Service providers
 
@@ -597,6 +597,10 @@ met, with the reason.
 - **`sw.js` and `offline.html` derive the base path** (from the service worker's own URL) and prefix their literal paths with it. At a domain root they behave byte-for-byte as before.
 - **Schema additions:** `users.password_hash`, `email_verified_at`, `pending_email` (local accounts); `file_assets.backend`, `storage_path` (was `bunnyPath`), `upload_pending`; `push_subscriptions.endpoint_hash` (the unique index; a push URL can outrun an index prefix); `broadcast_recipients.provider`, `provider_message_id`, `delivery_status`, `delivered_at` (SMS receipts); plus `series_tags`, `video_scripture_books`, `sessions`, `services`, `settings`, `jobs`, `email_log`, `auth_tokens`, `rate_limits`, `uploads`. Tables are plural snake_case (`watch_progresses`, `people`).
 - **`/auth/recover`** is new under `/auth/*`: with `storage/enable-local-login` present it sets an administrator's password against a code written to `storage/recovery.key` — the lockout path when email isn't set up.
+- **The importer mints a new object name for a file it pulls out of Bunny.**
+  Files were uploaded there under their own names, and "Hymnal Scan
+  (2019).pdf" is not a name a local store will take; nothing outside the row
+  reads that column, so the copy gets the port's own `files/<id>.<ext>`.
 - **v1 cursors are base64url, not the raw sort value.** The cursor is
   `"<sortValue>|<id>"` encoded, because the sort value is a datetime with a
   space in it and a bare one does not survive a query string.
@@ -865,3 +869,27 @@ met, with the reason.
   count and never an address at any scope, and the limit rolling over
   rather than locking a key out. 1099 unit, 147 integration, 62
   browser-module tests.
+
+- 2026-09-26 — the data import from the Next.js deployment, both halves.
+  `tools/export-from-nextjs/export.mjs` runs on a laptop against the old
+  database's direct connection string and writes a zip of newline-delimited
+  JSON with a manifest of the counts; it reads through a server-side cursor
+  so a large table need not fit in memory, takes timestamps as text so the
+  laptop's own time zone cannot move every service time on the way through,
+  and depends on nothing but `pg` — the zip writer is 60 lines here rather
+  than a toolchain somebody has to install before they can leave a platform.
+  The importer on /admin/tools unpacks, loads and relinks, each phase
+  resumable. Names convert by rule, with a short list of the three places
+  the port renamed something and a test that reads the migration and fails
+  if one of them stops naming a real column. Load order comes from the
+  database's own foreign keys, so a new key cannot make a hand-kept list
+  quietly wrong, and the three columns that point within their own table are
+  filled after everything is in. Files left behind in Bunny Storage are
+  pulled across a batch per request, each repointed only once its bytes are
+  here. Verified in Chromium against a hand-built export: a category written
+  before its parent found it, tags were deduplicated and lower-cased into
+  their index, a Bunny video kept its guid as the id at its provider, a
+  timestamp came through in UTC, the row too long for its column was
+  reported with the database's own words while the rest went in, and the
+  paired television was left behind with the reason. 1114 unit, 160
+  integration, 62 browser-module tests.

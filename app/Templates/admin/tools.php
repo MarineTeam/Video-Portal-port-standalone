@@ -4,6 +4,7 @@
  * @var list<array{files: int, bytes: int}> $parts
  * @var bool $zip
  * @var int $tables
+ * @var array{files: int, bytes: int}|null $inBunny
  */
 $mb = static fn (int $bytes): string => $bytes >= 1048576 ? number_format($bytes / 1048576, 1) . ' MB' : number_format(max(1, (int) round($bytes / 1024))) . ' KB';
 ?>
@@ -66,5 +67,18 @@ $mb = static fn (int $bytes): string => $bytes >= 1048576 ? number_format($bytes
     <p class="error" data-error hidden></p>
   <?php endif ?>
 </div>
+
+<?php if ($inBunny !== null): ?>
+<h2>Files still at the old storage</h2>
+<div class="card stack" data-pull>
+  <p><?= e(number_format($inBunny['files'])) ?> file<?= $inBunny['files'] === 1 ? '' : 's' ?> (<?= e($mb($inBunny['bytes'])) ?>) are still kept in Bunny Storage, where the old site put them. This site keeps its files elsewhere, so it can’t serve them from there.</p>
+  <p class="small muted">Copying them here reads each one out of Bunny and writes it where this site keeps files, a few per request. Nothing is deleted from Bunny: a file that can’t be read is left pointing at it, still working, and named below.</p>
+  <div class="row"><button class="button" type="button" data-pull-start>Copy them to this server</button></div>
+  <progress data-pull-progress value="0" max="100" hidden></progress>
+  <p class="small" data-pull-status></p>
+  <ul class="small" data-pull-failures hidden></ul>
+  <p class="error" data-error hidden></p>
+</div>
+<?php endif ?>
 
 <script type="module" src="<?= e(asset('js/tools.js')) ?>"></script>

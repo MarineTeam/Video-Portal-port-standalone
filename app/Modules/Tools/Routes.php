@@ -11,6 +11,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
 use App\Modules\Audit\Audit;
+use App\Modules\Tools\Import\FilePull;
 use App\Modules\Tools\Import\Importer;
 use App\Modules\Tools\Import\Mapping;
 use App\Modules\Uploads\Uploads;
@@ -38,6 +39,7 @@ final class Routes
         $r->post('/api/admin/tools/import', [$self, 'importStart'], [$admin]);
         $r->post('/api/admin/tools/import/[id]/step', [$self, 'importStep'], [$admin]);
         $r->get('/api/admin/tools/import/[id]', [$self, 'importState'], [$admin]);
+        $r->post('/api/admin/tools/pull-files', [$self, 'pullFiles'], [$admin]);
     }
 
     private function actor(): string
@@ -48,11 +50,13 @@ final class Routes
     public function page(Request $req): Response
     {
         $parts = (new UploadsArchive($this->app))->parts();
+        $pull = new FilePull($this->app);
         return $this->app->page('admin/tools', [
             'title' => 'Backup & import',
             'parts' => array_map(fn ($p) => ['files' => count($p['files']), 'bytes' => $p['bytes']], $parts),
             'zip' => class_exists(\ZipArchive::class),
             'tables' => count((new Backup($this->app))->tables()),
+            'inBunny' => $pull->needed() ? $pull->pending() : null,
         ], 200, 'layouts/admin');
     }
 
@@ -131,6 +135,22 @@ final class Routes
             throw ApiError::notFound('That import has gone; upload the export again.');
         }
         return Response::json(self::importPublic($state));
+    }
+
+    /**
+     * Files still in the old site's Bunny Storage, a batch onto this server.
+     */
+    public function pullFiles(Request $req): Response
+    {
+        try {
+            $result = (new FilePull($this->app))->step();
+        } catch (\RuntimeException $e) {
+            throw ApiError::invalid($e->getMessage());
+        }
+        if ($result['moved'] > 0) {
+            Audit::log($this->app->db(), $this->actor(), 'import.files', 'Site', (string) $result['moved'] . ' files');
+        }
+        return Response::json($result);
     }
 
     /**
