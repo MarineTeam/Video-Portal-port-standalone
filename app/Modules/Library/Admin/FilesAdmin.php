@@ -14,6 +14,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
 use App\Core\Validator;
+use App\Modules\Audit\Audit;
 use App\Modules\Files\UploadTypes;
 use App\Modules\Library\Presenter;
 use App\Modules\Library\Visibility;
@@ -40,6 +41,10 @@ final class FilesAdmin
         $self = new self($app, new Catalog($app));
         $can = Middleware::can($app, 'manage_files', anywhere: true);
         $r->get('/admin/files', [$self, 'page'], [$can]);
+        // What is at Bunny against what this site thinks is at Bunny. An
+        // administrator's question rather than a file editor's: it names
+        // things nobody here has a row for.
+        $r->get('/api/admin/bunny-audit', [$self, 'bunnyAudit'], [Middleware::admin($app)]);
         $r->get('/api/admin/files', [$self, 'list'], [$can]);
         $r->post('/api/admin/files', [$self, 'create'], [$can]);
         $r->post('/api/admin/files/bulk', [$self, 'bulk'], [$can]);
@@ -120,6 +125,26 @@ final class FilesAdmin
             $params,
         );
         return ['rows' => $rows, 'total' => $total];
+    }
+
+    /**
+     * GET /api/admin/bunny-audit: objects and videos at Bunny that no row
+     * points at, and rows pointing at things that are not there.
+     *
+     * Slow by nature — it walks the zone a folder per request — so it is an
+     * endpoint somebody asks for rather than something a page loads.
+     */
+    public function bunnyAudit(Request $req): Response
+    {
+        $audit = (new BunnyAudit($this->app))->run();
+        Audit::log($this->app->db(), (string) $this->app->currentUser()->email(), 'bunny.audit', 'Site', null, sprintf(
+            '%d orphaned files, %d missing; %d orphaned videos, %d missing',
+            count($audit['files']['orphans']),
+            count($audit['files']['missing']),
+            count($audit['videos']['orphans']),
+            count($audit['videos']['missing']),
+        ));
+        return Response::json($audit);
     }
 
     public function page(Request $req): Response

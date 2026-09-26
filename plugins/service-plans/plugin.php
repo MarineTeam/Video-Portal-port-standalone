@@ -59,6 +59,8 @@ return new class (__DIR__) extends BasePlugin {
 
             $r->get('/services', fn () => $this->listPage($app));
             $r->get('/services/[id]', fn (Request $req, array $p) => $this->planPage($app, (string) $p['id']));
+            // A running order kept on the device for the Sunday it is for.
+            $r->get('/api/offline/service/[id]', fn (Request $req, array $p) => $this->offlinePlan($app, $req, (string) $p['id']));
             $r->get('/profile/rota', fn () => $this->rotaPage($app), [$member]);
             $r->post('/api/rota', fn (Request $req) => $this->rotaAction($app, $req), [$member]);
             $r->add('DELETE', '/api/rota', fn (Request $req) => $this->removeBlockout($app, $req), [$member]);
@@ -121,6 +123,32 @@ return new class (__DIR__) extends BasePlugin {
      * @param array<string, mixed> $plan
      * @return list<array<string, mixed>>
      */
+    /**
+     * A running order as JSON, for a device with no connection.
+     *
+     * The same decision as the page it mirrors — an unpublished plan is not
+     * readable here just because the reader is a script, and each item
+     * carries its words only if this reader may open it. `?probe=1` answers
+     * "is what I saved still what you would send" without sending it, which
+     * is the whole point on a phone in a church hall.
+     */
+    private function offlinePlan(App $app, Request $req, string $id): Response
+    {
+        $plan = $this->findPlan($app->db(), $id);
+        if (!$plan['published'] && !$this->canManage($app)) {
+            throw ApiError::notFound();
+        }
+        $payload = Services::offlinePlan($plan, $this->items($app, $plan));
+        if (($req->query('probe') ?? '') !== '') {
+            return Response::json([
+                'id' => $payload['id'],
+                'fingerprint' => $payload['fingerprint'],
+                'items' => count($payload['items']),
+            ]);
+        }
+        return Response::json($payload);
+    }
+
     private function items(App $app, array $plan): array
     {
         $db = $app->db();
@@ -155,6 +183,11 @@ return new class (__DIR__) extends BasePlugin {
                 'href' => $readable ? Services::planItemHref($row, $file, $series) : null,
                 'presentHref' => $presentable ? Services::presentHref($row, $file, $series, (string) $plan['id']) : null,
                 'credits' => $this->credits($file, $detail),
+                // Only a reader who may open it gets the words, here as on
+                // the page: the offline copy is a copy of what they can see.
+                'words' => $readable
+                    ? trim((string) (Services::isHymnFile($series) ? ($row['lyrics_text'] ?? '') : ($detail['lyrics_text'] ?? '')))
+                    : '',
             ];
         }
         return $out;

@@ -127,4 +127,42 @@ final class Services
         }
         return '/present/' . $file['id'] . ($query === [] ? '' : '?' . http_build_query($query));
     }
+
+    /**
+     * A running order as a device keeps it, and a token for "is the order I
+     * saved still the order".
+     *
+     * Its own payload rather than the page's: a plan is kept for one Sunday
+     * and thrown away after it, so what goes on the device is the words
+     * themselves, not links to fetch them from a church hall with no signal.
+     *
+     * The fingerprint covers what is actually handed out — the order, the
+     * numbers, the titles and the words — because a device holding last
+     * week's third verse would sing last week's third verse. The count is in
+     * it too, so a collision cannot read as unchanged.
+     *
+     * @param array<string, mixed> $plan
+     * @param list<array<string, mixed>> $items
+     * @return array{id: string, title: string, date: ?string, notes: ?string, items: list<array<string, mixed>>, fingerprint: string}
+     */
+    public static function offlinePlan(array $plan, array $items): array
+    {
+        $rows = [];
+        foreach ($items as $item) {
+            $rows[] = implode("\x1f", [
+                (string) ($item['number'] ?? ''),
+                trim((string) ($item['title'] ?? '')),
+                trim((string) ($item['words'] ?? '')),
+                trim((string) ($item['note'] ?? '')),
+            ]);
+        }
+        return [
+            'id' => (string) $plan['id'],
+            'title' => (string) $plan['title'],
+            'date' => $plan['service_date'] === null ? null : substr((string) $plan['service_date'], 0, 10),
+            'notes' => $plan['notes'],
+            'items' => $items,
+            'fingerprint' => count($rows) . '-' . substr(hash('sha256', implode("\x1e", $rows)), 0, 32),
+        ];
+    }
 }

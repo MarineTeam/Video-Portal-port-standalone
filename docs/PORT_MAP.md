@@ -189,7 +189,7 @@ commit as the code it describes.
 | `/api/admin/broadcasts/[id]/send` | POST | done | Freezes the list on the first call, then works a batch at a time; the browser calls it until nothing is pending |
 | `/api/admin/broadcasts/[id]/test` | POST | done | To whoever asked, whatever they have switched off — they are asking to see it |
 | `/api/admin/broadcasts` | GET POST | done | Plus `/preview` for the count, and `/[id]/cancel` to stop one part-way |
-| `/api/admin/bunny-audit` | GET | todo | |
+| `/api/admin/bunny-audit` | GET | done | What is at Bunny against what this site thinks is: orphans (paid for, unreachable) and missing objects (a download that will fail). Deletes nothing |
 | `/api/admin/calendar-events/[id]` | GET PATCH DELETE | done | |
 | `/api/admin/categories/[id]` | PATCH DELETE | done | `{move: up|down|n}` reorders; DELETE trashes |
 | `/api/admin/categories` | GET POST | done | Top-level creation for administrators only |
@@ -333,7 +333,7 @@ commit as the code it describes.
 | `/api/notes/[id]` | PATCH DELETE | done | the member's own |
 | `/api/notes` | GET POST | done | `?videoId`; `&format=text` downloads the sheet and the notes as one text file |
 | `/api/offline/hymnal/[seriesId]` | GET | done | A hymn-per-file series as JSON, with `?probe=1` answering only its fingerprint |
-| `/api/offline/service/[id]` | GET | todo | |
+| `/api/offline/service/[id]` | GET | done | plugins/service-plans; a running order with its words, fingerprinted over what is handed out, `?probe=1` for the token alone |
 | `/api/people` | GET | done | 403 without a session |
 | `/api/playlists/[id]/items` | POST PATCH DELETE | done | `{videoId}`; PATCH `{videoId, move}` or `{order}` |
 | `/api/playlists/[id]` | GET PATCH DELETE | done | `{playlist, items}`; PATCH `{title, public}` |

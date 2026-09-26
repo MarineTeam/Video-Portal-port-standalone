@@ -238,4 +238,48 @@ final class ServicePlansTest extends ServerTestCase
         self::assertStringContainsString('What we sang', self::http('GET', "/admin/services/report?$window")['body']);
         self::assertSame(403, self::api('GET', '/api/admin/services/report', null, 'ruth')['status']);
     }
+
+    public function test_9_a_running_order_can_be_kept_on_the_device(): void
+    {
+        $id = self::$ids['plan'];
+        $full = self::api('GET', "/api/offline/service/$id", null, 'ruth');
+        self::assertSame(200, $full['status'], (string) $full['body']);
+        self::assertSame($id, $full['json']['id']);
+        self::assertNotSame([], $full['json']['items']);
+        self::assertNotSame('', (string) $full['json']['fingerprint']);
+        self::assertSame(count($full['json']['items']), (int) explode('-', (string) $full['json']['fingerprint'])[0], 'the count is in the token');
+
+        // A probe answers the token without the order behind it.
+        $probe = self::api('GET', "/api/offline/service/$id?probe=1", null, 'ruth');
+        self::assertSame($full['json']['fingerprint'], $probe['json']['fingerprint']);
+        self::assertSame(count($full['json']['items']), $probe['json']['items']);
+        self::assertSame(['id', 'fingerprint', 'items'], array_keys($probe['json']), 'and carries a count rather than the order');
+        self::assertIsInt($probe['json']['items']);
+        self::assertLessThan(strlen((string) $full['body']), strlen((string) $probe['body']), 'so it is much smaller than the thing itself');
+    }
+
+    public function test_10_correcting_a_verse_changes_the_token_so_a_device_refetches(): void
+    {
+        $id = self::$ids['plan'];
+        $before = (string) self::api('GET', "/api/offline/service/$id?probe=1", null, 'ruth')['json']['fingerprint'];
+
+        $db = self::connect(self::prefix());
+        $was = (string) $db->value('SELECT lyrics_text FROM {{file_assets}} WHERE id = ?', [self::$ids['hymn']]);
+        $db->update('file_assets', ['lyrics_text' => $was . "\n\nAnd a verse nobody had typed before"], ['id' => self::$ids['hymn']]);
+
+        $after = (string) self::api('GET', "/api/offline/service/$id?probe=1", null, 'ruth')['json']['fingerprint'];
+        self::assertNotSame($before, $after, 'a device holding the old words would sing the old words');
+
+        $db->update('file_assets', ['lyrics_text' => $was], ['id' => self::$ids['hymn']]);
+        self::assertSame($before, (string) self::api('GET', "/api/offline/service/$id?probe=1", null, 'ruth')['json']['fingerprint'], 'and putting it back puts the token back');
+    }
+
+    public function test_11_a_draft_plan_is_not_kept_on_a_strangers_device(): void
+    {
+        $db = self::connect(self::prefix());
+        $db->update('service_plans', ['published' => 0], ['id' => self::$ids['plan']]);
+        self::assertSame(404, self::api('GET', '/api/offline/service/' . self::$ids['plan'], null, 'ruth')['status']);
+        self::assertSame(200, self::api('GET', '/api/offline/service/' . self::$ids['plan'])['status'], 'but whoever keeps the plans may still fetch it');
+        $db->update('service_plans', ['published' => 1], ['id' => self::$ids['plan']]);
+    }
 }
