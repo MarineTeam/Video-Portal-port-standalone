@@ -21,7 +21,7 @@ commit as the code it describes.
 | 2 | Foundation: core, schema, migrator, installer, local sign-in, users and capabilities, admin shell, branding, i18n, services registry (Files: local disk, Email: mail()), jobs, plugin/theme loaders, default theme | done (the Next.js import is tracked under Areas) |
 | 3 | Library: categories, series, videos and providers, player, files, search, trash, audit, permissions, share links, downloads, feeds, sitemap, metadata; remaining sign-in, email, files providers | done (3.1–3.6 and 3.2b: content core, admin CMS, providers and player, public pages/search/feeds/sitemap, share links/downloads/video feeds, the remaining providers; home rows, chapters, transcription, media check) |
 | 4 | Bundled plugins, simplest first | done (the 21 member plugins and comments; the rest of Appendix E — live streaming, book reader, service plans, schedules, events, groups, prayer, forms, television — are step 5) |
-| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms) |
+| 5 | Books/hymnals, services/rota, schedules/sheets, events, forms, prayer, groups, broadcasts/SMS, live, television, read API, export/import | in progress (live streaming and chat, prayer wall, events, forms, small groups) |
 | 6 | Hardening and docs: smoke test, security walk, INSTALL/PLUGINS/THEMES/UPGRADING/SERVICES, migration guide | todo |
 
 ## Areas (Feature inventory)
@@ -42,7 +42,7 @@ commit as the code it describes.
 | Live streaming and chat | plugin | done | plugins/live-streaming: /live, the "Live now" banner and nav entry, /admin/live, and a polling chat that opens half an hour early and closes an hour after |
 | Book reader, hymnals, service plans, rota | plugins | todo | |
 | Schedules and Google Sheets | plugin | todo | |
-| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall (plugins/prayer), events with repeats and calendar feeds (plugins/events) and forms (plugins/forms) done; groups, the directory's group side and broadcasts todo |
+| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | Prayer wall, events with repeats and calendar feeds, forms, and small groups with attendance, guides and the thread (plugins/groups) done; broadcasts and SMS todo |
 | Television | plugin | todo | |
 | Data import from the Next.js deployment (`tools/export-from-nextjs`, `/admin/tools/import`) | core | todo | |
 
@@ -97,8 +97,8 @@ commit as the code it describes.
 | `/admin/files` | done | FilesAdmin: chunked upload stored with the Files slot, inline edit, replace, bulk (incl. podcast), kind filter |
 | `/admin/forms` | done | The list, and adding one (`manage_events`) |
 | `/admin/forms/[id]` | done | Its settings, its questions (add, rename, reorder, retire) and every response, with the CSV beside them |
-| `/admin/groups` | todo | |
-| `/admin/groups/[id]` | todo | |
+| `/admin/groups` | done | The list, with a group that has no leader flagged (`manage_events`) |
+| `/admin/groups/[id]` | done | One group's fields and everybody against it, including who has only asked |
 | `/admin/home-rows` | done | Library\Admin\HomeRowsAdmin: toggle, rename, reorder the built-in rows; add category and tag rows; says when a row's plugin is off |
 | `/admin/live` | done | Schedule a stream (title, embed address, cover, start/end), publish it, switch its chat on and set slow mode (manage_plugins) |
 | `/admin/media-check` | done | Library\Admin\MediaCheckAdmin (see Deviations): videos whose service is gone, whose host-disk file is missing, stuck or failed, failed transcriptions; local files missing; pasted links checked on request; unused host-disk video files (administrators may delete) |
@@ -130,10 +130,10 @@ commit as the code it describes.
 | `/favorites` | done | plugins/favorites |
 | `/forms` | done | The published forms this reader may open |
 | `/forms/[slug]` | done | The form as its rows describe it; a members-only one is absent rather than refused |
-| `/groups` | todo | |
-| `/groups/[slug]` | todo | |
-| `/guides` | todo | |
-| `/guides/[slug]` | todo | |
+| `/groups` | done | The list somebody is choosing between: the district, never the address |
+| `/groups/[slug]` | done | The group, its requests for its leader, its conversation and its roll |
+| `/guides` | done | Published guides, counted in questions |
+| `/guides/[slug]` | done | The questions, the scripture and the notes; leader notes only for whoever leads a group |
 | `/hymns/[fileId]` | todo | |
 | `/link` | todo | |
 | `/live` | done | Whatever is on now, a countdown to the next one otherwise, "Coming up" underneath, and the chat beside it |
@@ -145,7 +145,7 @@ commit as the code it describes.
 | `/profile/devices` | todo | |
 | `/profile/downloads` | done | This device’s saved videos (self-healing), Wi-Fi-only choice, space used and the browser quota |
 | `/profile/events` | done | The member's own sign-ups, and cancelling from there |
-| `/profile/groups` | todo | |
+| `/profile/groups` | done | The member's own groups and asks |
 | `/profile/inbox` | done | Mark one/all read, open, delete one/all; push toggle slot for the notifications plugin |
 | `/profile/rota` | todo | |
 | `/profile/settings` | done | This device (theme, language, autoplay, speed, reading, bottom bar), account fields by plugin, password and sign-out-elsewhere, download my data, delete account |
@@ -224,13 +224,13 @@ commit as the code it describes.
 | `/api/admin/forms` | GET POST | done | `manage_events` |
 | `/api/admin/group-assignments/[id]` | DELETE | done |  |
 | `/api/admin/group-assignments` | GET POST | done | By userId or email; category xor series scope |
-| `/api/admin/groups/[id]/members/[memberId]` | DELETE | todo | |
-| `/api/admin/groups/[id]/members` | POST | todo | |
-| `/api/admin/groups/[id]` | GET PATCH DELETE | todo | |
-| `/api/admin/groups` | GET POST | todo | |
+| `/api/admin/groups/[id]/members/[memberId]` | DELETE | done | Taking somebody off moves the waiting list |
+| `/api/admin/groups/[id]/members` | POST | done | By email; this is how a site manager joins a conversation they need to read, leaving a row saying so |
+| `/api/admin/groups/[id]` | GET PATCH DELETE | done | `leaderEmail` also puts a leader in, since a group with nobody to answer a request is the failure this screen is for |
+| `/api/admin/groups` | GET POST | done | `manage_events` |
 | `/api/admin/guest-login` | GET PATCH | done |  |
-| `/api/admin/guides/[id]` | GET PATCH DELETE | todo | |
-| `/api/admin/guides` | GET POST | todo | |
+| `/api/admin/guides/[id]` | GET PATCH DELETE | done | plus POST `/api/admin/guides/[id]/items` and PATCH/DELETE on one item (the port's: the original edits items through the guide) |
+| `/api/admin/guides` | GET POST | done | With /admin/guides, the page the brief asks for |
 | `/api/admin/home-rows/[id]` | PATCH DELETE | done | title, enabled, move up/down; only curated rows delete |
 | `/api/admin/home-rows` | GET POST | done | POST creates CATEGORY/TAG rows only |
 | `/api/admin/live/[id]` | PATCH DELETE | done | Publishing one fires `live.published`, which tells members after the response has gone |
@@ -315,13 +315,13 @@ commit as the code it describes.
 | `/api/files/[id]/content` | GET | done | ContentAccess per request; Range, ETag/304, private no-cache, ?download=1; X-Sendfile family via RangeStreamer |
 | `/api/files/[id]/search` | GET | todo | |
 | `/api/forms/[slug]` | POST | done | `{answers: {fieldId: value}}`, honeypot and a per-address limit; the server decides what a valid answer is |
-| `/api/groups/[slug]/join` | POST DELETE | todo | |
-| `/api/groups/[slug]/meetings` | GET POST | todo | |
-| `/api/groups/[slug]/messages/[messageId]` | DELETE | todo | |
-| `/api/groups/[slug]/messages` | GET POST PATCH | todo | |
-| `/api/groups/[slug]/requests/[memberId]` | PATCH | todo | |
-| `/api/groups/[slug]/requests` | GET | todo | |
-| `/api/groups` | GET | todo | |
+| `/api/groups/[slug]/join` | POST DELETE | done | A full group takes the name in order; leaving frees a place and moves the list |
+| `/api/groups/[slug]/meetings` | GET POST | done | The roll: a member is given at most their own row, never a count |
+| `/api/groups/[slug]/messages/[messageId]` | DELETE | done | Hidden rather than deleted; the author's own, or a leader's decision |
+| `/api/groups/[slug]/messages` | GET POST PATCH | done | Standing is re-read from the database on every request; PATCH is the mute |
+| `/api/groups/[slug]/requests/[memberId]` | PATCH | done | The leader's answer. Only a yes is a notification |
+| `/api/groups/[slug]/requests` | GET | done | The group's own leaders, without a capability |
+| `/api/groups` | GET | done | Every group through `presentGroup`, so no answer can carry an address it shouldn't |
 | `/api/hymnals/search` | GET | todo | |
 | `/api/hymns/lookup` | POST | todo | |
 | `/api/inbox` | GET PATCH DELETE | done | `{notifications, hasMore, unreadCount}`; PATCH/DELETE take `{ids}` or `{all: true}` |
@@ -480,13 +480,13 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | FormAnswer | `form_answers` | done | Every answer is text; a multi-choice is its chosen options joined by a newline |
 | PrayerRequest | `prayer_requests` | done | plugins/prayer |
 | PrayerIntercession | `prayer_intercessions` | done | Unique per request and member |
-| SmallGroup | `small_groups` | todo | |
-| SmallGroupMember | `small_group_members` | todo | |
-| GroupMessage | `group_messages` | todo | |
-| DiscussionGuide | `discussion_guides` | todo | |
-| DiscussionGuideItem | `discussion_guide_items` | todo | |
-| SmallGroupMeeting | `small_group_meetings` | todo | |
-| GroupAttendance | `group_attendances` | todo | |
+| SmallGroup | `small_groups` | done | plugins/groups |
+| SmallGroupMember | `small_group_members` | done | Leaving keeps the row (DECLINED), so asking again is a conversation |
+| GroupMessage | `group_messages` | done | Taken down = hidden, dropped in the query and in the filter |
+| DiscussionGuide | `discussion_guides` | done | plugins/groups |
+| DiscussionGuideItem | `discussion_guide_items` | done | A LEADER_NOTE has no field on a member's shape to be printed from |
+| SmallGroupMeeting | `small_group_meetings` | done | One per group per day under the unique index |
+| GroupAttendance | `group_attendances` | done | Apologies is a status of its own |
 | Broadcast | `broadcasts` | todo | |
 | BroadcastRecipient | `broadcast_recipients` | todo | |
 | VideoFeed | `video_feeds` | done | |
@@ -504,7 +504,7 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/admin-nav.test.ts` | done | tests/Unit/Admin/AdminNavTest.php |
 | `lib/api-keys.test.ts` | todo | |
 | `lib/api-v1.test.ts` | todo | |
-| `lib/attendance.test.ts` | todo | |
+| `lib/attendance.test.ts` | done | tests/Unit/Plugins/AttendanceTest.php (every case) |
 | `lib/authorization.test.ts` | done | tests/Unit/Access/AuthorizationTest.php; the guest-login cases in tests/Integration/GuestLoginTest.php |
 | `lib/book-contents.test.ts` | todo | |
 | `lib/branding.test.ts` | done | tests/Unit/Branding/BrandingTest.php |
@@ -526,9 +526,9 @@ Each becomes a PHPUnit test class with the original case names.
 | `lib/events.test.ts` | done | tests/Unit/Plugins/EventsTest.php (every case) and tests/Integration/EventsTest.php |
 | `lib/filename.test.ts` | done | tests/Unit/Support/SupportTest.php |
 | `lib/forms.test.ts` | done | tests/Unit/Plugins/FormsTest.php (every case) and tests/Integration/FormsTest.php |
-| `lib/group-messages.test.ts` | todo | |
-| `lib/groups.test.ts` | todo | |
-| `lib/guides.test.ts` | todo | |
+| `lib/group-messages.test.ts` | done | tests/Unit/Plugins/ThreadTest.php (every case) |
+| `lib/groups.test.ts` | done | tests/Unit/Plugins/GroupsTest.php (every case) and tests/Integration/GroupsTest.php |
+| `lib/guides.test.ts` | done | tests/Unit/Plugins/GuidesTest.php (every case) |
 | `lib/hymnal.test.ts` | todo | |
 | `lib/i18n/i18n.test.ts` | done | tests/Unit/I18n/I18nTest.php |
 | `lib/ics.test.ts` | done | tests/Unit/Support/IcsTest.php (every case) |
@@ -662,6 +662,11 @@ met, with the reason.
 - **A form question nobody has answered is deleted rather than retired.** The brief's rule protects answers; a question added by mistake five minutes ago has none, and leaving it in the export's columns for ever is the worse outcome. The answer says which happened (`{retired: true|false}`).
 - **"Only once" is enforced per account.** A visitor has no account to count against, so a form that may be sent only once still takes a second card from an unsigned-in visitor; the brief's example (a camp application) is a members' form in practice.
 - **A form's notify addresses are checked when they are saved**, and a typo is refused there rather than silently failing at the first submission.
+- **A group's thread is closed to a site manager who is not in the group**, exactly as the brief says, and the way in is to be put in the group from `/admin/groups/[id]` — which leaves a membership row saying so. The address is the other way round: whoever keeps the list is given it, because an address is an operational fact somebody running the site may need.
+- **A leader is `role = LEADER` on an active membership**, never a capability. `manage_events` ("keeps the group list") is treated as leading every group for the address, the requests and the roll, but not for the conversation.
+- **A name shown on a group page is never an email address**: the group's own byline rule, the same as comments and the live chat, so dev or imported data whose `name` holds an address shows "A member" instead.
+- **Guide items are edited through their own routes** (`POST /api/admin/guides/[id]/items`, `PATCH`/`DELETE` on one) rather than as a nested array on the guide: the same shape as a form's questions, and one save can't silently drop an item somebody else added.
+- **`/admin/guides` exists**, as the brief asks (the original has only the API).
 - **Supabase Auth is a form flow over GoTrue's REST API**, not supabase-js in the page: the password, magic-link and social forms post to `/auth/supabase/*`, so no third-party script runs in the site's origin and the access token is verified server-side (JWT secret or the project's JWKS). The magic-link form never creates accounts (`create_user: false`).
 
 ## Session log
@@ -735,3 +740,16 @@ met, with the reason.
   and responses are marked dealt with by name. 14 unit tests (the original's
   case list) and 4 integration tests, plus a Chromium run of a visitor
   filling one in and the office marking it dealt with.
+- 2026-09-26 — small groups (plugins/groups): /groups, /groups/[slug],
+  /profile/groups, /guides, /admin/groups, /admin/groups/[id] and
+  /admin/guides. presentGroup is the only thing that decides whether the
+  address travels (absent, never null); asking is a request the leader
+  answers on the group's own page without a capability; a full group takes
+  names in order and a freed place puts the longest-waiting ask in front of
+  the leader; the conversation is closed to anybody not actually in the
+  group, hidden messages are dropped in the query and in the filter, and
+  notifications carry the first line only; the roll reaches a member as a
+  list of at most one row — their own — and leader notes have no field on a
+  member's shape. 92 new unit tests (groups, attendance, guides, thread —
+  the original's four case lists) and 8 integration tests, plus a Chromium
+  run of a stranger asking and a leader answering.
