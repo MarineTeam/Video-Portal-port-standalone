@@ -113,7 +113,11 @@ final class Request
         }
         $path = '/' . ltrim($path, '/');
         // A path is never allowed to walk; routes only ever see a clean one.
-        if (str_contains($path, "\0")) {
+        // A browser resolves "." and ".." before it sends anything, so a path
+        // that still carries them was written by hand, and there is nothing
+        // below here — the router, the nav's idea of the open section, the
+        // shell's scope — that should have to think about it.
+        if (str_contains($path, "\0") || in_array('..', explode('/', $path), true) || in_array('.', explode('/', $path), true)) {
             return '/';
         }
         return $path === '/' ? '/' : rtrim($path, '/');
