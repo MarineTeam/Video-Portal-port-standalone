@@ -53,6 +53,16 @@ final class Videos
         return $this->provider((string) $row['provider']);
     }
 
+    /**
+     * Whether that video service can keep a members-only video's own URL from
+     * a stranger. False means the page is gated but the media URL is not.
+     */
+    public function enforcesPrivacy(string $id): bool
+    {
+        $p = $this->app->services()->get('video', $id);
+        return $p instanceof VideoProvider && $p->capabilities()->enforcesPrivacy;
+    }
+
     /** The provider new uploads go to, or null when the Video slot is unset. */
     public function uploadProvider(): ?VideoProvider
     {

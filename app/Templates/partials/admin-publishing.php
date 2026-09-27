@@ -7,8 +7,12 @@
  * @var array<string, mixed> $item presented (camelCase) fields
  * @var bool $canPublish
  * @var bool $downloads whether the download setting applies here
+ * @var ?string $privacyNote the service's name when it can't keep the media
+ *      URL private, so members-only gates the page alone; null when it can or
+ *      when the item has no media of its own
  */
 $dl = $item['downloadEnabled'] ?? null;
+$privacyNote ??= null;
 ?>
 <fieldset class="stack" <?= $v->raw($canPublish ? '' : 'disabled title="Publishing needs the publish-content permission"') ?>>
   <legend>Publishing</legend>
@@ -21,7 +25,10 @@ $dl = $item['downloadEnabled'] ?? null;
 </fieldset>
 <fieldset class="stack">
   <legend>Who sees it</legend>
-  <label class="check"><input type="checkbox" name="memberOnly"<?= !empty($item['memberOnly']) ? ' checked' : '' ?>> Members only — visitors see it isn’t there; a direct link asks them to sign in</label>
+  <label class="check"><input type="checkbox" name="memberOnly" data-member-only<?= !empty($item['memberOnly']) ? ' checked' : '' ?>> Members only — visitors see it isn’t there; a direct link asks them to sign in</label>
+  <?php if ($privacyNote !== null): ?>
+    <p class="small warn" data-privacy-note<?= empty($item['memberOnly']) ? ' hidden' : '' ?>><?= e($privacyNote) ?> can’t keep the video itself private: the page is gated; the video’s own URL is not. Anyone given that address can still play it.</p>
+  <?php endif ?>
   <label class="check"><input type="checkbox" name="hidden"<?= !empty($item['hidden']) ? ' checked' : '' ?>> Hidden — nobody but the people managing it can find or open it</label>
   <?php if (!empty($downloads)): ?>
   <label>Downloads

@@ -1,7 +1,7 @@
 <?php
 /**
  * @var \App\Core\View $v
- * @var list<array<string, mixed>> $videos presented, with providerLabel, seriesTitle, speakerName
+ * @var list<array<string, mixed>> $videos presented, with providerLabel, enforcesPrivacy, seriesTitle, speakerName
  * @var int $total
  * @var int $page
  * @var int $perPage
@@ -124,6 +124,7 @@ $seriesOptions = function (string $selected = '') use ($series): string {
         <?php if ($video['status'] !== 'READY'): ?><span class="badge <?= $video['status'] === 'FAILED' ? 'danger' : 'muted' ?>"><?= e($video['status'] === 'FAILED' ? 'Failed' : 'Processing') ?></span><?php endif ?>
         <?php if (!$video['published']): ?><span class="badge muted">Draft</span><?php elseif ($video['publishAt'] !== null && $video['publishAt'] > gmdate('Y-m-d\TH:i:s')): ?><span class="badge muted">Scheduled</span><?php endif ?>
         <?php if ($video['memberOnly']): ?><span class="badge">Members</span><?php endif ?>
+        <?php if ($video['memberOnly'] && !$video['enforcesPrivacy']): ?><span class="badge error" title="<?= e($video['providerLabel']) ?> can’t keep the video itself private: the page is gated; the video’s own URL is not.">Link is open</span><?php endif ?>
         <?php if ($video['hidden']): ?><span class="badge muted">Hidden</span><?php endif ?>
         <?php if ($video['speakerName'] !== null): ?><div class="small muted"><?= e($video['speakerName']) ?></div><?php endif ?>
       </td>

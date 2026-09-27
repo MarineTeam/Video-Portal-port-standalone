@@ -1,7 +1,7 @@
 <?php
 /**
  * @var \App\Core\View $v
- * @var array<string, mixed> $video presented, with providerLabel and tracks
+ * @var array<string, mixed> $video presented, with providerLabel, enforcesPrivacy and tracks
  * @var list<array{id: string, title: string}> $series
  * @var list<array<string, mixed>> $categories
  * @var list<array{id: string, name: string}> $speakers
@@ -62,7 +62,7 @@ $api = '/api/admin/videos/' . $video['id'];
   <label>Description<textarea name="description" rows="6" data-null><?= e((string) ($video['description'] ?? '')) ?></textarea></label>
   <label>Scripture (one per line or comma separated, e.g. John 3:16)<textarea name="scriptureRefs" rows="2" data-type="list"><?= e(implode("\n", (array) ($video['scriptureRefs'] ?? []))) ?></textarea></label>
   <label>Language (e.g. en, es)<input name="language" value="<?= e((string) ($video['language'] ?? '')) ?>" maxlength="35" data-null></label>
-  <?= $v->partial('partials/admin-publishing', ['item' => $video, 'canPublish' => $canPublish, 'downloads' => true]) ?>
+  <?= $v->partial('partials/admin-publishing', ['item' => $video, 'canPublish' => $canPublish, 'downloads' => true, 'privacyNote' => $video['enforcesPrivacy'] ? null : $video['providerLabel']]) ?>
   <label class="check"><input type="checkbox" name="isPremiere"<?= $video['isPremiere'] ? ' checked' : '' ?>> Premiere — shown as upcoming until its publish time</label>
   <details>
     <summary>Notes and transcript</summary>

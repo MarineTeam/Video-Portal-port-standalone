@@ -388,3 +388,12 @@ document.querySelector('[data-chapter-now]')?.addEventListener('click', (event) 
   const sec = String(s % 60).padStart(2, '0');
   input.value = h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 });
+
+// Members-only is only as good as the service behind the video: when the
+// service can't keep the media URL private the page says so the moment the
+// box is ticked, not after saving.
+{
+  const box = document.querySelector('[data-member-only]');
+  const note = document.querySelector('[data-privacy-note]');
+  if (box && note) box.addEventListener('change', () => { note.hidden = !box.checked; });
+}

@@ -78,6 +78,7 @@ final class VideosAdmin
         $out = Presenter::video($row);
         $data = VideoRef::fromRow($row)->data;
         $out['providerLabel'] = ($class = $this->app->services()->providerClass('video', (string) $row['provider'])) !== null ? $class::label() : (string) $row['provider'];
+        $out['enforcesPrivacy'] = $this->videos->enforcesPrivacy((string) $row['provider']);
         $out['seriesTitle'] = $row['series_title'] ?? null;
         $out['speakerName'] = $row['speaker_name'] ?? null;
         $out['tracks'] = array_values((array) ($data['tracks'] ?? []));
