@@ -469,7 +469,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | ScheduleSource | `schedule_sources` | done | One per schedule; the key itself is a setting, not a column |
 | Person | `people` | done | The normalized name is the unique key, so two spellings are one person |
 | PersonAlias | `person_aliases` | done | What a merge or a rename leaves behind, so the next import resolves it |
-| CalendarEvent | `calendar_events` | done | `origin` says whether a sheet or somebody here put it there |
+| CalendarEvent | `calendar_events` | done | `origin` says whether a sheet or somebody here put it there. `recurrence_rule`, `recurrence_end_date` and `parent_event_id` are carried and read by nothing, as in the original: its own note says the admin writes single occurrences, and that wiring them up means first deciding how expanded dates travel through the offline snapshot's delta sync |
 | CalendarEventPerson | `calendar_event_people` | done | |
 | Event | `events` | done | plugins/events |
 | EventSeries | `event_series` | done | Generated dates are ordinary events; `SetNull` on stopping, never a cascade |
@@ -689,7 +689,7 @@ met, with the reason.
 - **Bundled plugins default to active**, as the brief says of `ensurePluginsSeeded()`; FEATURES.md's "off until an admin turns it on" describes the original's UI, not its seeding.
 - **Vendored viewers stay at `/pdfjs/`, `/epubjs/`, `/tesseract/`** (Appendix H) rather than under `public/vendor-js/`: the offline shell and saved caches name those paths.
 - **`sw.js` and `offline.html` derive the base path** (from the service worker's own URL) and prefix their literal paths with it. At a domain root they behave byte-for-byte as before.
-- **Schema additions:** `users.password_hash`, `email_verified_at`, `pending_email` (local accounts); `file_assets.backend`, `storage_path` (was `bunnyPath`), `upload_pending`; `push_subscriptions.endpoint_hash` (the unique index; a push URL can outrun an index prefix); `broadcast_recipients.provider`, `provider_message_id`, `delivery_status`, `delivered_at` (SMS receipts); plus `series_tags`, `video_scripture_books`, `sessions`, `services`, `settings`, `jobs`, `email_log`, `auth_tokens`, `rate_limits`, `uploads`. Tables are plural snake_case (`watch_progresses`, `people`).
+- **Schema additions:** `users.password_hash`, `email_verified_at`, `pending_email` (local accounts); `file_assets.backend`, `storage_path` (was `bunnyPath`); `push_subscriptions.endpoint_hash` (the unique index; a push URL can outrun an index prefix); `broadcast_recipients.provider`, `provider_message_id`, `delivery_status`, `delivered_at` (SMS receipts); plus `series_tags`, `video_scripture_books`, `sessions`, `services`, `settings`, `jobs`, `email_log`, `auth_tokens`, `rate_limits`, `uploads`. Tables are plural snake_case (`watch_progresses`, `people`).
 - **`/auth/recover`** is new under `/auth/*`: with `storage/enable-local-login` present it sets an administrator's password against a code written to `storage/recovery.key` — the lockout path when email isn't set up.
 - **The importer mints a new object name for a file it pulls out of Bunny.**
   Files were uploaded there under their own names, and "Hymnal Scan

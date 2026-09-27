@@ -329,7 +329,6 @@ CREATE TABLE IF NOT EXISTS {{file_assets}} (
   podcast_published TINYINT(1) NOT NULL DEFAULT 0,
   public_path VARCHAR(1000) NULL,
   -- Set while a finalised upload is still being pushed to remote storage.
-  upload_pending TINYINT(1) NOT NULL DEFAULT 0,
   series_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL,
   category_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL,
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
