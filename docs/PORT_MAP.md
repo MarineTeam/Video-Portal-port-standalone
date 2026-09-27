@@ -601,6 +601,62 @@ forgotten rather than reviewed per route: output escaping by
 by `Validator::check`, which drops what it was not told about; the headers by
 one place in `App`; SSRF by `Http::fetchUntrusted` and the resolver behind it.
 
+### The Security requirements, item by item
+
+Every bullet of the brief's Security requirements section, and what proves
+it. Four rows say *manual*: each names what was done and why a test could not
+be, rather than leaving the row hopeful.
+
+| Requirement | Proved by |
+|---|---|
+| The installer needs `storage/install.key`, and `installed.lock` closes it | `tests/Integration/SmokeTest.php` (a fresh install over HTTP) |
+| `storage/` is not web-readable; the installer probes and refuses | The installer's own probe step; **manual**: `/storage/config.php`, `/storage/logs/app.log` and `/storage/` all answer 404 on the dev server |
+| Secrets encrypted with `app_key`, never echoed, exported or logged | `tests/Unit/Core/SecretsAtRestTest.php`, `tests/Unit/Core/LogMaskingTest.php`, `tests/Unit/Profile/DataExportTest.php` |
+| `display_errors` off whatever php.ini says; no stack trace to anybody | Forced in `app/bootstrap.php`; `tests/Integration/HeadersTest.php::test_6` asserts an error page names no path, query or frame |
+| The table prefix is `[a-z0-9_]{1,16}`; no identifier from input | `Db::assertColumn` and the prefix check in `app/Core/Db.php`; every table and column name in the tree is a literal. **gap**: no unit test of the guards themselves |
+| Session ids are 32 bytes, stored as SHA-256; regenerated on sign-in; 30-day and 7-day windows; sign out everywhere | `tests/Integration/SessionTest.php` (11 tests) |
+| Cookie HttpOnly, SameSite=Lax, Secure, base path, `__Host-` at a root | `tests/Integration/SessionTest.php` |
+| CSRF token on every write, constant time, with Origin / Sec-Fetch-Site | `tests/Unit/Core/CrossSiteTest.php`, `tests/Integration/RouteAuditTest.php` |
+| The only CSRF exemptions are the listed ones | `RouteAuditTest::test_4`, `test_6` — checked both ways |
+| `returnTo` is a relative path under the base path or `/` | `tests/Unit/Core/ReturnToTest.php` |
+| Headers on every response, and a CSP assembled from active providers | `tests/Integration/HeadersTest.php` — five pages including the television screen, with a fresh nonce per response and no HSTS until it is confirmed |
+| Passwords: Argon2id or bcrypt 12, 12 characters, a common list | `tests/Unit/Access/PasswordsTest.php` |
+| Reset and magic tokens: 32 bytes, hashed, single use, 60 and 15 minutes | `tests/Integration/AuthTokensTest.php`, including two callers racing for one token |
+| An unknown address answers identically | The handler answers before it looks. **gap**: no test compares the two answers, and none times them |
+| Sign-in, reset, unlock, pairing and API keys throttled per account and address | `tests/Integration/RateLimiterTest.php` (including under concurrency) |
+| An email change is verified at the new address and noticed at the old | The token carries the new address (`AuthTokensTest::test_10`). **gap**: no test of the two messages |
+| Only an ADMIN grants ADMIN; no group carries it | `tests/Unit/Access/PermissionsTest.php`, `tests/Unit/Access/AuthorizationTest.php` |
+| JWT: algorithms pinned, `iss`/`aud`/`exp`/`nbf`/`iat`/nonce checked, JWKS cached | `tests/Unit/JwtTest.php`, `tests/Unit/Auth/TokenProvidersTest.php` |
+| Server-only keys never reach the browser | `tests/Unit/Auth/RedirectProvidersTest.php`, `tests/Unit/Auth/TokenProvidersTest.php`, `tests/Unit/Auth/SupabaseProviderTest.php` |
+| Every typed URL goes through `Http::fetchUntrusted` | `tests/Unit/Core/UntrustedFetchTest.php` (16 tests, redirects included) |
+| Web Push endpoints: https, a known service, eight per member | `tests/Unit/Push/PushEndpointTest.php` |
+| Uploads typed by finfo against a per-purpose allowlist; SVG is not an image | `tests/Unit/Files/UploadTypesTest.php` |
+| Content-Type on the way out comes from the stored extension alone | `tests/Unit/Files/UploadTypesTest.php` |
+| Images decoded once at upload; over 40 megapixels refused | `getimagesize` before any decode in `app/Modules/Files/Images.php`; no route decodes from a URL. **gap**: no test of the megapixel refusal |
+| Stored names random; the original sanitised into Content-Disposition | `tests/Unit/Support/ReaderTest.php` (`contentDispositionFilename`) |
+| Nothing under the asset directories executes | `.htaccess` per directory and the asset route's refusal; **manual**: a planted `evil.php` and a dotfile under `plugins/tv/assets` both answer 404, as does `../../../storage/config.php` through that route, while `tv.js` beside them answers 200 |
+| Chunked uploads: random id, under `storage/tmp/<id>/`, capped, swept | Exercised end to end by `tests/Integration/ImportTest.php`, which uploads a zip in two chunks. **gap**: no test of the cap or the sweep |
+| Plugin and theme zips: no `..`, absolute paths or symlinks; caps | `tests/Unit/Plugins/PackageSafetyTest.php` |
+| Release zips are Ed25519-signed and verified before a file is touched | `tests/Unit/Update/ReleaseTest.php` |
+| Prepared statements; LIKE escaped; ORDER BY from allowlists; FULLTEXT stripped | `tests/Unit/SearchTest.php`, `tests/Integration/SearchTest.php`. No route takes a column name: the one `sort` a reader can send is a two-way choice between `newest` and `relevance` |
+| Every body validated against an explicit allowlist; unknown fields dropped | `tests/Unit/Core/ValidatorTest.php` |
+| Templates escape by default; `raw` is the only exception and CI greps it | `tools/ci/check-templates.php` (CI) |
+| `mail()` and SMTP reject CR or LF in an address or subject | Checked in `SmtpProvider::send` and `Response::header`. **gap**: no test feeds a header injection through a provider |
+| Logs mask credentials; `/admin/logs` is ADMIN only | `tests/Unit/Core/LogMaskingTest.php`, `RouteAuditTest::test_2` |
+| Backups: random name under `storage/tmp`, streamed, deleted after download | `tests/Integration/BackupTest.php` |
+| The export and `/api/v1` keep `assertExportSafe` | `tests/Unit/Profile/DataExportTest.php`, `tests/Integration/ReadApiTest.php` |
+| The directory, prayer, group, attendance, thread and rota-name rules | `tests/Unit/Plugins/DirectoryTest.php`, `AttendanceTest.php`, `ThreadTest.php`, `SchedulesNamesTest.php`; `tests/Integration/GroupsTest.php`, `PrayerTest.php` |
+| Public writes rate-limited per address and account, with a honeypot | `RouteAuditTest::test_3` names all twenty-six with what limits each |
+| Inbound SMS webhooks: signature, five-minute window, rate limit | `tests/Integration/SmsCallbacksTest.php` |
+| The page-view cron trigger fires once a minute and holds a lock | `tests/Integration/SmokeTest.php` runs /cron/run; the once-a-minute lock is in `app/Modules/Jobs`. **gap**: no test of two triggers at once |
+| `/cron/run` fails closed with no token; a wrong one is constant-time 401 | `tests/Unit/Jobs/CronGuardTest.php` |
+| View counts throttled by an HMAC of the address, blanked after a day | `tests/Unit/Library/ViewKeyTest.php` |
+| Small-group asks capped per member and per leader | `tests/Integration/GroupsTest.php` |
+| Search inputs capped at 100 and 200 characters | `Validator` rules on the two routes; `tests/Unit/Core/ValidatorTest.php` proves a length is a refusal rather than a truncation |
+| Vendored libraries pinned with checksums; `composer audit` in CI | `MANIFEST.json` per release; the CI workflow |
+
+### And the mechanical checks
+
 | What | Where it is proved |
 |---|---|
 | Capability on every admin route | `RouteAuditTest::test_2` |
@@ -973,3 +1029,20 @@ met, with the reason.
   guard bugs this port cannot have, and two that are a service worker and its
   Cache Storage, verified in Chromium because node cannot load a module that
   imports `mt.js`. 1151 unit, 191 integration, 62 browser-module tests.
+
+- 2026-09-27 — walking the brief's Security requirements item by item, which
+  the map now records in a table of its own. Most rows already had a test.
+  Six things did not, and they were the wrong six: `Http::fetchUntrusted`,
+  the single door every URL a member types goes through; the session — ids,
+  hashing, the two windows, sign out everywhere; the reset and magic-link
+  tokens; the plugin zip checks against slip, symlinks and bombs; the log
+  masking; and `safeReturnTo`, which is the whole open-redirect surface.
+  Seventy-one tests across those, including a redirect whose first hop is
+  public and whose second is the cloud metadata address, and two callers
+  racing for one sign-in link. Three rows are manual and say exactly what was
+  done: `/storage/*` answers 404 over HTTP, a planted `evil.php` and a
+  dotfile under a plugin's assets both answer 404 while the .js beside them
+  answers 200, and the headers were read off five real pages before being
+  turned into `HeadersTest`. Seven rows still say **gap** with what is
+  missing, which is the honest state rather than a tick.
+  1210 unit, 221 integration, 62 browser-module tests.
