@@ -769,7 +769,7 @@ be, rather than leaving the row hopeful.
 | Every template output escaped | `tools/ci/check-templates.php` (CI) |
 | Every provider documented | `tools/ci/check-docs.php` (CI) |
 | No process functions in shipped code | `tools/ci/check-banned.php` (CI) |
-| A site in a subdirectory works both ways | `tests/Unit/Core/BasePathTest.php` — the prefix taken off an incoming path and never off a sibling that merely starts the same way, put back on every address the app writes, a `returnTo` kept only inside it, and the cookie name dropping `__Host-` it cannot honour |
+| A site in a subdirectory works both ways | `tests/Unit/Core/BasePathTest.php` and `tools/dev/subdir-check.mjs` — the unit test covers the pieces; the check runs a second copy of the site at `/church` (`tools/dev/subdir-router.php`) and reads 24 pages signed out and signed in, refusing any address they emit that lands outside the install, then the sign-in round trip, the cookie's path, robots, the sitemap, the feed, the app manifest, and three walking paths written straight onto the socket. Each assertion was confirmed against the break it is there for. The unit test covers the prefix taken off an incoming path and never off a sibling that merely starts the same way, put back on every address the app writes, a `returnTo` kept only inside it, and the cookie name dropping `__Host-` it cannot honour |
 | The test server is the one the test is talking to | `tests/Integration/ServerTestCase.php` — a port asked of the operating system, and the server proved to be ours before a class runs; a lingering worker from the previous class used to answer from its own storage and fail the run about half the time |
 
 ## Deviations
