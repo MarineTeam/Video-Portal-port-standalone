@@ -660,6 +660,9 @@ be, rather than leaving the row hopeful.
 | What | Where it is proved |
 |---|---|
 | Every registered address answers | `tests/Integration/EveryUrlTest.php` — all 255 GET routes, signed in and signed out, none a server error |
+| Every bundled plugin activates on a fresh install | `tests/Integration/SmokeTest.php` — seeded, and still on after a page has been served |
+| A theme installs, overrides a template, and a broken one falls back | `tests/Integration/ThemesTest.php` |
+| A switch is preceded by its test; a failing test refuses it | `tests/Integration/ServiceSwitchTest.php` |
 | The feeds are the shapes their readers expect | `tests/Integration/FeedFormatsTest.php` — RSS and the podcast enclosure, iCalendar's CRLF, escaping and 75-character lines, the sitemap's namespace, the manifest |
 | Capability on every admin route | `RouteAuditTest::test_2` |
 | Public writes all accounted for | `RouteAuditTest::test_3` |
@@ -1079,3 +1082,16 @@ met, with the reason.
   newlines, and no line over 75 characters, the sitemap's namespace, and a
   manifest with the keys a browser needs to install it.
   1210 unit, 270 integration, 62 browser-module tests.
+
+- 2026-09-27 — the two acceptance criteria that had no test of their own.
+  Themes: a zip installs, a template in it wins over the core's while the
+  layout around it does not change, and — the one that matters, since a
+  theme is somebody else's code running as the site — one that throws on
+  load leaves the site answering on the default, with what went wrong named
+  on the admin's own page rather than the church down until somebody with
+  FTP can be found on a Sunday. Services: a switch with no test behind it,
+  with a token somebody made up, or to a sign-in provider nobody has proved
+  they can get through, are all refused; a failing test answers 422 with the
+  settings still on the page and hands back no token to switch with; and a
+  saved secret is not echoed into the form while what is not a secret is.
+  1210 unit, 285 integration, 62 browser-module tests.
