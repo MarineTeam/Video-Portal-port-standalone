@@ -3,18 +3,41 @@
 // so importing it from both app.js and admin.js registers each listener once.
 import MT from './mt.js';
 
+/** How many times a chunk is tried again after the connection drops under it. */
+export const UPLOAD_RETRIES = 4;
+
+const pause = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
 export async function uploadInChunks(file, purpose, onProgress) {
   const created = await MT.api('/api/uploads', { method: 'POST', body: { purpose, fileName: file.name, size: file.size } });
   const { id, chunkSize } = created;
   let offset = 0;
+  let failures = 0;
   while (offset < file.size) {
     const slice = file.slice(offset, offset + chunkSize);
     let result;
     try {
       result = await MT.api(`/api/uploads/${id}/chunk?offset=${offset}`, { method: 'PUT', body: slice, headers: { 'Content-Type': 'application/octet-stream' } });
+      failures = 0;
     } catch (error) {
       if (error.status === 409 && error.data && typeof error.data.received === 'number') {
         offset = error.data.received;
+        continue;
+      }
+      // No status means no answer at all: the connection went, which is the
+      // thing chunking exists for. Everything the server already has is still
+      // there, so ask how much that is and carry on from the next byte —
+      // rather than making somebody send a forty-megabyte sermon again
+      // because the wifi blinked on the last chunk. A refusal that did come
+      // back with a status is a real answer, and is passed on.
+      if (error.status === undefined && failures < UPLOAD_RETRIES) {
+        failures += 1;
+        await pause(failures * 500);
+        const state = await MT.api(`/api/uploads/${id}`).catch(() => null);
+        if (state && typeof state.received === 'number') {
+          offset = state.received;
+          onProgress?.(offset / file.size);
+        }
         continue;
       }
       throw error;
