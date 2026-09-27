@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Modules\Access\Capabilities;
+use App\Modules\Plugins\Features;
 use PHPUnit\Framework\Attributes\TestDox;
 use PHPUnit\Framework\TestCase;
 
@@ -156,6 +158,121 @@ final class InventoryTest extends TestCase
         }
 
         self::assertSame([], $wrong);
+    }
+
+    #[TestDox('the bundled features are Appendix E.1 — the slugs a database already holds')]
+    public function testFeatures(): void
+    {
+        $brief = self::briefText('E.1 — The 31 bundled features', 9000);
+        preg_match_all('/\{ slug: "([^"]+)", name: "([^"]+)", description: "((?:[^"\\\\]|\\\\.)*)" \}/', $brief, $m, PREG_SET_ORDER);
+        $want = [];
+        foreach ($m as $row) {
+            $want[$row[1]] = ['name' => $row[2], 'description' => str_replace('\\"', '"', $row[3])];
+        }
+        $have = [];
+        foreach (Features::META as $row) {
+            $have[$row['slug']] = ['name' => $row['name'], 'description' => $row['description']];
+        }
+
+        self::assertCount(31, $want, 'the appendix says 31 features');
+        // A slug is what the plugins table stores, so it has to be the same
+        // word an import from the original brings across.
+        self::assertSame([], array_values(array_diff(array_keys($want), array_keys($have))), 'in the registry, missing here');
+        self::assertSame([], array_values(array_diff(array_keys($have), array_keys($want))), 'here, not in the registry');
+
+        $differ = [];
+        foreach ($want as $slug => $row) {
+            foreach (['name', 'description'] as $field) {
+                if ($have[$slug][$field] === $row[$field]) {
+                    continue;
+                }
+                // The one deliberate rewording: the original names Auth0, and
+                // this port's sign-in provider is whatever the slot holds.
+                if ($slug === 'profiles' && $field === 'description'
+                    && $have[$slug][$field] === str_replace('Auth0', 'sign-in', $row[$field])) {
+                    continue;
+                }
+                $differ[] = "$slug $field: the registry says \"{$row[$field]}\", this says \"{$have[$slug][$field]}\"";
+            }
+        }
+
+        self::assertSame([], $differ);
+    }
+
+    #[TestDox('the capabilities are Appendix E.2 — the keys a permission group already holds')]
+    public function testCapabilities(): void
+    {
+        $brief = self::briefText('E.2 — Capabilities', 6000);
+        preg_match_all('/\{ key: "([^"]+)", label: "([^"]+)", hint: "((?:[^"\\\\]|\\\\.)*)" \}/', $brief, $m, PREG_SET_ORDER);
+        $want = [];
+        foreach ($m as $row) {
+            $want[$row[1]] = ['label' => $row[2], 'hint' => str_replace('\\"', '"', $row[3])];
+        }
+        $have = Capabilities::all();
+
+        self::assertCount(15, $want, 'the appendix says 15 capabilities');
+        self::assertSame([], array_values(array_diff(array_keys($want), array_keys($have))), 'in the registry, missing here');
+        self::assertSame([], array_values(array_diff(array_keys($have), array_keys($want))), 'here, not in the registry');
+
+        $differ = [];
+        foreach ($want as $key => $row) {
+            foreach (['label', 'hint'] as $field) {
+                if (($have[$key][$field] ?? null) !== $row[$field]) {
+                    $differ[] = "$key $field: the registry says \"{$row[$field]}\", this says \"" . ($have[$key][$field] ?? '') . '"';
+                }
+            }
+        }
+
+        self::assertSame([], $differ);
+    }
+
+    #[TestDox('every cron path of Appendix F names a job this port schedules')]
+    public function testScheduledJobs(): void
+    {
+        $brief = (string) file_get_contents(dirname(__DIR__, 2) . '/PORT_PROMPT.md');
+        preg_match_all('#"path": "/api/cron/([a-z-]+)"#', $brief, $m);
+        $want = array_values(array_unique($m[1]));
+
+        $source = '';
+        foreach (['app', 'plugins'] as $dir) {
+            /** @var iterable<\SplFileInfo> $files */
+            $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(dirname(__DIR__, 2) . "/$dir"));
+            foreach ($files as $file) {
+                if ($file->getExtension() === 'php') {
+                    $source .= (string) file_get_contents($file->getPathname());
+                }
+            }
+        }
+        preg_match_all("/->register\(\s*'([a-z0-9:_.-]+)'/", $source, $r);
+        $registered = array_unique($r[1]);
+
+        self::assertCount(8, $want, 'the appendix schedules eight');
+        // /api/cron/<name> is an alias of /cron/run?job=<name>, so a name that
+        // no longer matches is a cron line that quietly stops firing.
+        self::assertSame([], array_values(array_diff($want, $registered)));
+    }
+
+    #[TestDox('the manifest is Appendix I.2, key for key')]
+    public function testManifest(): void
+    {
+        $brief = self::briefText('I.2 — public/manifest.json', 4000);
+        // Stop at the next section: I.3 is full of braces.
+        $brief = substr($brief, 0, (int) strpos($brief, 'I.3 —'));
+        $start = (int) strpos($brief, '{');
+        $want = json_decode(substr($brief, $start, (int) strrpos($brief, '}') - $start + 1), true);
+        $have = json_decode((string) file_get_contents(dirname(__DIR__, 2) . '/public/manifest.json'), true);
+
+        self::assertIsArray($want);
+        self::assertSame($want, $have, 'an installed app is identified by these; changing one re-installs it as a different app');
+    }
+
+    /** The brief from a heading onwards, for the registries quoted verbatim in it. */
+    private static function briefText(string $heading, int $length): string
+    {
+        $brief = (string) file_get_contents(dirname(__DIR__, 2) . '/PORT_PROMPT.md');
+        $at = strpos($brief, $heading);
+        self::assertIsInt($at, "the brief still has $heading");
+        return substr($brief, $at, $length);
     }
 
     /**
