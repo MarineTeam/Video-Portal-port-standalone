@@ -6,6 +6,7 @@
  * @var array<string, mixed> $plan
  * @var list<array<string, mixed>> $items
  * @var list<array<string, mixed>> $rota
+ * @var string $script
  */
 ?>
 <p><a href="<?= e(url('/services')) ?>">← <?= e(t('services.title')) ?></a></p>
@@ -31,6 +32,16 @@
   <?php endforeach ?>
 </ol>
 <?php if ($items === []): ?><p class="muted"><?= e(t('services.noItems')) ?></p><?php endif ?>
+<p>
+  <button type="button" class="button small" data-keep-service="<?= e((string) $plan['id']) ?>"
+    data-keep-label="<?= e(t('services.keepOnDevice')) ?>"
+    data-remove-label="<?= e(t('services.removeFromDevice')) ?>"
+    data-saved-label="<?= e(t('services.keptOnDevice')) ?>"
+    data-stale-label="<?= e(t('services.orderChanged')) ?>"><?= e(t('services.keepOnDevice')) ?></button>
+  <span class="small" data-keep-service-status hidden></span>
+</p>
+<p class="small muted"><?= e(t('services.keepHint')) ?></p>
+<script type="module" src="<?= e($script) ?>"></script>
 <?php if ($rota !== []): ?>
   <h2><?= e(t('services.whoIsOn')) ?></h2>
   <ul class="plain">

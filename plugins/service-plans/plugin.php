@@ -255,6 +255,7 @@ return new class (__DIR__) extends BasePlugin {
             ],
             'items' => $this->items($app, $plan),
             'rota' => $this->rotaFor($app, (string) $plan['id'], namesOnly: true),
+            'script' => $this->asset('offline-services.js'),
         ]);
     }
 

@@ -13,6 +13,12 @@ return [
     'services.coveringFor' => 'sustituye a {name}',
     'services.namesNeedSignIn' => 'Inicia sesión para ver quién sirve.',
 
+    'services.keepOnDevice' => 'Guardar en este dispositivo',
+    'services.removeFromDevice' => 'Quitar de este dispositivo',
+    'services.keptOnDevice' => 'Guardado en este dispositivo. Se abre sin conexión.',
+    'services.orderChanged' => 'El orden ha cambiado desde que lo guardaste. Vuelve a guardarlo.',
+    'services.keepHint' => 'Guardado aquí, el orden y sus letras se abren sin conexión alguna.',
+
     'services.myRota' => 'Mis turnos',
     'services.rotaEmpty' => 'Todavía no estás en ningún turno.',
     'services.yes' => 'Puedo',

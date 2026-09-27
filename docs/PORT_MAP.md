@@ -29,20 +29,20 @@ commit as the code it describes.
 | Area | Kind | Status | Notes |
 |---|---|---|---|
 | Core framework (Router, Db, View, Session, Csrf, Http, Hooks, Cache, Jobs, Migrator, Log, errors) | core | done | app/Core; PHPStan level 6 clean |
-| Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | partial | Installer done and covered by the smoke test; /admin/update done (maintenance, resumable migrations, signed release zips with rollback; verified end to end against a scratch install); /admin/tools backup (.sql.gz a step per request, restores exactly — BackupTest) and files in 100 MB parts done; the Next.js import done (see the row below) |
-| Services registry and Admin → Services | core | partial | Registry, generated forms, signed test-then-switch at /admin/providers; auth trial-mode switch arrives with external providers |
+| Installer (`/install`) and upgrader (`/admin/update`), backups (`/admin/tools`) | core | done | Installer done and covered by the smoke test; /admin/update done (maintenance, resumable migrations, signed release zips with rollback; verified end to end against a scratch install); /admin/tools backup (.sql.gz a step per request, restores exactly — BackupTest) and files in 100 MB parts done; the Next.js import done (see the row below) |
+| Services registry and Admin → Services | core | done | Registry, generated forms, signed test-then-switch at /admin/providers, and the auth trial mode that came with the external providers (`/admin/providers/auth/[provider]/trial`: the switch nobody can lock themselves out of — tests/Integration/ServiceSwitchTest.php) |
 | Library (categories, series, videos, files, speakers, scripture, tags, search, trash, feeds, sitemap, metadata) | core | done | Admin, providers, player, public pages, search, feeds, sitemap, JSON-LD, share links, downloads, video feeds, home rows, chapters, transcription, media check; the library's plugins (comments, related, up next…) come with step 4 |
-| Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | partial | API keys done (/admin/api-keys, hashed at rest, scopes, per-key rate limit); the rest with the auth work |
-| Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | partial | Branding, i18n, nav, device settings, per-device bottom bar, inbox, profile shell, data export, query monitor done; video feeds with the Library (step 3) |
+| Access (sign-in providers, allowlist, identities, permissions, capabilities, audit, API keys) | core | done | API keys (/admin/api-keys, hashed at rest, scopes, per-key rate limit) and, with the auth work, the sign-in providers and their trial mode, the allowlist and guest rows, identities, permission groups and capabilities, and the audit |
+| Site (branding, i18n, nav, device settings, standalone chrome, inbox, profile, data export, video feeds, query monitor) | core | done | Branding, i18n, nav, device settings, per-device bottom bar, inbox, profile shell, data export and the query monitor, and the video feeds that came with the Library (/admin/video-feeds) |
 | Read API `/api/v1` | core | done | Eleven endpoints, bearer keys, six scopes, keyset paging, `assertExportSafe` over every payload |
-| PWA and offline shell (sw.js, offline.html, manifest) | core | partial | Static files shipped (base-path aware); the saving side (offline-books etc.) arrives with its modules |
+| PWA and offline shell (sw.js, offline.html, manifest) | core | done | Static files shipped (base-path aware), and all four saving sides with their modules: videos (`assets/js/downloads.js`), books and hymnals (`plugins/book-reader/assets/offline-books.js`), the rota calendar (`assets/js/offline-calendar.js`) and a service's running order (`plugins/service-plans/assets/offline-services.js`), each writing the cache and the index `offline.html` reads |
 | Plugin loader, auto-deactivation, per-category overrides | core | done | All three load-failure paths plus the hook breaker, proven by tests/Integration/SmokeTest.php |
 | Theme loader, default theme, customizer | core | done | Loader with child → parent → core, fallback with notice, /admin/appearance (install, activate, delete, customizer merged over branding) |
 | Member plugins (favorites … downloads, 21 of Appendix E) | plugins | done | all 21 in plugins/, each against the page hooks (page.category/series/video.panels, home.row, render.page_top, related.items) and the library's classes; integration tests through a real server (tests/Integration/*Test.php extending ServerTestCase) |
 | Live streaming and chat | plugin | done | plugins/live-streaming: /live, the "Live now" banner and nav entry, /admin/live, and a polling chat that opens half an hour early and closes an hour after |
 | Book reader, hymnals, service plans, rota | plugins | done | plugins/book-reader (pdf.js and epub.js behind one handle, contents, in-book search, marks, read-aloud, the three indexing passes, the words typed in) and plugins/service-plans (the order, the rota, blockouts, the report, and the order kept on a device) |
 | Schedules and Google Sheets | plugin | done | plugins/schedules: two layouts parsed forgivingly, skip-and-report, a failed sync deletes nothing, the tabs offered rather than typed, reminders at 18:00, the calendar and its feed |
-| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | in progress | All done: prayer wall, events with repeats and calendar feeds, forms, small groups with attendance, guides and the thread, the directory, and broadcasts with eleven SMS providers |
+| Events and event series, forms, prayer, small groups (attendance, guides, thread), directory, broadcasts and SMS | plugins | done | All done: prayer wall, events with repeats and calendar feeds, forms, small groups with attendance, guides and the thread, the directory, and broadcasts with eleven SMS providers |
 | Television | plugin | done | plugins/tv: pairing by code, the four-arrow screen, the feed, and a device list a member can sign out of |
 | Data import from the Next.js deployment (`tools/export-from-nextjs`, `/admin/tools/import`) | core | done | export.mjs (pg, a server-side cursor, its own zip writer, no dependency but pg) and the three-phase resumable importer on /admin/tools; counts checked against the manifest; files still in Bunny Storage pulled across in batches |
 
@@ -79,7 +79,7 @@ commit as the code it describes.
 |---|---|---|
 | `/` | done | Library\Pages: hero (featured, else newest series), Continue watching above the browse tiles, then the rows from /admin/home-rows (Because you watched, Trending this week, Recently added, category and tag rows) |
 | `/access-denied` | done | One plain sentence; guest link only while the switch is open |
-| `/admin` | partial | Dashboard with counts and setup warnings; library cards pending |
+| `/admin` | done | Dashboard: the library and member counts, the cron and email warnings, and the `admin.dashboard.cards` hook plugins add to |
 | `/admin/access-attempts` | done | Filter by address, reason, date and unreviewed; mark reviewed; prune past 90 days |
 | `/admin/analytics` | done | Views and people over 7/30/90 days, the top ten series and videos with a watch-through rate, and the hymns opened most often |
 | `/admin/announcements` | done | plugins/announcements |
@@ -385,7 +385,7 @@ commit as the code it describes.
 | `/api/watch-later` | POST | done | `{categoryId|seriesId|videoId}` toggles → `{saved}` |
 | `/api/watch-progress/mark-watched` | POST | done | The one way to clear a completion |
 | `/api/watch-progress` | POST | done | Only ever sets completed; never clears it |
-| `/auth/guest` | GET | partial | 404s unless the switch is open and the primary provider can build a guest URL (Auth0, step 3) |
+| `/auth/guest` | GET | done | 404s unless the switch is open and the active sign-in provider can build a guest URL, which the external providers now do — tests/Integration/GuestLoginTest.php |
 | `/events/[slug]/event.ics` | GET | done | A members-only event refuses this outright: a calendar application has nobody to check |
 | `/events/calendar.ics` | GET | done | The public feed; member-only events are absent |
 | `/feed.xml` | GET | done | Built as a visitor sees the site, whoever asks |
@@ -398,15 +398,15 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 
 | Model | Table | Status | Notes |
 |---|---|---|---|
-| User | `users` | partial | Table + local-account columns; sign-in, revocation, roles done; admin screens pending |
+| User | `users` | done | Table + local-account columns; sign-in, revocation and roles, and the admin screens (/admin/users, /admin/authorized-emails, /admin/permissions) |
 | UserIdentity | `user_identities` | done | Written by SignIn::complete; sub namespaced except Auth0 |
 | CategoryEditor | `category_editors` | done | Honoured by Permissions; managed at /admin/permissions |
 | SeriesEditor | `series_editors` | done | Honoured by Permissions; managed at /admin/permissions |
-| Category | `categories` | partial | Admin CRUD, tree, trash; public pages with 3.4 |
-| Series | `series` | partial | Admin CRUD, drafts, tags (series_tags), aliases, viewers; public pages with 3.4 |
+| Category | `categories` | done | Admin CRUD, tree, trash, and the public pages from 3.4 |
+| Series | `series` | done | Admin CRUD, drafts, tags (series_tags), aliases, viewers, and the public pages from 3.4 |
 | Video | `videos` | done | The library's centre: ten providers, the player, chapters, transcripts, downloads, feeds and the read API all read this row |
 | Chapter | `chapters` | done | listed in time order; editor on /admin/videos/[id]; the video page's list (Chapters plugin) seeks the player and copies a ?t= link |
-| Speaker | `speakers` | partial | Admin CRUD; public pages with 3.4 |
+| Speaker | `speakers` | done | Admin CRUD and /speakers/[slug] from 3.4 |
 | SeriesFavorite | `series_favorites` | done | plugins/favorites |
 | VideoFavorite | `video_favorites` | done | plugins/favorites |
 | BookHymn | `book_hymns` | done | Pages stored as PDF pages; the printed number derived at the edge |
@@ -454,7 +454,7 @@ Table names are `<prefix>` + the snake_case plural shown. **Every model's table 
 | VideoViewer | `video_viewers` | done | Restricted viewing, checked by ContentAccess |
 | SermonOutlineAnswer | `sermon_outline_answers` | done | kept with the sheet's fingerprint; an edited sheet is reported, earlier answers shown as text |
 | SermonNote | `sermon_notes` | done | time prefilled from the player, then the member's to edit |
-| SlugAlias | `slug_aliases` | partial | Written on rename; redirects with 3.4 |
+| SlugAlias | `slug_aliases` | done | Written on rename by `Catalog`, and read by `Browse` so an old address still lands on the thing it named |
 | ShareLink | `share_links` | done | Library\Sharing |
 | ShareLinkRecipient | `share_link_recipients` | done | |
 | DownloadPolicy | `download_policies` | done | |
@@ -723,6 +723,7 @@ met, with the reason.
 - **The admin video editor is a page, `/admin/videos/[id]`** (the port's), like the series editor, rather than a dialog on the list.
 - **Captions for providers without caption APIs are WebVTT sidecars** in `storage/media/captions/<random>.vtt`, listed in `provider_data.tracks`; like every /media file their names are random, so members-only captions are as private as an unguessable address.
 - **Vendored browser code for video:** `public/vendor-js/tus/` (tus-js-client 4.3.1) and `public/vendor-js/hls/` (hls.js light 1.6.15), each with its LICENSE and VERSION.
+- **A service's running order is kept on the device by `plugins/service-plans/assets/offline-services.js`**, the last of the four savers behind the offline shell (videos, books and hymnals, the rota calendar, and now the order): the order and its words go into their own Cache Storage bucket as JSON at `/offline-service/<id>.json`, with one localStorage index `offline.html` reads. The order can change after it is saved, so the page asks for the fingerprint alone on loading — one request carrying no words — and says the order has changed rather than letting somebody stand up on Sunday with last week's. Checked in Chromium end to end: saved, opened in the offline shell with no network, the stale notice, and removal clearing both the index and the cache.
 - **Cast uses the browser's own Remote Playback API, not Google's Cast Web Sender SDK** — the same reason the player speaks each embed's protocol itself: no third-party script in the site's origin, and nothing added to the CSP. Chrome offers Chromecast through it and Safari AirPlay, the button sits beside Download under the same gate (a receiver plays the very same signed MP4, so a video with no file of ours can't be cast either, and says so in the download's own words), and it stays hidden until a receiver is within reach. The two cast paths the original left unreconciled are reconciled here: Bunny's embed is asked for `chromecast=true` and carries the button inside its own frame, so the page adds none of its own for that provider. Covered by tests/js/cast.test.mjs and tests/Integration/CastTest.php.
 - **The player speaks each embed's postMessage protocol itself** (YouTube's widget messages, Vimeo's player API messages, Player.js for Bunny) instead of loading the YouTube IFrame API, the Vimeo Player SDK or player.js into the page: no third-party script runs in the site's origin, and the CSP needs only frame-src for them. The heartbeat is accurate wherever a protocol or a native `<video>` reports position, elapsed-time elsewhere (Google Drive preview).
 - **Host-disk video is the one exception to "video bytes never pass through PHP"**: its upload is chunked through the site (there is nowhere else for it to go) and a video not everybody may watch streams through `/api/videos/local/[name]`, offloaded by X-Sendfile / X-Accel-Redirect / X-LiteSpeed-Location where detected. Videos anybody may watch sit in `public/media/videos/` for the web server; a `local-videos` job (every five minutes) and every change above a video (category, series, viewer restriction, restore — the `library.changed` hook the library's audit fires) move files between the two, so a take-down time or a category going members-only never leaves a public copy.

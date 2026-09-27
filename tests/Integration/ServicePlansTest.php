@@ -274,6 +274,16 @@ final class ServicePlansTest extends ServerTestCase
         self::assertSame($before, (string) self::api('GET', "/api/offline/service/$id?probe=1", null, 'ruth')['json']['fingerprint'], 'and putting it back puts the token back');
     }
 
+    public function test_12_the_order_can_be_kept_on_a_device_from_the_page_itself(): void
+    {
+        $page = self::http('GET', '/services/' . self::$ids['plan'], null, 'ruth')['body'];
+
+        // The endpoint was built before anything called it; this is the caller.
+        self::assertStringContainsString('data-keep-service="' . self::$ids['plan'] . '"', $page);
+        self::assertStringContainsString('offline-services.js', $page);
+        self::assertStringContainsString('Keep on this device', $page);
+    }
+
     public function test_11_a_draft_plan_is_not_kept_on_a_strangers_device(): void
     {
         $db = self::connect(self::prefix());

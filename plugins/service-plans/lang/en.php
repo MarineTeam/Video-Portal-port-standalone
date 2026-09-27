@@ -13,6 +13,12 @@ return [
     'services.coveringFor' => 'covering for {name}',
     'services.namesNeedSignIn' => 'Sign in to see who is on.',
 
+    'services.keepOnDevice' => 'Keep on this device',
+    'services.removeFromDevice' => 'Remove from this device',
+    'services.keptOnDevice' => 'Kept on this device. It opens with no signal.',
+    'services.orderChanged' => 'The order has changed since you saved it. Save it again to catch up.',
+    'services.keepHint' => 'Kept here, the order and its words open with no signal at all.',
+
     'services.myRota' => 'My rota',
     'services.rotaEmpty' => 'You are not on the rota for anything yet.',
     'services.yes' => 'I can',
