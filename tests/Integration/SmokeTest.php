@@ -25,7 +25,7 @@ final class SmokeTest extends ServerTestCase
 
     public static function tearDownAfterClass(): void
     {
-        foreach (['throws-on-load', 'parse-error', 'exhausts-memory', 'good-plugin', 'throws-in-hook'] as $slug) {
+        foreach (['throws-on-load', 'parse-error', 'exhausts-memory', 'needs-the-future', 'good-plugin', 'throws-in-hook'] as $slug) {
             \App\Modules\Plugins\PackageInstaller::removeTree(dirname(__DIR__, 2) . "/plugins/$slug");
         }
         parent::tearDownAfterClass();
@@ -58,6 +58,46 @@ final class SmokeTest extends ServerTestCase
         self::assertFileDoesNotExist(self::$storage . '/install.key');
         self::assertSame(404, self::http('GET', '/install')['status']);
         self::assertSame(200, self::http('GET', '/')['status']);
+    }
+
+    #[TestDox('every bundled plugin comes up on a fresh install, with nothing switched off')]
+    public function testBundledPluginsActivate(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $bundled = [];
+        foreach (glob("$root/plugins/*/.bundled") ?: [] as $marker) {
+            $bundled[] = basename(dirname($marker));
+        }
+        // The fixtures the broken-plugin test plants are not bundled, so a
+        // run in either order sees the same list.
+        sort($bundled);
+        self::assertGreaterThan(25, count($bundled), 'the bundled plugins are on disk');
+
+        $db = self::connect(self::PREFIX);
+        $rows = [];
+        foreach ($db->all('SELECT slug, enabled, deactivated_reason FROM {{plugins}}') as $row) {
+            $rows[(string) $row['slug']] = $row;
+        }
+
+        $missing = [];
+        $off = [];
+        foreach ($bundled as $slug) {
+            if (!isset($rows[$slug])) {
+                $missing[] = $slug;
+            } elseif ((int) $rows[$slug]['enabled'] !== 1) {
+                $off[] = $slug . ' (' . (string) ($rows[$slug]['deactivated_reason'] ?? 'no reason given') . ')';
+            }
+        }
+        self::assertSame([], $missing, 'every bundled plugin was seeded by the install');
+        self::assertSame([], $off, 'and every one of them is on');
+
+        // Seeded is not the same as loaded: a plugin that throws on boot is
+        // switched off by the loader on the first request, so ask for a page
+        // and look again.
+        self::assertSame(200, self::http('GET', '/')['status']);
+        foreach ($db->all('SELECT slug, deactivated_reason FROM {{plugins}} WHERE enabled = 0') as $row) {
+            self::assertNotContains((string) $row['slug'], $bundled, (string) $row['slug'] . ' was switched off: ' . (string) $row['deactivated_reason']);
+        }
     }
 
     #[TestDox('signs the first administrator in and serves the admin area, refusing a login without its CSRF token')]
