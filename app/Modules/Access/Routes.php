@@ -37,6 +37,7 @@ final class Routes
         $r->get('/auth/register', [$self, 'registerForm']);
         $r->post('/auth/register', [$self, 'registerSubmit']);
         $r->get('/auth/verify/[token]', [$self, 'verify']);
+        $r->get('/auth/email/[token]', [$self, 'confirmEmailChange']);
         $r->get('/auth/reset', [$self, 'resetForm']);
         $r->post('/auth/reset', [$self, 'resetRequest']);
         $r->get('/auth/reset/[token]', [$self, 'resetTokenForm']);
@@ -273,6 +274,50 @@ final class Routes
         }
         $this->app->db()->update('users', ['email_verified_at' => Db::now()], ['id' => $row['user_id']]);
         return $this->message(t('auth.verified'), t('auth.verified'));
+    }
+
+    /**
+     * The new address answering, which is the only thing that moves an
+     * account onto it.
+     *
+     * The address comes off the token rather than out of this request: the
+     * token is what the member's new inbox received, and reading it from
+     * anywhere else would let the second request name a different address
+     * from the one that was confirmed.
+     */
+    public function confirmEmailChange(Request $req, array $p): Response
+    {
+        $db = $this->app->db();
+        $row = AuthTokens::consume($db, $p['token'], 'email_change');
+        if ($row === null) {
+            return $this->message(t('auth.linkExpired'), t('auth.linkExpired'), 410);
+        }
+        $email = Validator::normalizeEmail((string) ($row['email'] ?? ''));
+        $user = $db->one('SELECT id, email, pending_email FROM {{users}} WHERE id = ?', [$row['user_id']]);
+        if ($user === null || $email === '' || Validator::normalizeEmail((string) ($user['pending_email'] ?? '')) !== $email) {
+            // Asked for and then cancelled, or asked for twice and this is
+            // the older link.
+            return $this->message(t('auth.linkExpired'), t('auth.linkExpired'), 410);
+        }
+        try {
+            $db->update('users', [
+                'email' => $email,
+                'pending_email' => null,
+                // The new address has just proved itself by answering.
+                'email_verified_at' => Db::now(),
+            ], ['id' => $user['id']]);
+        } catch (\PDOException $e) {
+            if (!Db::isDuplicate($e)) {
+                throw $e;
+            }
+            // Somebody took the address between the ask and the answer.
+            $db->update('users', ['pending_email' => null], ['id' => $user['id']]);
+            return $this->message(t('auth.linkExpired'), t('auth.linkExpired'), 409);
+        }
+        \App\Modules\Audit\Audit::log($db, $email, 'profile.email_changed', 'User', (string) $user['id'], 'was ' . (string) $user['email']);
+        // The address is how somebody signs in, so every other session ends.
+        $this->app->session()->destroyAllFor((string) $user['id']);
+        return $this->message(t('auth.emailChanged'), t('auth.emailChanged'));
     }
 
     public function resetForm(Request $req): Response

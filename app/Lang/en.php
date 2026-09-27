@@ -62,6 +62,7 @@ return [
     'auth.continue' => 'Continue',
     'auth.magicConfirm' => 'Sign in as {email}?',
     'auth.verified' => 'Your email address is confirmed.',
+    'auth.emailChanged' => 'Your email address has been changed. Sign in again with the new one.',
     'auth.checkEmail' => 'Check your email: we sent a link to {email} to confirm the address.',
 
     'accessDenied.title' => 'Access denied',
@@ -247,4 +248,11 @@ return [
     'auth.finishing' => 'Finishing signing in…',
     'auth.refused' => 'That sign-in didn’t work.',
     'auth.magicSent' => 'If {email} can sign in here, a sign-in link is on its way. Open it in this browser.',
+    'settings.emailNow' => 'You sign in as {email}.',
+    'settings.emailNew' => 'New email address',
+    'settings.emailChange' => 'Change my address',
+    'settings.emailHint' => 'A link goes to the new address, and a note to the old one. Nothing changes until the new address answers.',
+    'settings.emailAsked' => 'Check the new address for a link. Nothing has changed yet.',
+    'settings.emailPending' => 'Waiting for {email} to confirm. Until it does, you still sign in as before.',
+    'settings.emailCancel' => 'Cancel that change',
 ];

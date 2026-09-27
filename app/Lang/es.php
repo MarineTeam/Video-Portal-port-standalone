@@ -60,6 +60,7 @@ return [
     'auth.continue' => 'Continuar',
     'auth.magicConfirm' => '¿Entrar como {email}?',
     'auth.verified' => 'Tu dirección de correo está confirmada.',
+    'auth.emailChanged' => 'Se ha cambiado su dirección de correo. Vuelva a iniciar sesión con la nueva.',
     'auth.checkEmail' => 'Revisa tu correo: enviamos un enlace a {email} para confirmar la dirección.',
 
     'accessDenied.title' => 'Acceso denegado',
@@ -245,4 +246,11 @@ return [
     'auth.finishing' => 'Terminando de iniciar sesión…',
     'auth.refused' => 'Ese inicio de sesión no ha funcionado.',
     'auth.magicSent' => 'Si {email} puede iniciar sesión aquí, te llega un enlace. Ábrelo en este navegador.',
+    'settings.emailNow' => 'Inicia sesión como {email}.',
+    'settings.emailNew' => 'Nueva dirección de correo',
+    'settings.emailChange' => 'Cambiar mi dirección',
+    'settings.emailHint' => 'Se envía un enlace a la nueva dirección y un aviso a la anterior. Nada cambia hasta que la nueva responda.',
+    'settings.emailAsked' => 'Busque el enlace en la nueva dirección. Todavía no ha cambiado nada.',
+    'settings.emailPending' => 'Esperando la confirmación de {email}. Hasta entonces, inicia sesión como antes.',
+    'settings.emailCancel' => 'Cancelar ese cambio',
 ];

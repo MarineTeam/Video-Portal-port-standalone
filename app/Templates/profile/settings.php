@@ -6,6 +6,8 @@
  * @var array<string, mixed> $fields the account settings this site offers (by the plugins that are on)
  * @var string $email
  * @var bool $hasPassword
+ * @var ?string $pendingEmail an address asked for and not yet confirmed
+ * @var bool $mailerConfigured
  * @var int $otherSessions
  * @var ?string $calendarUrl the member's own diary feed, once they ask for one
  * @var string $extra what plugins add
@@ -108,6 +110,25 @@ $has = static fn (string $key): bool => array_key_exists($key, $fields);
     <p class="small" data-done-message hidden></p>
     <p class="error" data-error hidden></p>
   </form>
+  <?php if ($mailerConfigured): ?>
+    <hr>
+    <p class="small muted"><?= e(t('settings.emailNow', ['email' => $email])) ?></p>
+    <?php if ($pendingEmail !== null): ?>
+      <p class="notice small"><?= e(t('settings.emailPending', ['email' => $pendingEmail])) ?></p>
+      <div><button class="button small" type="button" data-api="/api/profile/email" data-method="DELETE"><?= e(t('settings.emailCancel')) ?></button></div>
+    <?php else: ?>
+      <form class="stack" data-api="/api/profile/email" data-method="POST" data-no-reload data-done="<?= e(t('settings.emailAsked')) ?>">
+        <label><?= e(t('settings.emailNew')) ?><input type="email" name="email" autocomplete="email" required></label>
+        <?php if ($hasPassword): ?>
+          <label><?= e(t('settings.currentPassword')) ?><input type="password" name="password" autocomplete="current-password" required></label>
+        <?php endif ?>
+        <p class="small muted"><?= e(t('settings.emailHint')) ?></p>
+        <div><button class="button" type="submit"><?= e(t('settings.emailChange')) ?></button></div>
+        <p class="small" data-done-message hidden></p>
+        <p class="error" data-error hidden></p>
+      </form>
+    <?php endif ?>
+  <?php endif ?>
   <?php if ($otherSessions > 0): ?>
     <p class="small"><?= e(t('settings.otherSessions', ['count' => $otherSessions])) ?></p>
     <div><button class="button small" type="button" data-api="/api/profile/sessions" data-method="DELETE"><?= e(t('settings.signOutElsewhere')) ?></button></div>

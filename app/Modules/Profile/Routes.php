@@ -13,9 +13,12 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
 use App\Core\Session;
+use App\Core\RateLimiter;
 use App\Core\Validator;
+use App\Modules\Access\AuthTokens;
 use App\Modules\Access\Passwords;
 use App\Modules\Audit\Audit;
+use App\Services\Email\Message;
 
 /**
  * The profile shell: /profile (what's waiting), /profile/inbox and
@@ -43,6 +46,7 @@ final class Routes
         'directoryNote' => ['directory_note', 'profiles', ['text', 'nullable', 'max' => 500]],
     ];
 
+    public const EMAIL_CHANGES_PER_HOUR = 3;
     public const EXPORTS_PER_MINUTE = 2;
 
     public function __construct(private readonly App $app)
@@ -65,6 +69,10 @@ final class Routes
         Calendar::register($r, $app, $member);
         // The port's additions for local accounts.
         $r->post('/api/profile/password', [$self, 'changePassword'], [$member]);
+        // Changing the address somebody signs in with: asked for here,
+        // applied only once the new address has answered.
+        $r->post('/api/profile/email', [$self, 'changeEmail'], [$member]);
+        $r->add('DELETE', '/api/profile/email', [$self, 'cancelEmailChange'], [$member]);
         $r->add('DELETE', '/api/profile/sessions', [$self, 'signOutElsewhere'], [$member]);
     }
 
@@ -155,6 +163,8 @@ final class Routes
             ) ?: []),
             'email' => (string) $user['email'],
             'hasPassword' => ($user['password_hash'] ?? null) !== null,
+            'pendingEmail' => $user['pending_email'] ?? null,
+            'mailerConfigured' => $this->app->mailer()->isConfigured(),
             'otherSessions' => (int) $this->db()->value('SELECT COUNT(*) FROM {{sessions}} WHERE user_id = ? AND id_hash <> ?', [$this->userId(), $this->app->session()->idHash()]),
             'calendarUrl' => Calendar::url(Calendar::tokenFor($this->db(), $this->userId())),
             'extra' => $this->capture('profile.settings'),
@@ -261,6 +271,78 @@ final class Routes
             }
         }
         return Response::json($out);
+    }
+
+    /**
+     * Ask to change the address this account signs in with.
+     *
+     * Nothing changes here. A link goes to the new address, and a plain
+     * notice to the old one — the notice is the point: if somebody else has
+     * got into the account, the message arrives where the real member still
+     * reads, while the attacker is holding an address that does not work
+     * yet.
+     */
+    public function changeEmail(Request $req): Response
+    {
+        $user = $this->user();
+        $db = $this->db();
+        if (!$this->app->mailer()->isConfigured()) {
+            throw ApiError::conflict('Email isn’t set up on this site, so an address can’t be confirmed. An administrator can change it for you.');
+        }
+        $data = Validator::check($req->input(), [
+            'email' => ['email', 'required'],
+            'password' => ['string', 'max' => Passwords::MAX],
+        ]);
+        $email = (string) $data['email'];
+        $current = Validator::normalizeEmail((string) $user['email']);
+        if ($email === $current) {
+            throw ApiError::invalid('That is already your address.');
+        }
+        // A local account proves it is still the member sitting there; one
+        // that signs in elsewhere has already proved it this session.
+        if ($user['password_hash'] !== null && !Passwords::verify((string) ($data['password'] ?? ''), (string) $user['password_hash'])) {
+            throw ApiError::forbidden('That password is not right.');
+        }
+        if (!(new RateLimiter($db))->hit(RateLimiter::bucket('email-change', (string) $user['id']), self::EMAIL_CHANGES_PER_HOUR, 3600)) {
+            throw ApiError::tooMany('You have asked to change your address a few times just now. Try again in an hour.');
+        }
+
+        // Whether the new address is already somebody's is not said out
+        // loud: that would make this a way of asking who is a member. The
+        // link simply never arrives.
+        $taken = $db->value('SELECT id FROM {{users}} WHERE email = ?', [$email]) !== null;
+        if (!$taken) {
+            $db->update('users', ['pending_email' => $email], ['id' => $user['id']]);
+            $token = AuthTokens::issue($db, (string) $user['id'], 'email_change', $email);
+            $this->app->mailer()->send(Message::plain(
+                $email,
+                'Confirm your new email address',
+                "Somebody asked to move a Marine Team account to this address. If it wasn't you, ignore this message and nothing will change.\n\nThe link works once, for a day.",
+                \App\Core\Url::absolute('/auth/email/' . $token),
+                'Confirm this address',
+                sensitive: true,
+            ));
+            $this->app->mailer()->send(Message::plain(
+                $current,
+                'Your email address is being changed',
+                "Somebody asked to move your account to $email. Nothing has changed yet — it will only change when that address is confirmed.\n\nIf this wasn't you, sign in and cancel it, and change your password.",
+                \App\Core\Url::absolute('/profile/settings'),
+                'Open my settings',
+            ));
+        }
+        Audit::log($db, $current, 'profile.email_change_asked', 'User', (string) $user['id']);
+        return Response::json(['ok' => true, 'pending' => $email]);
+    }
+
+    /** Change of mind, or the notice arriving to somebody who did not ask. */
+    public function cancelEmailChange(Request $req): Response
+    {
+        $user = $this->user();
+        $db = $this->db();
+        $db->update('users', ['pending_email' => null], ['id' => $user['id']]);
+        $db->run('DELETE FROM {{auth_tokens}} WHERE user_id = ? AND purpose = ?', [$user['id'], 'email_change']);
+        Audit::log($db, (string) $user['email'], 'profile.email_change_cancelled', 'User', (string) $user['id']);
+        return Response::json(['ok' => true]);
     }
 
     public function deleteAccount(Request $req): Response
