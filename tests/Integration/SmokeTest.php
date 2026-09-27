@@ -149,6 +149,32 @@ final class SmokeTest extends ServerTestCase
         self::assertStringContainsString('switched off automatically', $list['body']);
     }
 
+    #[TestDox('a plugin that throws in a hook is contained: the page still renders, and it is switched off once it keeps failing')]
+    public function testPluginThrowingInAHook(): void
+    {
+        $root = dirname(__DIR__, 2);
+        \App\Modules\Plugins\PackageInstaller::removeTree("$root/plugins/throws-in-hook");
+        mkdir("$root/plugins/throws-in-hook", 0775, true);
+        copy("$root/tests/fixtures/plugins/throws-in-hook/plugin.php", "$root/plugins/throws-in-hook/plugin.php");
+        $db = self::connect(self::PREFIX);
+        $db->run('INSERT INTO {{plugins}} (id, slug, name, enabled) VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE enabled = 1, deactivated_reason = NULL', [\App\Core\Id::new(), 'throws-in-hook', 'throws-in-hook']);
+        self::flushCache();
+
+        // Its nav.sections filter throws on every page. The first few requests
+        // are served anyway: one plugin's bad hook is not the site's problem.
+        for ($i = 0; $i < \App\Modules\Plugins\PluginLoader::HOOK_FAILURE_LIMIT + 2; $i++) {
+            $page = self::http('GET', '/');
+            self::assertSame(200, $page['status'], "request $i was not served");
+            self::assertStringContainsString('<nav', $page['body'], "the nav went missing on request $i");
+        }
+
+        // And it does not throw forever: ten failures in ten minutes and it is off.
+        self::assertSame('hook_failures', (string) $db->value('SELECT deactivated_reason FROM {{plugins}} WHERE slug = ?', ['throws-in-hook']));
+        self::assertSame(0, (int) $db->value('SELECT enabled FROM {{plugins}} WHERE slug = ?', ['throws-in-hook']));
+        self::assertStringContainsString('hook boom', (string) $db->value('SELECT deactivated_error FROM {{plugins}} WHERE slug = ?', ['throws-in-hook']));
+        self::assertSame(200, self::http('GET', '/admin/plugins')['status']);
+    }
+
     #[TestDox('/cron/run refuses a wrong token and runs with the right one')]
     public function testCron(): void
     {
