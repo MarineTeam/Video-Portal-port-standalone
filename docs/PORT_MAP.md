@@ -663,6 +663,10 @@ be, rather than leaving the row hopeful.
 | Every bundled plugin activates on a fresh install | `tests/Integration/SmokeTest.php` — seeded, and still on after a page has been served |
 | A theme installs, overrides a template, and a broken one falls back | `tests/Integration/ThemesTest.php` |
 | A switch is preceded by its test; a failing test refuses it | `tests/Integration/ServiceSwitchTest.php` |
+| A plugin throwing in a hook is contained | `tests/Integration/SmokeTest.php` — the page still renders, and it is switched off after ten failures in ten minutes |
+| Both player kinds resume and report progress | `tests/Integration/ResumeTest.php` — our own `<video>` and a YouTube embed, the saved position, a shared `?t=`, and a watched video starting again from the top; the browser half checked in Chromium |
+| Members-only says so where a service can't enforce it | `tests/Integration/MembersOnlyHonestyTest.php` |
+| Cast offers what it can and refuses with the reason | `tests/Integration/CastTest.php`, `tests/js/cast.test.mjs` |
 | The feeds are the shapes their readers expect | `tests/Integration/FeedFormatsTest.php` — RSS and the podcast enclosure, iCalendar's CRLF, escaping and 75-character lines, the sitemap's namespace, the manifest |
 | Capability on every admin route | `RouteAuditTest::test_2` |
 | Public writes all accounted for | `RouteAuditTest::test_3` |
