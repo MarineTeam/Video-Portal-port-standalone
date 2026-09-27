@@ -36,11 +36,12 @@ final class Routes
     public static function register(Router $r, App $app): void
     {
         $self = new self($app);
-        $staff = Middleware::staff($app);
         $admin = Middleware::admin($app);
         $plugins = Middleware::can($app, 'manage_plugins');
 
-        $r->get('/admin', [$self, 'dashboard'], [$staff]);
+        // The original's rule, which its admin-nav test states as the reason
+        // the overview is admin-only: the dashboard bounces everyone else.
+        $r->get('/admin', [$self, 'dashboard'], [$admin]);
         $r->get('/admin/system', [$self, 'system'], [$admin]);
         $r->get('/admin/logs', [$self, 'logs'], [$admin]);
         $r->get('/admin/logs/download', [$self, 'logsDownload'], [$admin]);

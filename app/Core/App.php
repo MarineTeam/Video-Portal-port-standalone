@@ -373,6 +373,10 @@ final class App
         $look = \App\Modules\Themes\Appearance::forPage($this);
         $branding = $look['branding'];
         $isAdmin = $current->isAdmin();
+        $adminNav = $user !== null && $current->isStaff()
+            ? \App\Modules\Admin\AdminNav::groupsFor($isAdmin, fn (string $c) => $current->canAnywhere($c))
+            : [];
+        $adminEntry = \App\Modules\Admin\AdminNav::entryHref($isAdmin, $adminNav);
         $nav = [
             ['href' => '/', 'label' => t('nav.home'), 'icon' => 'home'],
             ['href' => '/search', 'label' => t('nav.search'), 'icon' => 'search'],
@@ -386,8 +390,8 @@ final class App
             $profile = ['href' => '/profile', 'label' => t('nav.profile'), 'icon' => 'person', 'badge' => \App\Modules\Profile\Inbox::unreadCount($this->db(), (string) $user['id'])];
             $tabs[] = $profile;
             $tabOptions[] = $profile;
-            if ($current->isStaff()) {
-                $tabOptions[] = ['href' => '/admin', 'label' => t('nav.admin'), 'icon' => 'shield'];
+            if ($current->isStaff() && $adminEntry !== null) {
+                $tabOptions[] = ['href' => $adminEntry, 'label' => t('nav.admin'), 'icon' => 'shield'];
             }
         }
         $seen = [];
@@ -422,9 +426,8 @@ final class App
             'maintenance' => $isAdmin ? \App\Modules\Update\Updater::readMaintenance($this->paths->maintenance()) : null,
             'updateWaiting' => $isAdmin && \App\Modules\Update\Updater::behind($this->settings()),
             'breakGlass' => $isAdmin && is_file($this->paths->storage('enable-local-login')),
-            'adminNav' => $user !== null && $current->isStaff()
-                ? \App\Modules\Admin\AdminNav::groupsFor($isAdmin, fn (string $c) => $current->canAnywhere($c))
-                : [],
+            'adminNav' => $adminNav,
+            'adminEntry' => $adminEntry,
             'head' => $this->capture('render.head'),
             'bodyEnd' => $this->capture('render.body_end'),
             'pageTop' => $this->capture('render.page_top'),

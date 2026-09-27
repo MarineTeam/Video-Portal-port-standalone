@@ -219,6 +219,66 @@ final class RouteAuditTest extends DatabaseTestCase
         return (string) preg_replace('/\[[a-z]+\]/i', 'x', $pattern);
     }
 
+    #[TestDox('every sidebar link leads somewhere the person it is shown to can actually open')]
+    public function test_7_the_sidebar_and_the_guards_agree(): void
+    {
+        $guards = [];
+        foreach (self::routes() as [$pattern, $method, $names]) {
+            if ($method === 'GET') {
+                $guards[$pattern] = $names;
+            }
+        }
+        $wrong = [];
+        foreach (\App\Modules\Admin\AdminNav::groups() as $group) {
+            foreach ($group['links'] as $link) {
+                $href = $link['href'];
+                // A link to a page this build does not register is its own bug.
+                if (!isset($guards[$href])) {
+                    $wrong[] = "$href is in the sidebar and is not a route";
+                    continue;
+                }
+                $needs = (array) $link['needs'];
+                $guard = $guards[$href];
+                // A page whose check is inside its handler is listed above
+                // with the reason; the sidebar cannot be read off middleware
+                // that is not there.
+                if (isset(self::GUARDED_IN_HANDLER[$href])) {
+                    continue;
+                }
+                $capabilities = [];
+                foreach ($guard as $one) {
+                    if (preg_match('/^can\((.+)\)$/', $one, $m)) {
+                        $capabilities[] = $m[1];
+                    }
+                }
+                if (in_array('admin', $guard, true)) {
+                    // An ADMIN-only page must say so, or somebody is shown a
+                    // link that refuses them.
+                    if ($needs !== ['admin']) {
+                        $wrong[] = "$href is ADMIN only but the sidebar asks for " . implode(', ', $needs);
+                    }
+                    continue;
+                }
+                if ($capabilities === []) {
+                    $wrong[] = "$href is in the sidebar behind " . implode(', ', $needs) . ' but its route is guarded by ' . (implode(', ', $guard) ?: 'nothing');
+                    continue;
+                }
+                if ($needs === ['admin']) {
+                    $wrong[] = "$href only needs " . implode(', ', $capabilities) . ' but the sidebar shows it to administrators alone';
+                    continue;
+                }
+                // Everyone the sidebar shows it to can open it.
+                foreach ($needs as $capability) {
+                    if (!in_array($capability, $capabilities, true)) {
+                        $wrong[] = "$href is shown to $capability but its route wants " . implode(' or ', $capabilities);
+                    }
+                }
+            }
+        }
+
+        self::assertSame([], $wrong, "the sidebar and the guards disagree:\n" . implode("\n", $wrong));
+    }
+
     public function test_5_the_read_api_is_read_only(): void
     {
         foreach (self::routes() as [$pattern, $method]) {

@@ -79,7 +79,7 @@ commit as the code it describes.
 |---|---|---|
 | `/` | done | Library\Pages: hero (featured, else newest series), Continue watching above the browse tiles, then the rows from /admin/home-rows (Because you watched, Trending this week, Recently added, category and tag rows) |
 | `/access-denied` | done | One plain sentence; guest link only while the switch is open |
-| `/admin` | done | Dashboard: the library and member counts, the cron and email warnings, and the `admin.dashboard.cards` hook plugins add to |
+| `/admin` | done | Dashboard: the library and member counts, the cron and email warnings, and the `admin.dashboard.cards` hook plugins add to. ADMIN only, as the original's admin-nav test says ("since /admin bounces everyone else"); the top bar's Admin link sends everybody else to the first section they can open instead |
 | `/admin/access-attempts` | done | Filter by address, reason, date and unreviewed; mark reviewed; prune past 90 days |
 | `/admin/analytics` | done | Views and people over 7/30/90 days, the top ten series and videos with a watch-through rate, and the hymns opened most often |
 | `/admin/announcements` | done | plugins/announcements |
@@ -669,6 +669,7 @@ be, rather than leaving the row hopeful.
 | Cast offers what it can and refuses with the reason | `tests/Integration/CastTest.php`, `tests/js/cast.test.mjs` |
 | The feeds are the shapes their readers expect | `tests/Integration/FeedFormatsTest.php` — RSS and the podcast enclosure, iCalendar's CRLF, escaping and 75-character lines, the sitemap's namespace, the manifest |
 | Capability on every admin route | `RouteAuditTest::test_2` |
+| The sidebar and the guards agree | `RouteAuditTest::test_7` — every link leads somewhere the person it is shown to can open, and no page they may open is missing from it |
 | Public writes all accounted for | `RouteAuditTest::test_3` |
 | CSRF exemptions all accounted for | `RouteAuditTest::test_4`, `test_6` |
 | The read API cannot write | `RouteAuditTest::test_5` |
@@ -723,6 +724,7 @@ met, with the reason.
 - **The admin video editor is a page, `/admin/videos/[id]`** (the port's), like the series editor, rather than a dialog on the list.
 - **Captions for providers without caption APIs are WebVTT sidecars** in `storage/media/captions/<random>.vtt`, listed in `provider_data.tracks`; like every /media file their names are random, so members-only captions are as private as an unguessable address.
 - **Vendored browser code for video:** `public/vendor-js/tus/` (tus-js-client 4.3.1) and `public/vendor-js/hls/` (hls.js light 1.6.15), each with its LICENSE and VERSION.
+- **The top bar's "Admin" link goes to the first section its reader can open**, not always to `/admin`. The dashboard is ADMIN only, which is the original's rule, and the port shows that link to every staff member; sending a series editor to a refusal is no way to enter the admin area. `AdminNav::entryHref` picks it from the sidebar the same person is about to see, and where they can open nothing the link is not drawn.
 - **`DELETE /api/admin/appearance/notice` was dropped**: it duplicated `POST /admin/appearance/dismiss`, which is what the notice's own button uses and the one that has to work, because a broken theme is exactly when the page cannot depend on JavaScript. Nothing called the JSON one.
 - **A service's running order is kept on the device by `plugins/service-plans/assets/offline-services.js`**, the last of the four savers behind the offline shell (videos, books and hymnals, the rota calendar, and now the order): the order and its words go into their own Cache Storage bucket as JSON at `/offline-service/<id>.json`, with one localStorage index `offline.html` reads. The order can change after it is saved, so the page asks for the fingerprint alone on loading — one request carrying no words — and says the order has changed rather than letting somebody stand up on Sunday with last week's. Checked in Chromium end to end: saved, opened in the offline shell with no network, the stale notice, and removal clearing both the index and the cache.
 - **Cast uses the browser's own Remote Playback API, not Google's Cast Web Sender SDK** — the same reason the player speaks each embed's protocol itself: no third-party script in the site's origin, and nothing added to the CSP. Chrome offers Chromecast through it and Safari AirPlay, the button sits beside Download under the same gate (a receiver plays the very same signed MP4, so a video with no file of ours can't be cast either, and says so in the download's own words), and it stays hidden until a receiver is within reach. The two cast paths the original left unreconciled are reconciled here: Bunny's embed is asked for `chromecast=true` and carries the button inside its own frame, so the page adds none of its own for that provider. Covered by tests/js/cast.test.mjs and tests/Integration/CastTest.php.

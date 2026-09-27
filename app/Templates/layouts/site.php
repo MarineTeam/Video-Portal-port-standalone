@@ -31,8 +31,8 @@ $tabs = $shell['tabs'];
     <input type="search" name="q" placeholder="<?= e(t('nav.search')) ?>" aria-label="<?= e(t('nav.search')) ?>" maxlength="100">
   </form>
   <nav class="topbar-actions" aria-label="<?= e(t('nav.menu')) ?>">
-    <?php if ($user !== null && $user['isStaff']): ?>
-      <a href="<?= e(url('/admin')) ?>"><?= e(t('nav.admin')) ?></a>
+    <?php if ($user !== null && $user['isStaff'] && ($shell['adminEntry'] ?? null) !== null): ?>
+      <a href="<?= e(url((string) $shell['adminEntry'])) ?>"><?= e(t('nav.admin')) ?></a>
     <?php endif ?>
     <?php if ($user !== null): ?>
       <a href="<?= e(url('/profile')) ?>" class="avatar" title="<?= e($user['name']) ?>"><?= e(mb_strtoupper(mb_substr($user['name'], 0, 1))) ?></a>

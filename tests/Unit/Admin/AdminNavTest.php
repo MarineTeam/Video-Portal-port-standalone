@@ -72,6 +72,25 @@ final class AdminNavTest extends TestCase
         self::assertSame($pairs, array_values(array_unique($pairs)));
     }
 
+    #[TestDox('entryHref: an administrator goes to the dashboard')]
+    public function testEntryAdmin(): void
+    {
+        self::assertSame('/admin', AdminNav::entryHref(true, AdminNav::groupsFor(true, fn () => false)));
+    }
+
+    #[TestDox('entryHref: everybody else goes to the first section they can open, since the dashboard would bounce them')]
+    public function testEntryStaff(): void
+    {
+        $groups = AdminNav::groupsFor(false, fn (string $c) => $c === 'moderate_prayer');
+        self::assertSame('/admin/prayer', AdminNav::entryHref(false, $groups));
+    }
+
+    #[TestDox('entryHref: somebody who can open nothing is offered no way in')]
+    public function testEntryNothing(): void
+    {
+        self::assertNull(AdminNav::entryHref(false, AdminNav::groupsFor(false, fn () => false)));
+    }
+
     #[TestDox('currentAdminLabel: names the open section')]
     public function testLabel(): void
     {

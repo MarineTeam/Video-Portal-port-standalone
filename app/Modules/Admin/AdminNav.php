@@ -10,6 +10,9 @@ namespace App\Modules\Admin;
  * link is hidden is dropped, so no heading stands over nothing.
  *
  * 'admin' means ADMIN only; a list means any one of those capabilities.
+ * Whatever a link says here is what its route's own guard allows —
+ * tests/Integration/RouteAuditTest.php holds the two together, so nobody is
+ * shown a link that refuses them and no page they may open is missing.
  */
 final class AdminNav
 {
@@ -63,7 +66,7 @@ final class AdminNav
                 ['href' => '/admin/appearance', 'label' => 'Appearance', 'needs' => 'admin'],
                 ['href' => '/admin/announcements', 'label' => 'Announcements', 'needs' => 'manage_plugins'],
                 ['href' => '/admin/downloads', 'label' => 'Downloads', 'needs' => 'manage_plugins'],
-                ['href' => '/admin/webhooks', 'label' => 'Webhooks', 'needs' => 'manage_plugins'],
+                ['href' => '/admin/webhooks', 'label' => 'Webhooks', 'needs' => 'admin'],
                 ['href' => '/admin/query-monitor', 'label' => 'Query monitor', 'needs' => 'manage_plugins'],
             ]],
             ['label' => 'System', 'links' => [
@@ -108,6 +111,24 @@ final class AdminNav
             }
         }
         return $out;
+    }
+
+    /**
+     * Where the "Admin" link in the top bar should go for this person.
+     *
+     * The dashboard bounces anybody but an administrator, so a staff member
+     * who only edits series is sent to the first section they can open rather
+     * than to a refusal. Null when they can open nothing, and the link is not
+     * drawn at all.
+     *
+     * @param list<array{label: string, links: list<array{href: string, label: string}>}> $groups from groupsFor()
+     */
+    public static function entryHref(bool $isAdmin, array $groups): ?string
+    {
+        if ($isAdmin) {
+            return '/admin';
+        }
+        return $groups[0]['links'][0]['href'] ?? null;
     }
 
     /** The section a path belongs to: the longest link that prefixes it. */
