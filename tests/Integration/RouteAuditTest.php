@@ -358,6 +358,30 @@ final class RouteAuditTest extends DatabaseTestCase
         return $out;
     }
 
+    #[TestDox('every address the site answers is written down somewhere in the map')]
+    public function test_9_no_route_is_undocumented(): void
+    {
+        $doc = (string) file_get_contents(dirname(__DIR__, 2) . '/docs/PORT_MAP.md');
+        $listed = [];
+        foreach (self::inventory() as [$raw]) {
+            $listed[(string) preg_replace('/\[[^\]]+\]/', '[]', $raw)] = true;
+        }
+        $undocumented = [];
+        foreach (self::routes() as [$pattern]) {
+            if (isset($listed[(string) preg_replace('/\[[^\]]+\]/', '[]', $pattern)])) {
+                continue;
+            }
+            // The port's own addresses are their own table; anywhere else in
+            // the document that names one counts as written down too.
+            if (str_contains($doc, '`' . $pattern . '`') || str_contains($doc, $pattern)) {
+                continue;
+            }
+            $undocumented[$pattern] = true;
+        }
+
+        self::assertSame([], array_keys($undocumented), "these answer and the map does not mention them:\n" . implode("\n", array_keys($undocumented)));
+    }
+
     public function test_5_the_read_api_is_read_only(): void
     {
         foreach (self::routes() as [$pattern, $method]) {

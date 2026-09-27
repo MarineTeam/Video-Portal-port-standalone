@@ -392,6 +392,88 @@ commit as the code it describes.
 | `/s/[token]` | GET | done | Redeems a share link into an httpOnly cookie, re-checked against the database on every request so revoking is immediate |
 | `/series/[slug]/podcast.xml` | GET | done | Opted-in audio only; 404 for a members-only series; enclosure is /api/files/[id]/content until the Bunny public zone arrives (3.6) |
 
+### The port's own addresses — 69
+
+Everything above is the original's. These are this port's: the sign-in pages
+the original got from its identity provider's SDK, the screens a host with no
+shell needs (update, backup, jobs, the email log, what this machine is), the
+chunked uploader every upload goes through, and the plain forms the plugin and
+service screens use so they work when JavaScript or a third-party plugin does
+not. `RouteAuditTest::test_9` holds this list to the router, so a new address
+cannot go unwritten.
+
+| Path | Methods | Notes |
+|---|---|---|
+| `/auth/login` | GET POST | The port's own sign-in form. The original's `/auth/login` is the Auth0 SDK's; here the page is the site's and the provider behind it is whatever the Sign-in slot holds |
+| `/auth/logout` | GET POST | Ends the session and, for an external provider, sends the browser on to its own sign-out |
+| `/auth/register` | GET POST | Only where the active provider allows it and the address is on the list; otherwise the same refusal as an unknown address |
+| `/auth/verify/[token]` | GET | Confirms a new local account's address |
+| `/auth/email/[token]` | GET | Confirms a change of address: the new one comes off the token, never the request |
+| `/auth/reset` | GET POST | Asks for a reset link; answers the same whether or not the address is a member |
+| `/auth/reset/[token]` | GET POST | Sets the new password, once, against a token consumed as it is used |
+| `/auth/magic` | POST | Asks for a sign-in link |
+| `/auth/magic/[token]` | GET POST | Signs in with it. GET shows a confirm, since mail clients fetch links |
+| `/auth/start` | GET | Hands the browser to an external provider with the state and PKCE challenge |
+| `/auth/token` | POST | The television's pairing code exchanged for a session |
+| `/auth/supabase/password` | POST | Supabase's password grant, over its REST API rather than its SDK |
+| `/auth/supabase/magic` | POST | The same for a magic link |
+| `/auth/supabase/social` | GET | Starts a social sign-in through PKCE |
+| `/auth/supabase/callback` | GET | Where it comes back |
+| `/admin/books` | GET | plugins/book-reader: the books and hymnals list, which the original kept inside the files screen |
+| `/admin/books/[fileId]` | GET | One book: its contents, its hymns, the words typed against a number |
+| `/admin/system` | GET | What this host is: PHP, extensions, limits, writable paths, the database's version |
+| `/admin/jobs` | GET | The scheduled jobs with their last run, and the cron line to paste into the host's panel |
+| `/admin/jobs/[name]/run` | POST | Runs one now, from a form, so a job can be tried without a shell |
+| `/admin/email` | GET | The email log: what was sent, to whom, and why a failure failed |
+| `/admin/email/[id]/resend` | POST | Sends one again |
+| `/admin/logs/download` | GET | The log file as a download, masked the same way the screen masks it |
+| `/admin/plugins/[slug]/toggle` | POST | A plain form, not an API call: /admin/plugins has to work with every third-party plugin broken |
+| `/admin/plugins/[slug]/dismiss` | POST | Puts away the notice about a plugin that was switched off automatically |
+| `/admin/plugins/install` | POST | A zip uploaded in chunks, then checked before anything is unpacked |
+| `/admin/plugins/[slug]/uninstall` | POST | Removes the plugin and the rows it owns |
+| `/admin/providers/[slot]/[provider]` | GET | One service's settings form, generated from what the provider declares |
+| `/admin/providers/[slot]/[provider]/test` | POST | Tries the settings as typed and answers what happened; no test, no switch |
+| `/admin/providers/[slot]/[provider]/switch` | POST | Makes it the active one, against a token the test issued for those exact settings |
+| `/admin/providers/[slot]/off` | POST | Turns a slot off where the site can run without it |
+| `/api/admin/branding/logo` | POST | A logo redrawn and stored under storage/media |
+| `/api/admin/appearance/theme` | POST | Activates an installed theme |
+| `/api/admin/appearance/customizer` | PUT DELETE | The active theme's settings, and putting them back to its defaults |
+| `/api/admin/appearance/customizer/image` | POST | An image a theme's customizer asks for |
+| `/api/admin/appearance/install` | POST | A theme zip, uploaded in chunks and checked like a plugin's |
+| `/api/admin/appearance/themes/[slug]` | DELETE | Removes a theme and its settings |
+| `/api/admin/update` | GET | What version this is, what is available, and whether an update is part-way through |
+| `/api/admin/update/step` | POST | One migration step per request, so no request has to outlive a shared host's limit |
+| `/api/admin/update/finish` | POST | Leaves maintenance and records the version |
+| `/api/admin/update/maintenance` | POST | Puts the site into maintenance, or takes it out |
+| `/api/admin/update/release` | POST | A release zip uploaded in chunks; its signature checked before anything is unpacked |
+| `/api/admin/update/release/[id]/extract` | POST | Unpacks it beside the running copy, a batch of files per request |
+| `/api/admin/update/release/[id]/swap` | POST | Swaps the new copy in |
+| `/api/admin/update/release/[id]/rollback` | POST | Swaps the old one back |
+| `/api/admin/update/release/[id]` | DELETE | Throws away an upload that was never used |
+| `/api/admin/tools/backup` | POST | Starts a backup |
+| `/api/admin/tools/backup/[id]/step` | POST | A step of it per request: tables in batches, then the uploads in 100 MB parts |
+| `/api/admin/tools/backup/[id]/download` | GET | The .sql.gz, offloaded to the web server where it can be |
+| `/api/admin/tools/uploads/[part]` | GET | One part of the uploads backup |
+| `/api/admin/tools/import` | POST | Starts an import of the Next.js export |
+| `/api/admin/tools/import/[id]/step` | POST | A phase at a time, resumable, counted against the export's own manifest |
+| `/api/admin/tools/import/[id]` | GET | Where it has got to |
+| `/api/admin/tools/pull-files` | POST | Fetches the files the export left in Bunny Storage, in batches |
+| `/api/admin/media-check/links` | POST | Checks pasted links a batch at a time, with a cursor |
+| `/api/admin/media-check/orphans/[name]` | DELETE | Deletes a video file on this host that no video names |
+| `/api/admin/broadcasts/preview` | POST | How many the message will reach, and the reason for the rest, before it goes |
+| `/api/admin/broadcasts/[id]/cancel` | POST | Stops one part-way |
+| `/api/admin/guides/[id]/items/[itemId]` | PATCH DELETE | One question inside a discussion guide |
+| `/api/admin/schedules/key` | POST DELETE | The Google service account, stored encrypted and never read back out |
+| `/api/uploads` | POST | Opens a chunked upload: the one way bytes reach this host, whatever is being uploaded |
+| `/api/uploads/[id]/chunk` | POST PUT | One chunk |
+| `/api/uploads/[id]` | GET | What has arrived, so a dropped connection can carry on |
+| `/api/books/[fileId]` | GET | A book's contents and hymn list for the reader |
+| `/api/sms/status/[provider]` | GET POST | A provider's delivery receipt, checked against that provider's own signature |
+| `/api/sms/inbound/[provider]` | GET POST | A reply, which is how STOP reaches the opt-out list |
+| `/plugins/[slug]/assets/[...path]` | GET | A plugin's own js, css and images, refused unless the file is inside its assets folder |
+| `/themes/[slug]/assets/[...path]` | GET | The same for a theme |
+| `/media/[...path]` | GET | Storage-backed media where the web server cannot serve it directly |
+
 ## Models (Appendix B) — 95
 
 Table names are `<prefix>` + the snake_case plural shown. **Every model's table exists in `app/Migrations/0001_init.sql`** (applied and re-applied cleanly on MariaDB 10.11 locally; MySQL 8.0 and MariaDB 10.6 in CI). A row's status is about the module that owns its reads and writes; `todo` means the table is there and nothing uses it yet.
@@ -670,6 +752,8 @@ be, rather than leaving the row hopeful.
 | The feeds are the shapes their readers expect | `tests/Integration/FeedFormatsTest.php` — RSS and the podcast enclosure, iCalendar's CRLF, escaping and 75-character lines, the sitemap's namespace, the manifest |
 | Capability on every admin route | `RouteAuditTest::test_2` |
 | The sidebar and the guards agree | `RouteAuditTest::test_7` — every link leads somewhere the person it is shown to can open, and no page they may open is missing from it |
+| Every address the map marks done really answers | `RouteAuditTest::test_8` — both inventory tables against the router, methods included |
+| Every address the site answers is written down | `RouteAuditTest::test_9` — the inventory tables, the port's own table, or a mention anywhere in the map |
 | Public writes all accounted for | `RouteAuditTest::test_3` |
 | CSRF exemptions all accounted for | `RouteAuditTest::test_4`, `test_6` |
 | The read API cannot write | `RouteAuditTest::test_5` |
