@@ -210,6 +210,37 @@ final class Downloads
         'audience' => 'Downloads are limited to certain people, and you aren’t one of them yet.',
     ];
 
+    /** Why casting isn't offered, beyond the reasons a download shares with it. */
+    public const CAST_REASONS = [
+        'not_playing' => 'There’s nothing playing to send to a television.',
+        'player_casts' => 'The player has its own cast button.',
+    ];
+
+    /**
+     * Whether the page offers a Cast button, and the reason when it doesn't.
+     *
+     * Casting is the same file under the same gate as a download — a receiver
+     * needs a direct MP4, not somebody's embed — so a video with no file of
+     * ours (YouTube, Vimeo) is refused with the download's own words. Bunny's
+     * player carries a cast button of its own inside its frame, so the page
+     * leaves that one alone rather than showing two.
+     *
+     * @param array<string, mixed> $video
+     * @param ?array<string, mixed> $series
+     * @param ?array<string, mixed> $player as Player::spec() gives it, or null
+     * @return array{allowed: bool, reason: ?string}
+     */
+    public function castDecision(array $video, ?array $series, ?array $player): array
+    {
+        if ($player === null) {
+            return ['allowed' => false, 'reason' => 'not_playing'];
+        }
+        if (($player['protocol'] ?? null) === 'playerjs') {
+            return ['allowed' => false, 'reason' => 'player_casts'];
+        }
+        return $this->decide($video, $series);
+    }
+
     /** @param array<string, string> $p */
     public function download(Request $req, array $p): Response
     {

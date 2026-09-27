@@ -135,6 +135,9 @@ final class ProvidersTest extends TestCase
         $this->assertStringStartsWith('https://iframe.mediadelivery.net/embed/123/gu-id?', $plain);
         $this->assertStringContainsString('t=30', $plain);
         $this->assertStringNotContainsString('token=', $plain, 'unsigned without a token key');
+        // Bunny's own player carries the cast button for this provider, so the
+        // page adds none of its own.
+        $this->assertStringContainsString('chromecast=true', $plain);
         $signed = $this->bunny(['embedTokenKey' => 'tk'])->player(new VideoRef('gu-id'), new PlayerOptions())->src;
         parse_str((string) parse_url($signed, PHP_URL_QUERY), $q);
         $this->assertSame(hash('sha256', 'tkgu-id' . $q['expires']), $q['token']);

@@ -135,7 +135,9 @@ final class BunnyStreamProvider extends BaseVideoProvider
     public function embedUrl(string $videoId, int $start = 0, bool $autoplay = false): string
     {
         $library = (string) ($this->lib());
-        $query = ['autoplay' => $autoplay ? 'true' : 'false', 'preload' => 'true', 'responsive' => 'true'];
+        // chromecast=true puts a cast button in Bunny's own player; AirPlay is
+        // on by default there. The page adds none of its own for this provider.
+        $query = ['autoplay' => $autoplay ? 'true' : 'false', 'preload' => 'true', 'responsive' => 'true', 'chromecast' => 'true'];
         if ($this->str('embedTokenKey') !== '') {
             $expires = Bunny::expiry(3600, time());
             $query = ['token' => Bunny::embedToken($this->str('embedTokenKey'), $videoId, $expires), 'expires' => (string) $expires] + $query;

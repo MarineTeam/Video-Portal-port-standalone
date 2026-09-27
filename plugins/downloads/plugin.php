@@ -36,7 +36,11 @@ return new class (__DIR__) extends BasePlugin {
                 || !$viewer instanceof Viewer || !$viewer->signedIn() || !(new Downloads($app))->decide($video, $ctx['series'])['allowed']) {
                 return $panels;
             }
-            return [...$panels, ['area' => 'actions', 'order' => 15, 'html' => $app->view()->partial('downloads/button', ['videoId' => (string) $video['id']])]];
+            $cast = (new Downloads($app))->castDecision($video, $ctx['series'], $ctx['player'] ?? null);
+            return [...$panels, ['area' => 'actions', 'order' => 15, 'html' => $app->view()->partial('downloads/button', [
+                'videoId' => (string) $video['id'],
+                'cast' => $cast['allowed'],
+            ])]];
         });
     }
 };

@@ -241,6 +241,7 @@ return [
     'downloads.remove' => 'Remove',
     'downloads.button' => 'Download',
     'downloads.saved' => 'Saved on this device',
+    'cast.button' => 'Cast to TV',
     'auth.continueWith' => 'Continue with {provider}',
     'auth.adminSignIn' => 'Administrators: sign in with a password',
     'auth.withPassword' => 'Sign in with a password instead',

@@ -239,6 +239,7 @@ return [
     'downloads.remove' => 'Quitar',
     'downloads.button' => 'Descargar',
     'downloads.saved' => 'Guardado en este dispositivo',
+    'cast.button' => 'Enviar al televisor',
     'auth.continueWith' => 'Continuar con {provider}',
     'auth.adminSignIn' => 'Administradores: iniciar sesión con contraseña',
     'auth.withPassword' => 'Iniciar sesión con contraseña',
