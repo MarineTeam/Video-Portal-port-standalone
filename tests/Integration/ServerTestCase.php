@@ -36,30 +36,70 @@ abstract class ServerTestCase extends DatabaseTestCase
         self::$storage = sys_get_temp_dir() . '/mt-srv-' . bin2hex(random_bytes(4));
         mkdir(self::$storage, 0775, true);
         self::$jars = [];
-        $port = 18000 + random_int(0, 999);
-        self::$base = "http://127.0.0.1:$port";
         $root = dirname(__DIR__, 2);
-        $env = array_merge(getenv(), ['MT_STORAGE_DIR' => self::$storage, 'PHP_CLI_SERVER_WORKERS' => '4']);
-        self::$server = proc_open(
-            [PHP_BINARY, '-d', 'memory_limit=128M', '-d', 'max_execution_time=30', '-S', "127.0.0.1:$port", '-t', "$root/public", "$root/tools/dev/router.php"],
-            [0 => ['pipe', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
-            $pipes,
-            $root,
-            $env,
-        );
-        for ($i = 0; $i < 50; $i++) {
-            if (@fsockopen('127.0.0.1', $port) !== false) {
-                break;
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $port = self::freePort();
+            self::$base = "http://127.0.0.1:$port";
+            $env = array_merge(getenv(), ['MT_STORAGE_DIR' => self::$storage, 'PHP_CLI_SERVER_WORKERS' => '4']);
+            self::$server = proc_open(
+                [PHP_BINARY, '-d', 'memory_limit=128M', '-d', 'max_execution_time=30', '-S', "127.0.0.1:$port", '-t', "$root/public", "$root/tools/dev/router.php"],
+                [0 => ['pipe', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
+                $pipes,
+                $root,
+                $env,
+            );
+            if (self::serverIsOurs()) {
+                return;
+            }
+            self::stopServer();
+        }
+        throw new \RuntimeException('The test server would not answer on any port tried.');
+    }
+
+    /** A port nothing is listening on, asked of the operating system. */
+    private static function freePort(): int
+    {
+        $socket = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
+        if ($socket === false) {
+            throw new \RuntimeException("No port to test on: $error");
+        }
+        $port = (int) explode(':', (string) stream_socket_get_name($socket, false))[1];
+        fclose($socket);
+        return $port;
+    }
+
+    /**
+     * Whether the server answering on our port is the one we just started.
+     *
+     * Accepting a connection is not the same as serving a request, and the
+     * last class's workers can still hold a port after their parent is gone —
+     * they would answer from their own storage folder and this class would
+     * then look for an install key that is never written. Asking for /install
+     * settles both: it answers 200 and writes the key into our storage.
+     */
+    private static function serverIsOurs(): bool
+    {
+        for ($i = 0; $i < 100; $i++) {
+            if (self::http('GET', '/install')['status'] === 200 && is_file(self::$storage . '/install.key')) {
+                return true;
             }
             usleep(100_000);
         }
+        return false;
+    }
+
+    private static function stopServer(): void
+    {
+        if (is_resource(self::$server)) {
+            proc_terminate(self::$server);
+            proc_close(self::$server);
+        }
+        self::$server = null;
     }
 
     public static function tearDownAfterClass(): void
     {
-        if (is_resource(self::$server)) {
-            proc_terminate(self::$server);
-        }
+        self::stopServer();
         if (self::$storage !== '') {
             \App\Modules\Plugins\PackageInstaller::removeTree(self::$storage);
         }

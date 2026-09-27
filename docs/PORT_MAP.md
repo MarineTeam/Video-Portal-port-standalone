@@ -675,6 +675,7 @@ be, rather than leaving the row hopeful.
 | Every template output escaped | `tools/ci/check-templates.php` (CI) |
 | Every provider documented | `tools/ci/check-docs.php` (CI) |
 | No process functions in shipped code | `tools/ci/check-banned.php` (CI) |
+| The test server is the one the test is talking to | `tests/Integration/ServerTestCase.php` — a port asked of the operating system, and the server proved to be ours before a class runs; a lingering worker from the previous class used to answer from its own storage and fail the run about half the time |
 
 ## Deviations
 
