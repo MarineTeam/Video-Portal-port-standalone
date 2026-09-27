@@ -47,7 +47,12 @@ const CALENDAR_CACHE = "marine-team-calendar-v1";
 const CALENDAR_PATH_PREFIX = BASE + "/offline-calendar/";
 // The reader libraries, saved into the book cache alongside the first book
 // that needs them so the offline shell has something to draw a page with.
-const VIEWER_PATH_PREFIXES = ["/pdfjs/", "/epubjs/"].map((p) => BASE + p);
+//
+// These are the paths this port vendors them at, which must be the paths
+// offline.html and offline-books.js name: a prefix that matches nothing means
+// the library is never served from the cache, and then a saved book opens to
+// a blank page on the one occasion it was saved for.
+const VIEWER_PATH_PREFIXES = ["/vendor-js/pdfjs/", "/vendor-js/epubjs/"].map((p) => BASE + p);
 // The app's own file route. A saved book is the same bytes under a different
 // name, which is what lets the in-app reader survive the connection dropping
 // while it is open.
