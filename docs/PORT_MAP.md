@@ -752,7 +752,7 @@ be, rather than leaving the row hopeful.
 | The feeds are the shapes their readers expect | `tests/Integration/FeedFormatsTest.php` — RSS and the podcast enclosure, iCalendar's CRLF, escaping and 75-character lines, the sitemap's namespace, the manifest |
 | Capability on every admin route | `RouteAuditTest::test_2` |
 | The sidebar and the guards agree | `RouteAuditTest::test_7` — every link leads somewhere the person it is shown to can open, and no page they may open is missing from it |
-| The map's address tables are Appendix C, unchanged | `tests/Unit/InventoryTest.php` — 91 pages and 218 routes, methods included, against the brief itself |
+| The map's inventories are the brief's appendices, unchanged | `tests/Unit/InventoryTest.php` — Appendix C's 91 pages and 218 routes with their methods, Appendix B's 95 models with a table the schema really creates, and Appendix D's 73 test files, each naming a test that is there |
 | Every address the map marks done really answers | `RouteAuditTest::test_8` — both inventory tables against the router, methods included |
 | Every address the site answers is written down | `RouteAuditTest::test_9` — the inventory tables, the port's own table, or a mention anywhere in the map |
 | Public writes all accounted for | `RouteAuditTest::test_3` |
