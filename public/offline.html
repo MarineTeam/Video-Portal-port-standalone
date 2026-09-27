@@ -762,8 +762,15 @@ async function renderCalendar(entry) {
     scheduleNames[schedule.id] = schedule.name;
   });
 
-  const chooser = el("p", "sub");
-  chooser.appendChild(el("span", null, "You are "));
+  // The snapshot says whether it was taken by somebody signed in. Without
+  // that, a rota saved by a visitor is a list of dates with the names cut out
+  // of it, and nothing on the page to say that is what happened — the live
+  // calendar says as much, and offline is where it matters more, because
+  // signing in is not an option until there is a connection again.
+  if (saved.namesWithheld === true) {
+    view.appendChild(el("p", "sub", "Sign in to see who is on. This copy was saved without the names."));
+  }
+
   const select = document.createElement("select");
   select.setAttribute("aria-label", "Your name");
   select.style.cssText = "font:inherit;padding:2px 4px";
@@ -780,8 +787,14 @@ async function renderCalendar(entry) {
     setCalendarPerson(select.value || null);
     draw();
   });
-  chooser.appendChild(select);
-  view.appendChild(chooser);
+  // Offered only when it can narrow something: with no names to choose
+  // between, "You are Everyone" is a control that does nothing.
+  if (people.length > 0) {
+    const chooser = el("p", "sub");
+    chooser.appendChild(el("span", null, "You are "));
+    chooser.appendChild(select);
+    view.appendChild(chooser);
+  }
 
   const list = el("ul");
   view.appendChild(list);
