@@ -66,12 +66,20 @@ final class Request
             || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443;
         $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
         if ($trustProxy) {
+            // The last entry, never the first. A proxy appends — Cloudflare
+            // and nginx's $proxy_add_x_forwarded_for both keep whatever
+            // arrived and add the address they saw — so the left of the list
+            // is a string the visitor chose and only the right of it is the
+            // proxy's own word. Reading the left would let anybody pick the
+            // address every rate limit in this site is counted against.
             if (isset($headers['x-forwarded-proto'])) {
-                $https = strtolower(trim(explode(',', $headers['x-forwarded-proto'])[0])) === 'https';
+                $https = strtolower(self::lastHop($headers['x-forwarded-proto'])) === 'https';
             }
             if (isset($headers['x-forwarded-for'])) {
-                $candidate = trim(explode(',', $headers['x-forwarded-for'])[0]);
-                if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                $candidate = self::lastHop($headers['x-forwarded-for']);
+                // Not a readable address: the proxy did not write this, so
+                // keep the address the server itself saw, which is the proxy.
+                if (filter_var($candidate, FILTER_VALIDATE_IP) !== false) {
                     $ip = $candidate;
                 }
             }
@@ -103,6 +111,13 @@ final class Request
             files: $_FILES,
             id: bin2hex(random_bytes(8)),
         );
+    }
+
+    /** The rightmost entry of a comma-separated forwarded header. */
+    private static function lastHop(string $header): string
+    {
+        $hops = explode(',', $header);
+        return trim((string) end($hops));
     }
 
     public static function stripBase(string $path, string $basePath): string

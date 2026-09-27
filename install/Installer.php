@@ -209,7 +209,7 @@ final class Installer
             $html .= '<p class="error">Fix the items marked ✗, then reload this page.</p>';
         } else {
             $html .= '<form method="post" class="stack narrow"><input type="hidden" name="_csrf" value="' . e($this->csrf($req)) . '">'
-                . '<label class="check"><input type="checkbox" name="trust_proxy" value="1"> This site sits behind a proxy or CDN that terminates HTTPS (Cloudflare, a load balancer). Only tick this if it does: it makes the site believe the X-Forwarded-Proto header.</label>'
+                . '<label class="check"><input type="checkbox" name="trust_proxy" value="1"> This site sits behind a proxy or CDN that terminates HTTPS (Cloudflare, a load balancer). Only tick this if it does: it makes the site believe the X-Forwarded-Proto and X-Forwarded-For headers, which decide whether a request counts as secure and which address every rate limit is counted against. Nothing in front of the site means anybody can send them.</label>'
                 . '<button class="button primary" type="submit">Continue</button></form>';
         }
         return $this->render('Check this host', $html, 2);
