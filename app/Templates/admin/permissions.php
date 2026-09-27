@@ -49,7 +49,7 @@
 </form>
 
 <h2>Assignments</h2>
-<form class="card row" data-api="/api/admin/assignments" data-method="POST">
+<form class="card row" data-api="/api/admin/group-assignments" data-method="POST">
   <label>Member’s email<input type="email" name="email" required></label>
   <label>Group<select name="groupId" required><?php foreach ($groups as $g): ?><option value="<?= e($g['id']) ?>"><?= e($g['name']) ?></option><?php endforeach ?></select></label>
   <label>Only in category<select name="categoryId" data-null><option value="">Site-wide</option><?php foreach ($categories as $c): ?><option value="<?= e($c['id']) ?>"><?= e($c['name']) ?></option><?php endforeach ?></select></label>
@@ -65,7 +65,7 @@
       <td><?= e($a['userEmail']) ?></td>
       <td><?= e($a['groupName']) ?></td>
       <td><?= e($a['categoryName'] ? 'Category: ' . $a['categoryName'] : ($a['seriesTitle'] ? 'Series: ' . $a['seriesTitle'] : 'Site-wide')) ?></td>
-      <td><button type="button" class="button small danger" data-api="/api/admin/assignments/<?= e($a['id']) ?>" data-method="DELETE">Remove</button></td>
+      <td><button type="button" class="button small danger" data-api="/api/admin/group-assignments/<?= e($a['id']) ?>" data-method="DELETE">Remove</button></td>
     </tr>
   <?php endforeach ?>
   <?php if ($assignments === []): ?><tr><td colspan="4" class="muted">No assignments yet.</td></tr><?php endif ?>

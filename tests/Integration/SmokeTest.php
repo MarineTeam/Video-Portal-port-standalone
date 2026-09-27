@@ -175,12 +175,25 @@ final class SmokeTest extends ServerTestCase
         self::assertSame(200, self::http('GET', '/admin/plugins')['status']);
     }
 
-    #[TestDox('/cron/run refuses a wrong token and runs with the right one')]
+    #[TestDox('/cron/run refuses a wrong token and runs with the right one, under both its addresses')]
     public function testCron(): void
     {
         self::assertSame(401, self::http('GET', '/cron/run?token=wrong')['status']);
         $db = self::connect(self::PREFIX);
-        $token = json_decode((string) $db->value('SELECT value FROM {{settings}} WHERE name = ?', ['cron.token']), true);
-        self::assertSame(200, self::http('GET', '/cron/run?token=' . urlencode((string) $token))['status']);
+        $token = urlencode((string) json_decode((string) $db->value('SELECT value FROM {{settings}} WHERE name = ?', ['cron.token']), true));
+        self::assertSame(200, self::http('GET', "/cron/run?token=$token")['status']);
+
+        // The original's per-job addresses are the same door: a church moving
+        // over has these in its host's cron panel already.
+        self::assertSame(401, self::http('GET', '/api/cron/transcribe?token=wrong')['status']);
+        $ran = self::http('GET', "/api/cron/transcribe?token=$token");
+        self::assertSame(200, $ran['status']);
+        self::assertSame(['transcribe'], array_column((array) $ran['json']['ran'], 'name'));
+
+        // And a name nothing answers to says so, rather than reporting that it
+        // ran nothing successfully — which is how a cron line rots unnoticed.
+        $nonsense = self::http('GET', "/api/cron/no-such-job?token=$token");
+        self::assertSame(404, $nonsense['status']);
+        self::assertSame('no_such_job', $nonsense['json']['code'] ?? null);
     }
 }

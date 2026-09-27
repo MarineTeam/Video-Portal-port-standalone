@@ -179,7 +179,7 @@ commit as the code it describes.
 | `/api/admin/announcements` | GET POST | done | message, active, publishAt/expiresAt window, audience ALL/GUESTS/MEMBERS |
 | `/api/admin/api-keys/[id]` | DELETE | done | Revokes (sets `revoked_at`); the row stays so audit and last-used survive |
 | `/api/admin/api-keys` | GET POST | done | POST returns the one and only plaintext copy; GET lists prefixes, scopes, last use |
-| `/api/admin/assignments` | POST DELETE | done | Permission-group assignments, managed at /admin/permissions (GET added; the original had none) |
+| `/api/admin/assignments` | POST DELETE | **not built** | The original's rota endpoint: one `ServiceAssignment` made or withdrawn. The port writes the rota with the plan it belongs to (`PATCH /api/admin/services/[id]`, the whole order and rota at once, as its editor sends them) and a member answers their own ask at `/api/rota`, so nothing is left for this address to do. Recorded rather than invented: its payload is not in the brief |
 | `/api/admin/audit/export` | GET | done | ?format=csv|json, streamed |
 | `/api/admin/audit` | GET | done | Paged, filter by actor/action/entity/date |
 | `/api/admin/authorized-emails/[id]` | PATCH DELETE | done | Last-active guard |
@@ -222,8 +222,8 @@ commit as the code it describes.
 | `/api/admin/forms/[id]/submissions/[submissionId]` | PATCH DELETE | done | `{handled}` records who dealt with it, by name |
 | `/api/admin/forms/[id]/submissions` | GET | done | `?format=csv`; live questions first, retired ones after, so an export never silently drops what somebody said |
 | `/api/admin/forms` | GET POST | done | `manage_events` |
-| `/api/admin/group-assignments/[id]` | DELETE | done |  |
-| `/api/admin/group-assignments` | GET POST | done | By userId or email; category xor series scope |
+| `/api/admin/group-assignments/[id]` | DELETE | done | Deleting one ends that person's sessions, so the next request re-decides what they may see |
+| `/api/admin/group-assignments` | GET POST | done | Permission-group assignments, managed at /admin/permissions: by userId or email, category xor series scope (GET added; the original had none) |
 | `/api/admin/groups/[id]/members/[memberId]` | DELETE | done | Taking somebody off moves the waiting list |
 | `/api/admin/groups/[id]/members` | POST | done | By email; this is how a site manager joins a conversation they need to read, leaving a row saying so |
 | `/api/admin/groups/[id]` | GET PATCH DELETE | done | `leaderEmail` also puts a leader in, since a group with nobody to answer a request is the failure this screen is for |
@@ -301,14 +301,14 @@ commit as the code it describes.
 | `/api/comments/[id]/report` | POST | done | once per member, never one's own |
 | `/api/comments/[id]` | DELETE | done | the author, or a moderator for that part of the library |
 | `/api/comments` | GET POST | done | GET for anybody who may open the page; POST `{seriesId|videoId, body, parentId?}` members, one level of replies, 10 a minute |
-| `/api/cron/broadcasts` | GET | done | Job `broadcasts` every 5 minutes: the backstop for a closed laptop, not the delivery path |
-| `/api/cron/extend-events` | GET | done | Job `extend-events`, daily at 02:20 UTC through /cron/run; keeps every series filled in six months ahead |
-| `/api/cron/notification-digest` | GET | done | Job `notification-digest`, daily at 13:00 UTC (plugins/notifications) |
-| `/api/cron/schedule-reminders` | GET | done | Job `schedule-reminders` at 18:00 UTC through /cron/run: what each person is on for tomorrow, one message however many rotas they are on |
-| `/api/cron/sync-schedules` | GET POST | done | The `sync-schedules` job, 05:30 UTC, before the reminders |
-| `/api/cron/sync-video-feeds` | GET | done | Job `sync-video-feeds`, daily at 07:15 UTC as before |
-| `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min through /cron/run; abandoned upload placeholders marked FAILED after a day |
-| `/api/cron/transcribe` | GET | done | Job `transcribe` every 10 minutes through /cron/run, 20 s budget for starting work; stale RUNNING (30 min) re-queued |
+| `/api/cron/broadcasts` | GET | done | Job `broadcasts` every 5 minutes: the backstop for a closed laptop, not the delivery path. Served by `/api/cron/[job]`, an alias of `/cron/run?job=` behind the same token, so a cron line already pointing here keeps firing |
+| `/api/cron/extend-events` | GET | done | Job `extend-events`, daily at 02:20 UTC; keeps every series filled in six months ahead. Served by `/api/cron/[job]`, an alias of `/cron/run?job=` behind the same token, so a cron line already pointing here keeps firing |
+| `/api/cron/notification-digest` | GET | done | Job `notification-digest`, daily at 13:00 UTC (plugins/notifications). Served by `/api/cron/[job]`, an alias of `/cron/run?job=` behind the same token, so a cron line already pointing here keeps firing |
+| `/api/cron/schedule-reminders` | GET | done | Job `schedule-reminders` at 18:00 UTC: what each person is on for tomorrow, one message however many rotas they are on. Served by `/api/cron/[job]`, an alias of `/cron/run?job=` behind the same token, so a cron line already pointing here keeps firing |
+| `/api/cron/sync-schedules` | GET POST | done | The `sync-schedules` job, 05:30 UTC, before the reminders. Served by `/api/cron/[job]`, an alias of `/cron/run?job=` behind the same token, so a cron line already pointing here keeps firing |
+| `/api/cron/sync-video-feeds` | GET | done | Job `sync-video-feeds`, daily at 07:15 UTC as before. Served by `/api/cron/[job]`, an alias of `/cron/run?job=` behind the same token, so a cron line already pointing here keeps firing |
+| `/api/cron/sync-video-status` | GET | done | Job `sync-video-status` every 15 min; abandoned upload placeholders marked FAILED after a day. Served by `/api/cron/[job]`, an alias of `/cron/run?job=` behind the same token, so a cron line already pointing here keeps firing |
+| `/api/cron/transcribe` | GET | done | Job `transcribe` every 10 minutes, 20 s budget for starting work; stale RUNNING (30 min) re-queued. Served by `/api/cron/[job]`, an alias of `/cron/run?job=` behind the same token, so a cron line already pointing here keeps firing |
 | `/api/downloads/[videoId]` | GET | done | Four gates after canViewVideo; an MP4 link or the specific reason there isn’t one |
 | `/api/events/[slug]/register` | POST DELETE | done | Under a row lock on the event, so the last place goes to one person; honeypot and a per-address limit for visitors |
 | `/api/favorites` | POST | done | `{seriesId}` or `{videoId}` toggles → `{favorited}`; 404 for what the member can't open; 403 `plugin_disabled` where a category switches it off |
@@ -724,6 +724,7 @@ met, with the reason.
 - **The admin video editor is a page, `/admin/videos/[id]`** (the port's), like the series editor, rather than a dialog on the list.
 - **Captions for providers without caption APIs are WebVTT sidecars** in `storage/media/captions/<random>.vtt`, listed in `provider_data.tracks`; like every /media file their names are random, so members-only captions are as private as an unguessable address.
 - **Vendored browser code for video:** `public/vendor-js/tus/` (tus-js-client 4.3.1) and `public/vendor-js/hls/` (hls.js light 1.6.15), each with its LICENSE and VERSION.
+- **Scheduled work has one door, `/cron/run`, with the original's per-job addresses aliased onto it.** The port runs jobs from a scheduler rather than a URL apiece, and `/cron/run?job=<name>` runs one; `/api/cron/<name>` is that address under the original's spelling, behind the same token, so a church whose host already has those cron lines keeps firing them. A name nothing answers to is a 404 rather than a cheerful "ran nothing", since a rotted cron line is otherwise invisible.
 - **The top bar's "Admin" link goes to the first section its reader can open**, not always to `/admin`. The dashboard is ADMIN only, which is the original's rule, and the port shows that link to every staff member; sending a series editor to a refusal is no way to enter the admin area. `AdminNav::entryHref` picks it from the sidebar the same person is about to see, and where they can open nothing the link is not drawn.
 - **`DELETE /api/admin/appearance/notice` was dropped**: it duplicated `POST /admin/appearance/dismiss`, which is what the notice's own button uses and the one that has to work, because a broken theme is exactly when the page cannot depend on JavaScript. Nothing called the JSON one.
 - **A service's running order is kept on the device by `plugins/service-plans/assets/offline-services.js`**, the last of the four savers behind the offline shell (videos, books and hymnals, the rota calendar, and now the order): the order and its words go into their own Cache Storage bucket as JSON at `/offline-service/<id>.json`, with one localStorage index `offline.html` reads. The order can change after it is saved, so the page asks for the fingerprint alone on loading — one request carrying no words — and says the order has changed rather than letting somebody stand up on Sunday with last week's. Checked in Chromium end to end: saved, opened in the offline shell with no network, the stale notice, and removal clearing both the index and the cache.

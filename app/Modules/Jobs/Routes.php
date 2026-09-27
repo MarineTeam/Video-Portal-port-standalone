@@ -15,30 +15,48 @@ use App\Core\Url;
 /**
  * /cron/run — the one door scheduled work comes through. No token configured
  * is a 503 that runs nothing; a wrong one is a 401.
+ *
+ * The original's per-job addresses, /api/cron/<job>, are kept as aliases of
+ * /cron/run?job=<job>: a church moving over has those in its host's cron
+ * panel already, and a line that silently stops firing is how a Sunday's
+ * reminders go unsent.
  */
 final class Routes
 {
     public static function register(Router $r, App $app): void
     {
-        $r->add(['GET', 'POST'], '/cron/run', function (Request $req) use ($app): Response {
-            $token = $req->query('token') ?? $req->bearerToken();
-            $verdict = CronGuard::verdict($app->settings()->string('cron.token'), $token);
-            if ($verdict === 'unconfigured') {
-                return Response::error('Scheduled jobs are not configured on this site.', 503, 'unconfigured');
-            }
-            if ($verdict === 'unauthorized') {
-                return Response::error('Unauthorized', 401);
-            }
-            ignore_user_abort(true);
-            @set_time_limit(60);
-            $isLoopback = $req->query('via') === 'pageview';
-            if (!$isLoopback) {
-                $app->settings()->set('cron.last_real_at', time());
-            }
-            $scheduler = Jobs::scheduler($app);
-            $ran = $scheduler->run($req->query('job'));
-            return Response::json(['ran' => $ran]);
-        });
+        $r->add(['GET', 'POST'], '/cron/run', fn (Request $req) => self::run($app, $req, $req->query('job')));
+        $r->add(['GET', 'POST'], '/api/cron/[job]', fn (Request $req, array $p) => self::run($app, $req, (string) $p['job']));
+    }
+
+    /**
+     * Runs what is due, or the one job named.
+     *
+     * @param ?string $job null for everything due
+     */
+    private static function run(App $app, Request $req, ?string $job): Response
+    {
+        $token = $req->query('token') ?? $req->bearerToken();
+        $verdict = CronGuard::verdict($app->settings()->string('cron.token'), $token);
+        if ($verdict === 'unconfigured') {
+            return Response::error('Scheduled jobs are not configured on this site.', 503, 'unconfigured');
+        }
+        if ($verdict === 'unauthorized') {
+            return Response::error('Unauthorized', 401);
+        }
+        ignore_user_abort(true);
+        @set_time_limit(60);
+        $isLoopback = $req->query('via') === 'pageview';
+        if (!$isLoopback) {
+            $app->settings()->set('cron.last_real_at', time());
+        }
+        $scheduler = Jobs::scheduler($app);
+        // A name nothing answers to would otherwise run nothing and say it
+        // worked, which is how a cron line rots unnoticed.
+        if ($job !== null && !isset($scheduler->jobs()[$job])) {
+            return Response::error("No scheduled job is called \"$job\".", 404, 'no_such_job');
+        }
+        return Response::json(['ran' => $scheduler->run($job)]);
     }
 
     /**

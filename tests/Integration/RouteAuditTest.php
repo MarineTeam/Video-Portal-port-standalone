@@ -50,6 +50,7 @@ final class RouteAuditTest extends DatabaseTestCase
      */
     private const CSRF_EXEMPT = [
         '/cron/run' => 'the cron secret in the address',
+        '/api/cron/[job]' => 'the same door under the original\'s per-job addresses, and the same secret',
         '/api/auth/registration-check' => 'a bearer secret the identity provider holds',
         '/auth/callback' => 'the OAuth state, spent once (Apple posts cross-site)',
         '/api/tv/pair' => 'a device secret minted for this screen',
@@ -279,6 +280,84 @@ final class RouteAuditTest extends DatabaseTestCase
         self::assertSame([], $wrong, "the sidebar and the guards disagree:\n" . implode("\n", $wrong));
     }
 
+    #[TestDox("every address the map marks done is one the site really registers")]
+    public function test_8_the_inventory_is_not_a_wish_list(): void
+    {
+        // A placeholder's name is the handler's business, not the address's:
+        // /api/admin/files/[fileId]/lyrics and the map's [id] are the same URL.
+        $key = static fn (string $path): string => (string) preg_replace('/\[[^\]]+\]/', '[]', $path);
+        $registered = [];
+        foreach (self::routes() as [$pattern, $method]) {
+            $registered[$key($pattern)][$method] = true;
+        }
+        // A literal the map names may be served by a pattern: the original's
+        // /api/cron/transcribe is this port's /api/cron/[job].
+        $match = static function (string $path) use ($registered): ?string {
+            if (isset($registered[$path])) {
+                return $path;
+            }
+            foreach (array_keys($registered) as $pattern) {
+                if (!str_contains($pattern, '[]')) {
+                    continue;
+                }
+                $re = '#^' . str_replace('\[\]', '[^/]+', preg_quote($pattern, '#')) . '$#';
+                if (preg_match($re, $path) === 1) {
+                    return $pattern;
+                }
+            }
+            return null;
+        };
+        $missing = [];
+        foreach (self::inventory() as [$raw, $methods, $table]) {
+            $path = $match($key($raw));
+            if ($path === null) {
+                $missing[] = "$table: $raw is marked done and is not registered";
+                continue;
+            }
+            foreach ($methods as $method) {
+                if (!isset($registered[$path][$method])) {
+                    $missing[] = "$table: $raw is marked done for $method and only answers " . implode(', ', array_keys($registered[$path]));
+                }
+            }
+        }
+
+        self::assertSame([], $missing, "the map claims what the router does not do:\n" . implode("\n", $missing));
+    }
+
+    /**
+     * The two address tables of docs/PORT_MAP.md, as rows of
+     * [path, methods, which table].
+     *
+     * @return list<array{0: string, 1: list<string>, 2: string}>
+     */
+    private static function inventory(): array
+    {
+        $out = [];
+        $table = '';
+        foreach (file(dirname(__DIR__, 2) . '/docs/PORT_MAP.md') ?: [] as $line) {
+            if (str_starts_with($line, '## ')) {
+                $table = preg_match('/^## (Pages|Routes) \(/', $line, $m) === 1 ? $m[1] : '';
+                continue;
+            }
+            if ($table === '' || !str_starts_with($line, '| `')) {
+                continue;
+            }
+            $cells = array_map('trim', explode('|', trim($line, "| \n")));
+            if (preg_match('/^`([^`]+)`$/', $cells[0], $m) !== 1) {
+                continue;
+            }
+            $status = strtolower($table === 'Routes' ? ($cells[2] ?? '') : ($cells[1] ?? ''));
+            if (!str_starts_with($status, 'done')) {
+                continue;
+            }
+            $methods = $table === 'Routes'
+                ? array_values(array_filter(preg_split('/\s+/', (string) ($cells[1] ?? '')) ?: []))
+                : ['GET'];
+            $out[] = [$m[1], array_map('strtoupper', $methods), $table];
+        }
+        return $out;
+    }
+
     public function test_5_the_read_api_is_read_only(): void
     {
         foreach (self::routes() as [$pattern, $method]) {
@@ -312,6 +391,7 @@ final class RouteAuditTest extends DatabaseTestCase
             '/api/share-links/unlock' => 'thirty tries in fifteen minutes per address, plus the per-link lockout',
             '/api/view-events' => 'a thirty-minute cookie and an HMAC address throttle; it can only count',
             '/cron/run' => 'the cron secret in the address',
+        '/api/cron/[job]' => 'the same door under the original\'s per-job addresses, and the same secret',
             '/api/auth/registration-check' => 'a bearer secret the identity provider holds',
             '/api/sms/status/[provider]' => 'the provider’s signature, or a secret in the address',
             '/api/sms/inbound/[provider]' => 'the provider’s signature, or a secret in the address',
