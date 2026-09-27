@@ -659,6 +659,8 @@ be, rather than leaving the row hopeful.
 
 | What | Where it is proved |
 |---|---|
+| Every registered address answers | `tests/Integration/EveryUrlTest.php` — all 255 GET routes, signed in and signed out, none a server error |
+| The feeds are the shapes their readers expect | `tests/Integration/FeedFormatsTest.php` — RSS and the podcast enclosure, iCalendar's CRLF, escaping and 75-character lines, the sitemap's namespace, the manifest |
 | Capability on every admin route | `RouteAuditTest::test_2` |
 | Public writes all accounted for | `RouteAuditTest::test_3` |
 | CSRF exemptions all accounted for | `RouteAuditTest::test_4`, `test_6` |
@@ -1060,3 +1062,20 @@ met, with the reason.
   the half that bites two days later. And the email change, which was a
   requirement with nothing behind it at all.
   1210 unit, 257 integration, 62 browser-module tests.
+
+- 2026-09-27 — the two remaining acceptance criteria. Every address the site
+  registers is now asked for in a test: all 255 GET routes, filled in with a
+  plausible id, hit both as an administrator and as a stranger, with a
+  server error failing the build. The signed-out half is the interesting one
+  — a stranger reaches the guards rather than the pages, and a guard that
+  throws is a 500 on something anybody can find. Nothing was broken, which
+  is the answer one wants and not one worth assuming.
+
+  The feeds are asserted against the shapes their readers expect rather than
+  against the old app, which is not here to diff against: RSS that parses,
+  an ampersand in a series title escaped rather than breaking the document,
+  a podcast enclosure with the length and type an app refuses to play
+  without, iCalendar with its CRLF line endings, its escaped semicolons and
+  newlines, and no line over 75 characters, the sitemap's namespace, and a
+  manifest with the keys a browser needs to install it.
+  1210 unit, 270 integration, 62 browser-module tests.
