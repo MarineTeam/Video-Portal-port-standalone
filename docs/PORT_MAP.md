@@ -622,7 +622,7 @@ be, rather than leaving the row hopeful.
 | Headers on every response, and a CSP assembled from active providers | `tests/Integration/HeadersTest.php` — five pages including the television screen, with a fresh nonce per response and no HSTS until it is confirmed |
 | Passwords: Argon2id or bcrypt 12, 12 characters, a common list | `tests/Unit/Access/PasswordsTest.php` |
 | Reset and magic tokens: 32 bytes, hashed, single use, 60 and 15 minutes | `tests/Integration/AuthTokensTest.php`, including two callers racing for one token |
-| An unknown address answers identically | The handler answers before it looks. **gap**: no test compares the two answers, and none times them |
+| An unknown address answers identically | `tests/Integration/EnumerationTest.php` — the reset form, the sign-in link, the login and registration all answer a member and a stranger byte for byte alike, and a stranger's answer is not instant |
 | Sign-in, reset, unlock, pairing and API keys throttled per account and address | `tests/Integration/RateLimiterTest.php` (including under concurrency) |
 | An email change is verified at the new address and noticed at the old | `tests/Integration/EmailChangeTest.php` — nothing moves until the new address answers, the old one is told while it can still cancel, and confirming ends every session |
 | Only an ADMIN grants ADMIN; no group carries it | `tests/Unit/Access/PermissionsTest.php`, `tests/Unit/Access/AuthorizationTest.php` |
@@ -635,7 +635,7 @@ be, rather than leaving the row hopeful.
 | Images decoded once at upload; over 40 megapixels refused | `tests/Unit/Files/ImageBombTest.php` — a 33-byte PNG header claiming 40000×40000 is refused 413 before any decoder sees it; no route decodes from a URL |
 | Stored names random; the original sanitised into Content-Disposition | `tests/Unit/Support/ReaderTest.php` (`contentDispositionFilename`) |
 | Nothing under the asset directories executes | `.htaccess` per directory and the asset route's refusal; **manual**: a planted `evil.php` and a dotfile under `plugins/tv/assets` both answer 404, as does `../../../storage/config.php` through that route, while `tv.js` beside them answers 200 |
-| Chunked uploads: random id, under `storage/tmp/<id>/`, capped, swept | Exercised end to end by `tests/Integration/ImportTest.php`, which uploads a zip in two chunks. **gap**: no test of the cap or the sweep |
+| Chunked uploads: random id, under `storage/tmp/<id>/`, capped, swept | `tests/Integration/UploadLimitsTest.php` (the cap, the purposes, who may use the dangerous ones, and the daily sweep); `tests/Integration/ImportTest.php` uploads a real zip in two chunks |
 | Plugin and theme zips: no `..`, absolute paths or symlinks; caps | `tests/Unit/Plugins/PackageSafetyTest.php` |
 | Release zips are Ed25519-signed and verified before a file is touched | `tests/Unit/Update/ReleaseTest.php` |
 | Prepared statements; LIKE escaped; ORDER BY from allowlists; FULLTEXT stripped | `tests/Integration/DbGuardsTest.php` (including the backslash escaped before the wildcards), `tests/Unit/SearchTest.php`, `tests/Integration/SearchTest.php`. No route takes a column name: the one `sort` a reader can send is a two-way choice between `newest` and `relevance` |
@@ -648,7 +648,7 @@ be, rather than leaving the row hopeful.
 | The directory, prayer, group, attendance, thread and rota-name rules | `tests/Unit/Plugins/DirectoryTest.php`, `AttendanceTest.php`, `ThreadTest.php`, `SchedulesNamesTest.php`; `tests/Integration/GroupsTest.php`, `PrayerTest.php` |
 | Public writes rate-limited per address and account, with a honeypot | `RouteAuditTest::test_3` names all twenty-six with what limits each |
 | Inbound SMS webhooks: signature, five-minute window, rate limit | `tests/Integration/SmsCallbacksTest.php` |
-| The page-view cron trigger fires once a minute and holds a lock | `tests/Integration/SmokeTest.php` runs /cron/run; the once-a-minute lock is in `app/Modules/Jobs`. **gap**: no test of two triggers at once |
+| The page-view cron trigger fires once a minute and holds a lock | `tests/Integration/CronLockTest.php` — eight page views in the same second yield one trigger, two schedulers racing run a job once, and a lock left by a request that died is taken over rather than sticking |
 | `/cron/run` fails closed with no token; a wrong one is constant-time 401 | `tests/Unit/Jobs/CronGuardTest.php` |
 | View counts throttled by an HMAC of the address, blanked after a day | `tests/Unit/Library/ViewKeyTest.php` |
 | Small-group asks capped per member and per leader | `tests/Integration/GroupsTest.php` |
@@ -1046,3 +1046,17 @@ met, with the reason.
   turned into `HeadersTest`. Seven rows still say **gap** with what is
   missing, which is the honest state rather than a tick.
   1210 unit, 221 integration, 62 browser-module tests.
+
+- 2026-09-27 — the last of the security rows, which means every item in that
+  table now names a test or a manual check that was really done. Four needed
+  work. Member enumeration: the reset form, the sign-in link, the login and
+  registration are compared byte for byte between a member and a stranger,
+  with the nonce and the CSRF token normalised out, and a stranger's answer
+  is checked for not coming back instantly. The upload area: the cap, the
+  purposes, who may use the four dangerous ones, and the daily sweep. The
+  cron lock under two callers: eight page views in the same second yield one
+  trigger, two schedulers racing run a job once, and a lock left behind by a
+  request that died is taken over rather than sticking for ever — which is
+  the half that bites two days later. And the email change, which was a
+  requirement with nothing behind it at all.
+  1210 unit, 257 integration, 62 browser-module tests.
