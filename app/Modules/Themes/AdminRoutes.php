@@ -38,7 +38,6 @@ final class AdminRoutes
         $r->post('/api/admin/appearance/customizer/image', [$self, 'uploadImage'], [$admin]);
         $r->post('/api/admin/appearance/install', [$self, 'install'], [$admin]);
         $r->add('DELETE', '/api/admin/appearance/themes/[slug]', [$self, 'delete'], [$admin]);
-        $r->add('DELETE', '/api/admin/appearance/notice', [$self, 'dismissNotice'], [$admin]);
         $r->post('/admin/appearance/dismiss', function (Request $req) use ($app): Response {
             $app->settings()->delete('theme.notice');
             return Response::redirect(Url::safeReturnTo((string) ($req->input()['returnTo'] ?? ''), '/admin/appearance'));
@@ -237,12 +236,6 @@ final class AdminRoutes
         }
         $this->app->settings()->delete('theme.customizer.' . $slug);
         Audit::log($this->app->db(), $this->actor(), 'theme.delete', 'Theme', $slug);
-        return Response::json(['ok' => true]);
-    }
-
-    public function dismissNotice(Request $req): Response
-    {
-        $this->app->settings()->delete('theme.notice');
         return Response::json(['ok' => true]);
     }
 }

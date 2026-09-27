@@ -73,6 +73,9 @@ final class MediaCheckAdmin
             'videos' => $videoScope === null ? [] : $this->videoProblems($videoScope),
             'files' => $fileScope === null ? [] : $this->missingFiles($fileScope),
             'orphans' => $admin ? $this->orphans() : null,
+            // The Bunny audit is an administrator's question and a slow one
+            // (a request per folder), so the page offers it rather than runs it.
+            'canAuditBunny' => $admin,
             'linkCount' => $videoScope === null ? 0 : (int) $this->db()->value(
                 'SELECT COUNT(*) FROM {{videos}} v LEFT JOIN {{series}} s ON s.id = v.series_id WHERE v.deleted_at IS NULL AND v.provider IN (' . self::marks(self::LINK_PROVIDERS) . ') AND ' . $videoScope[0],
                 [...self::LINK_PROVIDERS, ...$videoScope[1]],

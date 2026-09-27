@@ -5,6 +5,7 @@
  * @var list<array{id: string, title: string, path: string}> $files
  * @var ?list<array{name: string, size: int, modified: int, public: bool, deletable: bool}> $orphans null unless an administrator
  * @var int $linkCount
+ * @var bool $canAuditBunny whether to offer the audit of what is at Bunny
  */
 $labels = ['service' => 'Service gone', 'file' => 'File missing', 'failed' => 'Failed', 'stuck' => 'Stuck processing', 'transcript' => 'Transcription failed'];
 ?>
@@ -79,5 +80,14 @@ $labels = ['service' => 'Service gone', 'file' => 'File missing', 'failed' => 'F
       </tbody>
     </table>
   <?php endif ?>
+<?php endif ?>
+<?php if ($canAuditBunny): ?>
+  <h2>What is at Bunny</h2>
+  <div class="card stack" data-bunny-audit>
+    <p class="small muted">What Bunny holds against what this site thinks it holds. An orphan is being paid for and nothing here can reach it; a missing object is a download that will fail on a Sunday. This reads only — it deletes nothing — and walks the zone a folder at a time, so a big library takes a minute.</p>
+    <div><button type="button" class="button" data-bunny-audit-start>Check Bunny</button> <span class="small muted" data-bunny-audit-progress hidden></span></div>
+    <div data-bunny-audit-result hidden></div>
+    <p class="error" data-error hidden></p>
+  </div>
 <?php endif ?>
 <script type="module" src="<?= e(asset('js/media-check.js')) ?>"></script>
