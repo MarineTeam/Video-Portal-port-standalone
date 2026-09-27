@@ -754,6 +754,7 @@ be, rather than leaving the row hopeful.
 | The sidebar and the guards agree | `RouteAuditTest::test_7` — every link leads somewhere the person it is shown to can open, and no page they may open is missing from it |
 | The registries are Appendix E and F, word for word | `tests/Unit/InventoryTest.php` — 31 feature slugs with their names and descriptions, 15 capability keys with their labels and hints, and every cron path naming a job that is scheduled |
 | The manifest is Appendix I.2, key for key | `tests/Unit/InventoryTest.php` — an installed app is identified by these |
+| A service order keeps, reads and refreshes | `tools/dev/service-check.mjs` — saved, opened in the shell with every item of the order, reported stale when the fingerprint moves, and removed from both the index and the cache |
 | A saved rota reads correctly signed in or not | `tools/dev/calendar-check.mjs` — the names, the explanation for their absence, the chooser, and every saved date listed |
 | A saved file answers for part of itself correctly | `tools/dev/range-check.mjs` — eight range requests against a file whose byte i is i, so the numbers say which bytes came back, not just how many |
 | A saved book opens with nothing to fetch it from | `tools/dev/offline-check.mjs` — saves a book, takes pdf.js off the server, opens the offline shell and measures the ink on the rendered page. Run by hand against a dev server (Playwright); no PHP test can reach a service worker |
