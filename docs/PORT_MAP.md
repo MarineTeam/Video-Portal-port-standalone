@@ -754,6 +754,7 @@ be, rather than leaving the row hopeful.
 | The sidebar and the guards agree | `RouteAuditTest::test_7` — every link leads somewhere the person it is shown to can open, and no page they may open is missing from it |
 | The registries are Appendix E and F, word for word | `tests/Unit/InventoryTest.php` — 31 feature slugs with their names and descriptions, 15 capability keys with their labels and hints, and every cron path naming a job that is scheduled |
 | The manifest is Appendix I.2, key for key | `tests/Unit/InventoryTest.php` — an installed app is identified by these |
+| A saved book opens with nothing to fetch it from | `tools/dev/offline-check.mjs` — saves a book, takes pdf.js off the server, opens the offline shell and measures the ink on the rendered page. Run by hand against a dev server (Playwright); no PHP test can reach a service worker |
 | The names on members' devices are Appendix H's | `tests/js/offline-names.test.mjs` — the caches, indexes and path prefixes by literal, in the files that must carry them |
 | The map's inventories are the brief's appendices, unchanged | `tests/Unit/InventoryTest.php` — Appendix C's 91 pages and 218 routes with their methods, Appendix B's 95 models with a table the schema really creates, and Appendix D's 73 test files, each naming a test that is there |
 | Every address the map marks done really answers | `RouteAuditTest::test_8` — both inventory tables against the router, methods included |
