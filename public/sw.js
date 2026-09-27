@@ -101,16 +101,45 @@ async function respondFromCache(cacheName, path, request, fallbackType) {
   const range = request.headers.get("range");
   if (!range) return cached;
 
+  // One range, the only kind anything here asks for. Anything else — several
+  // ranges at once, or a header we don't recognise — falls through to the
+  // whole file, which a client is allowed to be given instead. This is decided
+  // before the body is read, because reading it spends the cached response.
+  const match = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
+  if (!match || (match[1] === "" && match[2] === "")) return cached;
+
   const blob = await cached.blob();
-  const match = /bytes=(\d*)-(\d*)/.exec(range);
-  const start = match && match[1] ? Number(match[1]) : 0;
-  const end = match && match[2] ? Number(match[2]) : blob.size - 1;
+  const size = blob.size;
+
+  let start;
+  let end;
+  if (match[1] === "") {
+    // "bytes=-500" is the LAST 500 bytes, not the first. An MP4 whose moov
+    // atom sits at the end — which is most of them — is opened by asking for
+    // exactly this, so reading it as the head is a saved video that won't play.
+    const wanted = Number(match[2]);
+    start = Math.max(0, size - wanted);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    // A player may ask past the end; the answer is what there is, described
+    // honestly. Claiming the length that was asked for and sending less is a
+    // response the browser reads as truncated.
+    end = match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
+  }
+
+  if (start >= size || start > end) {
+    return new Response(null, {
+      status: 416,
+      headers: { "Content-Range": `bytes */${size}`, "Accept-Ranges": "bytes" },
+    });
+  }
 
   return new Response(blob.slice(start, end + 1), {
     status: 206,
     headers: {
       "Content-Type": blob.type || fallbackType,
-      "Content-Range": `bytes ${start}-${end}/${blob.size}`,
+      "Content-Range": `bytes ${start}-${end}/${size}`,
       "Content-Length": String(end - start + 1),
       "Accept-Ranges": "bytes",
     },
