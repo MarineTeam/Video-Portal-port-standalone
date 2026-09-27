@@ -613,7 +613,7 @@ be, rather than leaving the row hopeful.
 | `storage/` is not web-readable; the installer probes and refuses | The installer's own probe step; **manual**: `/storage/config.php`, `/storage/logs/app.log` and `/storage/` all answer 404 on the dev server |
 | Secrets encrypted with `app_key`, never echoed, exported or logged | `tests/Unit/Core/SecretsAtRestTest.php`, `tests/Unit/Core/LogMaskingTest.php`, `tests/Unit/Profile/DataExportTest.php` |
 | `display_errors` off whatever php.ini says; no stack trace to anybody | Forced in `app/bootstrap.php`; `tests/Integration/HeadersTest.php::test_6` asserts an error page names no path, query or frame |
-| The table prefix is `[a-z0-9_]{1,16}`; no identifier from input | `Db::assertColumn` and the prefix check in `app/Core/Db.php`; every table and column name in the tree is a literal. **gap**: no unit test of the guards themselves |
+| The table prefix is `[a-z0-9_]{1,16}`; no identifier from input | `tests/Integration/DbGuardsTest.php` — the prefix, column names in an insert, update and where, and a value that reads like SQL going in and coming back as itself |
 | Session ids are 32 bytes, stored as SHA-256; regenerated on sign-in; 30-day and 7-day windows; sign out everywhere | `tests/Integration/SessionTest.php` (11 tests) |
 | Cookie HttpOnly, SameSite=Lax, Secure, base path, `__Host-` at a root | `tests/Integration/SessionTest.php` |
 | CSRF token on every write, constant time, with Origin / Sec-Fetch-Site | `tests/Unit/Core/CrossSiteTest.php`, `tests/Integration/RouteAuditTest.php` |
@@ -632,16 +632,16 @@ be, rather than leaving the row hopeful.
 | Web Push endpoints: https, a known service, eight per member | `tests/Unit/Push/PushEndpointTest.php` |
 | Uploads typed by finfo against a per-purpose allowlist; SVG is not an image | `tests/Unit/Files/UploadTypesTest.php` |
 | Content-Type on the way out comes from the stored extension alone | `tests/Unit/Files/UploadTypesTest.php` |
-| Images decoded once at upload; over 40 megapixels refused | `getimagesize` before any decode in `app/Modules/Files/Images.php`; no route decodes from a URL. **gap**: no test of the megapixel refusal |
+| Images decoded once at upload; over 40 megapixels refused | `tests/Unit/Files/ImageBombTest.php` — a 33-byte PNG header claiming 40000×40000 is refused 413 before any decoder sees it; no route decodes from a URL |
 | Stored names random; the original sanitised into Content-Disposition | `tests/Unit/Support/ReaderTest.php` (`contentDispositionFilename`) |
 | Nothing under the asset directories executes | `.htaccess` per directory and the asset route's refusal; **manual**: a planted `evil.php` and a dotfile under `plugins/tv/assets` both answer 404, as does `../../../storage/config.php` through that route, while `tv.js` beside them answers 200 |
 | Chunked uploads: random id, under `storage/tmp/<id>/`, capped, swept | Exercised end to end by `tests/Integration/ImportTest.php`, which uploads a zip in two chunks. **gap**: no test of the cap or the sweep |
 | Plugin and theme zips: no `..`, absolute paths or symlinks; caps | `tests/Unit/Plugins/PackageSafetyTest.php` |
 | Release zips are Ed25519-signed and verified before a file is touched | `tests/Unit/Update/ReleaseTest.php` |
-| Prepared statements; LIKE escaped; ORDER BY from allowlists; FULLTEXT stripped | `tests/Unit/SearchTest.php`, `tests/Integration/SearchTest.php`. No route takes a column name: the one `sort` a reader can send is a two-way choice between `newest` and `relevance` |
+| Prepared statements; LIKE escaped; ORDER BY from allowlists; FULLTEXT stripped | `tests/Integration/DbGuardsTest.php` (including the backslash escaped before the wildcards), `tests/Unit/SearchTest.php`, `tests/Integration/SearchTest.php`. No route takes a column name: the one `sort` a reader can send is a two-way choice between `newest` and `relevance` |
 | Every body validated against an explicit allowlist; unknown fields dropped | `tests/Unit/Core/ValidatorTest.php` |
 | Templates escape by default; `raw` is the only exception and CI greps it | `tools/ci/check-templates.php` (CI) |
-| `mail()` and SMTP reject CR or LF in an address or subject | Checked in `SmtpProvider::send` and `Response::header`. **gap**: no test feeds a header injection through a provider |
+| `mail()` and SMTP reject CR or LF in an address or subject | `tests/Unit/Email/HeaderInjectionTest.php` — the guard is in `Message`'s constructor, so a provider added later cannot forget it, and the two that read a “send as” of their own check it there |
 | Logs mask credentials; `/admin/logs` is ADMIN only | `tests/Unit/Core/LogMaskingTest.php`, `RouteAuditTest::test_2` |
 | Backups: random name under `storage/tmp`, streamed, deleted after download | `tests/Integration/BackupTest.php` |
 | The export and `/api/v1` keep `assertExportSafe` | `tests/Unit/Profile/DataExportTest.php`, `tests/Integration/ReadApiTest.php` |
