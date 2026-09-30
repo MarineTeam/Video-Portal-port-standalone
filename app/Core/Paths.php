@@ -30,10 +30,23 @@ final class Paths
             return new self($root, rtrim($override, '/'), "$root/plugins", "$root/themes");
         }
         if (is_file($pointer)) {
+            // Once this file exists it is the only correct answer. An
+            // administrator writes it because storage/ had to leave the
+            // document root, so falling back to storage/ would mean writing
+            // config.php, the sessions and the uploads into the folder they
+            // moved away from because a stranger could download it — and,
+            // finding no config there, offering the installer to every
+            // visitor. Better to stop and say so.
             $candidate = require $pointer;
-            if (is_string($candidate) && is_dir($candidate)) {
-                $storage = rtrim($candidate, '/');
+            if (!is_string($candidate) || $candidate === '' || !is_dir($candidate)) {
+                throw new \RuntimeException(
+                    "storage-path.php says the storage folder is at "
+                    . (is_string($candidate) ? "\"$candidate\"" : 'something that is not a path')
+                    . ', and there is no folder there. Correct the path in storage-path.php, or delete that'
+                    . ' file to keep storage/ inside the site.',
+                );
             }
+            $storage = rtrim($candidate, '/');
         }
         return new self($root, $storage, "$root/plugins", "$root/themes");
     }

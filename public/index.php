@@ -7,7 +7,26 @@ declare(strict_types=1);
  */
 
 /** @var App\Core\App $app */
-$app = require dirname(__DIR__) . '/app/bootstrap.php';
+try {
+    $app = require dirname(__DIR__) . '/app/bootstrap.php';
+} catch (Throwable $e) {
+    // Loading failed before there is an app to ask anything of — today the
+    // one way that happens is a storage-path.php pointing somewhere that
+    // isn't there. The reason goes to the host's error log, where an
+    // administrator can read it; a visitor gets the plain page, because the
+    // reason names a path on disk.
+    error_log('Marine Team: ' . $e::class . ': ' . $e->getMessage());
+    http_response_code(500);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        , '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        , '<meta name="robots" content="noindex"><title>Something went wrong</title>'
+        , '<style>body{font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 16px;color:#18181b}'
+        , '@media (prefers-color-scheme:dark){body{background:#09090b;color:#fafafa}}</style></head>'
+        , '<body><h1>Something went wrong</h1><p>Sorry — this site couldn’t start. '
+        , 'The reason is in the server’s error log.</p></body></html>';
+    exit;
+}
 
 $trustProxy = (bool) ($app->config['trust_proxy'] ?? false);
 $basePath = (string) (parse_url((string) ($app->config['base_url'] ?? ''), PHP_URL_PATH) ?? '');

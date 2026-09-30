@@ -136,6 +136,40 @@ If the document root has to be the project folder instead of `public/`, add
 `location ~ ^/(app|storage|plugins|themes|install|bin|tests|tools|vendor)/ { deny all; }`
 — but pointing the root at `public/` is much better.
 
+## Moving `storage/` out of the web root
+
+`storage/` holds `config.php` — the database password, and the key every
+stored secret is encrypted with — along with the sessions, the uploads and
+the logs. None of it may be downloadable. By default an `.htaccess` in that
+folder denies everything, and the installer checks this by fetching a probe
+file over HTTP before it will go on.
+
+If your host ignores `.htaccess` (Apache with `AllowOverride None`, or
+nginx), the installer stops and says so. Either ask the host to honour
+`.htaccess`, add the nginx `deny all` line above, or move the folder out of
+the web root altogether:
+
+1. In the file manager, move the whole `storage` folder somewhere **above**
+   your `public_html` — beside it, not inside it. A common place is
+   `/home/yourname/marine-team-storage`.
+2. Beside `app/`, create a file called **`storage-path.php`** holding one
+   line, with the new location written out in full:
+
+   ```php
+   <?php return '/home/yourname/marine-team-storage';
+   ```
+
+3. Reload the site. Nothing else moves: `app/`, `plugins/` and `themes/` stay
+   where they are.
+
+Keep that file with your backups, and remember it when you change hosts —
+the path is usually different on the new one. If it ever points somewhere
+that isn't there, **the site stops with "Something went wrong" and writes the
+reason to your host's error log**. That is on purpose: the alternative would
+be a site that quietly starts writing your passwords back into the folder you
+moved away from. Correct the path, or delete `storage-path.php` to put
+`storage/` back inside the site.
+
 ## Locked out
 
 **Forgot the administrator password, and email isn't set up?** Create an empty
