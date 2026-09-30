@@ -67,10 +67,7 @@ final class BackupTest extends DatabaseTestCase
             self::assertStringNotContainsString('`it_', $sql, 'only this site’s tables');
 
             self::dropPrefix($db, self::PREFIX);
-            $pdo = $db->pdo();
-            foreach (self::statements($sql) as $statement) {
-                $pdo->exec($statement);
-            }
+            self::restoreWithTheRealClient($sql, self::PREFIX);
             self::assertSame($before, $this->snapshot($db));
         } finally {
             PackageInstaller::removeTree($storage);
@@ -86,43 +83,5 @@ final class BackupTest extends DatabaseTestCase
             'settings' => $db->all('SELECT name, value FROM {{settings}} ORDER BY name'),
             'tables' => count($db->column('SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name LIKE ?', [Db::likeEscape(self::PREFIX) . '%'])),
         ];
-    }
-
-    /**
-     * Splits the dump the way the mysql client does for this file: a
-     * statement ends at ";" at the end of a line outside a quoted string.
-     *
-     * @return list<string>
-     */
-    private static function statements(string $sql): array
-    {
-        $out = [];
-        $current = '';
-        $quote = null;
-        $len = strlen($sql);
-        for ($i = 0; $i < $len; $i++) {
-            $c = $sql[$i];
-            if ($quote === null && $c === '-' && substr($sql, $i, 3) === '-- ' && ($i === 0 || $sql[$i - 1] === "\n")) {
-                $i = (int) (strpos($sql, "\n", $i) ?: $len);
-                continue;
-            }
-            $current .= $c;
-            if ($quote !== null) {
-                if ($c === '\\') {
-                    $current .= $sql[++$i];
-                } elseif ($c === $quote) {
-                    $quote = null;
-                }
-            } elseif ($c === "'" || $c === '"' || $c === '`') {
-                $quote = $c;
-            } elseif ($c === ';') {
-                $out[] = trim($current);
-                $current = '';
-            }
-        }
-        if (trim($current) !== '') {
-            $out[] = trim($current);
-        }
-        return array_values(array_filter($out, fn ($s) => $s !== '' && $s !== ';'));
     }
 }

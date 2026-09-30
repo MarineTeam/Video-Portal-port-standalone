@@ -13,6 +13,63 @@ use PHPUnit\Framework\TestCase;
  */
 abstract class DatabaseTestCase extends TestCase
 {
+    /**
+     * Restores the dump with the real mysql client, the way an administrator
+     * or their host would.
+     *
+     * Not with a splitter written here. BackupTest has one, with a comment
+     * saying it splits "the way the mysql client does" — and a parser that
+     * agrees with the file it was written for proves only that. If the dump
+     * ever holds something the real client reads differently, a splitter of
+     * our own would keep passing while the restore that matters failed.
+     */
+    protected static function restoreWithTheRealClient(string $sql, string $prefix): void
+    {
+        $client = null;
+        foreach (['mysql', 'mariadb'] as $candidate) {
+            $found = @proc_open([$candidate, '--version'], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+            if (is_resource($found)) {
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                if (proc_close($found) === 0) {
+                    $client = $candidate;
+                    break;
+                }
+            }
+        }
+        if ($client === null) {
+            self::markTestSkipped('no mysql client to restore with.');
+        }
+
+        $db = self::dbConfig($prefix);
+        $process = proc_open(
+            [
+                $client,
+                '--host=' . $db['host'],
+                '--port=' . (string) $db['port'],
+                '--user=' . $db['user'],
+                '--password=' . $db['password'],
+                '--default-character-set=utf8mb4',
+                $db['name'],
+            ],
+            [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+            $pipes,
+        );
+        self::assertIsResource($process, 'the client would not start');
+        fwrite($pipes[0], $sql);
+        fclose($pipes[0]);
+        $out = (string) stream_get_contents($pipes[1]);
+        $err = (string) stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $status = proc_close($process);
+        // A warning about the password on the command line is the one thing
+        // it always says; anything else is the restore complaining.
+        $err = trim((string) preg_replace('/^.*Using a password on the command line.*$/mi', '', $err));
+        self::assertSame(0, $status, "the restore failed:\n$err\n$out");
+        self::assertSame('', $err, "the restore complained:\n$err");
+    }
+
     /** @return array{host: string, port: int, name: string, user: string, password: string, prefix: string} */
     protected static function dbConfig(string $prefix = 'it_'): array
     {

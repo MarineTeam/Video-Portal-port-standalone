@@ -138,39 +138,6 @@ final class BackupFidelityTest extends ServerTestCase
         return ['schema' => $schema, 'rows' => $rows];
     }
 
-    /** @return list<string> */
-    private static function statements(string $sql): array
-    {
-        $out = [];
-        $current = '';
-        $quote = null;
-        $len = strlen($sql);
-        for ($i = 0; $i < $len; $i++) {
-            $c = $sql[$i];
-            if ($quote === null && $c === '-' && substr($sql, $i, 3) === '-- ' && ($i === 0 || $sql[$i - 1] === "\n")) {
-                $i = (int) (strpos($sql, "\n", $i) ?: $len);
-                continue;
-            }
-            $current .= $c;
-            if ($quote !== null) {
-                if ($c === '\\') {
-                    $current .= $sql[++$i] ?? '';
-                } elseif ($c === $quote) {
-                    $quote = null;
-                }
-            } elseif ($c === "'" || $c === '"' || $c === '`') {
-                $quote = $c;
-            } elseif ($c === ';') {
-                $out[] = trim($current);
-                $current = '';
-            }
-        }
-        if (trim($current) !== '') {
-            $out[] = trim($current);
-        }
-        return array_values(array_filter($out, fn ($s) => $s !== '' && $s !== ';'));
-    }
-
     public function testAnInstalledSiteSurvivesBeingRestoredFromItsBackup(): void
     {
         $db = self::connect(self::prefix());
@@ -219,10 +186,7 @@ final class BackupFidelityTest extends ServerTestCase
         self::dropPrefix($db, self::prefix());
         self::assertSame([], $backup->tables(), 'the database really is empty first');
 
-        $pdo = $db->pdo();
-        foreach (self::statements($sql) as $statement) {
-            $pdo->exec($statement);
-        }
+        self::restoreWithTheRealClient($sql, self::prefix());
 
         $after = self::snapshot($db, $backup);
 
