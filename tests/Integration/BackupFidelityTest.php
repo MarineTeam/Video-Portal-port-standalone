@@ -57,8 +57,15 @@ final class BackupFidelityTest extends ServerTestCase
         $db->run('SET FOREIGN_KEY_CHECKS = 0');
         try {
             foreach ($backup->tables() as $table) {
+                // Aliased, every one of them: MySQL 8 names these columns
+                // in upper case and MariaDB in lower, so reading them by
+                // their own names works on one engine and silently returns
+                // nothing on the other. That is what this missed — the rows
+                // went in on MariaDB here and not on MySQL in CI, and the
+                // test's own coverage assertion was what noticed.
                 $columns = $db->all(
-                    'SELECT column_name, data_type, is_nullable, extra, character_maximum_length, column_key
+                    'SELECT column_name AS name, data_type AS type, is_nullable AS nullable,
+                            extra AS extra, character_maximum_length AS maxlen
                      FROM information_schema.columns
                      WHERE table_schema = DATABASE() AND table_name = ? ORDER BY ordinal_position',
                     [$table],
@@ -71,13 +78,13 @@ final class BackupFidelityTest extends ServerTestCase
                     if (str_contains($extra, 'generated') || str_contains($extra, 'auto_increment')) {
                         continue;
                     }
-                    $name = (string) $column['column_name'];
-                    $nullable = strtoupper((string) $column['is_nullable']) === 'YES';
+                    $name = (string) $column['name'];
+                    $nullable = strtoupper((string) $column['nullable']) === 'YES';
                     // Leave one nullable column of each table NULL, to prove
                     // a NULL does not come back as an empty string.
                     $value = $nullable && $i % 5 === 4
                         ? null
-                        : self::valueFor((string) $column['data_type'], (int) ($column['character_maximum_length'] ?? 0), $i);
+                        : self::valueFor((string) $column['type'], (int) ($column['maxlen'] ?? 0), $i);
                     $names[] = '`' . str_replace('`', '``', $name) . '`';
                     $values[] = $value;
                 }

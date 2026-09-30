@@ -413,7 +413,9 @@ final class Importer
                 }
             }
         } catch (\Throwable) {
-            // An engine without that view; its JSON columns say "json".
+            // MySQL keeps no table_name on that view, so the query is an
+            // error there rather than an empty answer — and it does not
+            // matter, because MySQL has a real JSON type and says so.
         }
         $out = [];
         foreach ($rows as $row) {
