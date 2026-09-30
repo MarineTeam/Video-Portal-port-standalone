@@ -87,6 +87,9 @@ function finished(state) {
   for (const one of state.skipped) lines.push(one.why);
   if (state.unknown.length) lines.push(`The export also held ${state.unknown.join(', ')}, which this site has no table for.`);
   for (const one of state.dropped) lines.push(`${one.model}: no column here for ${one.fields.join(', ')}.`);
+  for (const one of (state.filled || [])) {
+    lines.push(`${one.model}: your export had no ${one.columns.join(', ')}, so ${one.columns.length === 1 ? 'it was' : 'they were'} left empty.`);
+  }
   if (state.errors.length) {
     const n = state.errors.length;
     lines.push(`${n} row${n === 1 ? ' was' : 's were'} refused, the first being: ${state.errors[0].model} ${state.errors[0].id} — ${state.errors[0].message}`);

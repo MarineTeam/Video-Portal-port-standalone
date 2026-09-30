@@ -19,12 +19,16 @@ final class Row
      * @param array<string, mixed> $old one line of the export
      * @param array<string, string> $columns this table's columns => their SQL
      *        type, from the database rather than from a list kept here
-     * @return array{row: array<string, mixed>, fanout: array<string, list<string>>, dropped: list<string>}
+     * @param array<string, string> $required the subset of $columns that the
+     *        database will not accept without a value: NOT NULL and with no
+     *        default of their own
+     * @return array{row: array<string, mixed>, fanout: array<string, list<string>>, dropped: list<string>, filled: list<string>}
      *         `fanout` is table => the values for the second table's rows;
      *         `dropped` names columns the export had and this schema has not,
-     *         which the screen reports rather than swallowing.
+     *         and `filled` names ones the export had not and the database
+     *         insists on — both reported rather than swallowed.
      */
-    public static function convert(string $model, array $old, array $columns): array
+    public static function convert(string $model, array $old, array $columns, array $required = []): array
     {
         $row = [];
         $fanout = [];
@@ -52,7 +56,22 @@ final class Row
                 $row[$column] = $value;
             }
         }
-        return ['row' => $row, 'fanout' => $fanout, 'dropped' => $dropped];
+        $filled = [];
+        foreach ($required as $column => $type) {
+            if (array_key_exists($column, $row)) {
+                continue;
+            }
+            $empty = self::emptyFor($type);
+            if ($empty === null) {
+                // Nothing honest to put here — a date, most often. Leave it
+                // out and let the database refuse the row, which says more
+                // than an invented instant would.
+                continue;
+            }
+            $row[$column] = $empty;
+            $filled[] = $column;
+        }
+        return ['row' => $row, 'fanout' => $fanout, 'dropped' => $dropped, 'filled' => $filled];
     }
 
     /**
@@ -77,6 +96,30 @@ final class Row
             }
         }
         return $out;
+    }
+
+    /**
+     * What "nothing" is for a column the old site did not have.
+     *
+     * A deployment older than a column exports rows without it, and this
+     * schema keeps its lists as JSON NOT NULL with no default, because
+     * neither MySQL 8 nor MariaDB 10.6 will take a default on one. So a
+     * category from before tags existed was refused outright — and with it
+     * every series that pointed at it, and every video in those series. An
+     * empty list is what that row means, and losing a church's whole library
+     * over it is not.
+     *
+     * A date has no empty value that is not a lie, so it gets none.
+     */
+    private static function emptyFor(string $type): string|int|null
+    {
+        return match (true) {
+            $type === 'json' => '[]',
+            str_contains($type, 'char'), str_contains($type, 'text'), $type === 'blob' => '',
+            in_array($type, ['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint'], true) => 0,
+            in_array($type, ['decimal', 'float', 'double'], true) => 0,
+            default => null,
+        };
     }
 
     /**

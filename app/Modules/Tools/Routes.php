@@ -83,6 +83,10 @@ final class Routes
      */
     private static function publicState(array $state): array
     {
+        $filled = [];
+        foreach (is_array($state['filled'] ?? null) ? $state['filled'] : [] as $model => $columns) {
+            $filled[] = ['model' => (string) $model, 'columns' => array_values((array) $columns)];
+        }
         return [
             'id' => $state['id'],
             'stage' => $state['stage'],
@@ -173,6 +177,10 @@ final class Routes
         foreach (is_array($state['dropped']) ? $state['dropped'] : [] as $model => $fields) {
             $dropped[] = ['model' => (string) $model, 'fields' => array_values((array) $fields)];
         }
+        $filled = [];
+        foreach (is_array($state['filled'] ?? null) ? $state['filled'] : [] as $model => $columns) {
+            $filled[] = ['model' => (string) $model, 'columns' => array_values((array) $columns)];
+        }
         return [
             'id' => $state['id'],
             'phase' => $state['phase'],
@@ -183,6 +191,7 @@ final class Routes
             'report' => Importer::report($state),
             'errors' => $errors,
             'dropped' => $dropped,
+            'filled' => $filled,
             'skipped' => array_map(
                 static fn (string $model) => ['model' => $model, 'why' => Mapping::SKIPPED[$model]],
                 array_values((array) ($state['skippedModels'] ?? [])),

@@ -38,6 +38,9 @@ final class Importer
     /** @var array<string, array<string, string>> asked of the database once per table */
     private array $columns = [];
 
+    /** @var array<string, array<string, string>> the same, for the ones a row cannot go in without */
+    private array $required = [];
+
     public function __construct(private readonly App $app, private readonly float $budget = self::BUDGET_SECONDS)
     {
     }
@@ -102,6 +105,7 @@ final class Importer
             'expected' => $manifest['tables'],
             'counts' => [],
             'dropped' => [],
+            'filled' => [],
             'errors' => [],
             'skippedModels' => array_values(array_intersect(array_keys($manifest['tables']), array_keys(Mapping::SKIPPED))),
             'unknownModels' => array_values(array_diff(array_keys($manifest['tables']), array_keys(Mapping::TABLES))),
@@ -207,9 +211,15 @@ final class Importer
         $count['read'] += count($batch['rows']) + $batch['unreadable'];
         $count['refused'] += $batch['unreadable'];
         $columns = $this->columns($table);
+        $required = $this->required($table);
         $selfRefs = $state['selfRefs'][$table] ?? [];
         foreach ($batch['rows'] as $old) {
-            $made = Row::convert($model, is_array($old) ? $old : [], $columns);
+            $made = Row::convert($model, is_array($old) ? $old : [], $columns, $required);
+            foreach ($made['filled'] as $column) {
+                if (!in_array($column, $state['filled'][$model] ?? [], true)) {
+                    $state['filled'][$model][] = $column;
+                }
+            }
             foreach ($made['dropped'] as $field) {
                 if (!in_array($field, $state['dropped'][$model] ?? [], true)) {
                     $state['dropped'][$model][] = $field;
@@ -361,6 +371,56 @@ final class Importer
             $out[(string) $row['name']] = strtolower((string) $row['type']);
         }
         return $this->columns[$table] = $out;
+    }
+
+    /**
+     * The columns this table will not take a row without: NOT NULL, with no
+     * default of their own, and not filled in by the database.
+     *
+     * The primary key is left out. A row with no id is not a row that lost a
+     * column somewhere along the way; it is not a row.
+     *
+     * @return array<string, string> column => SQL type
+     */
+    public function required(string $table): array
+    {
+        if (isset($this->required[$table])) {
+            return $this->required[$table];
+        }
+        $db = $this->app->db();
+        $full = $db->prefix() . $table;
+        $rows = $db->all(
+            "SELECT column_name AS name, data_type AS type FROM information_schema.columns
+              WHERE table_schema = DATABASE() AND table_name = ?
+                AND is_nullable = 'NO' AND column_default IS NULL
+                AND extra NOT LIKE '%auto_increment%' AND extra NOT LIKE '%generated%'
+                AND column_key <> 'PRI'",
+            [$full],
+        );
+        // MariaDB has no JSON type: a JSON column is a LONGTEXT with a
+        // json_valid() check beside it, and asking information_schema for
+        // the type gives "longtext". Putting an empty string in one of those
+        // fails the check, so the checks are what say which they are.
+        $json = [];
+        try {
+            foreach ($db->all(
+                'SELECT constraint_name AS name, check_clause AS clause FROM information_schema.check_constraints
+                  WHERE constraint_schema = DATABASE() AND table_name = ?',
+                [$full],
+            ) as $check) {
+                if (preg_match('/json_valid\\(`?([A-Za-z0-9_]+)`?\\)/i', (string) $check['clause'], $m) === 1) {
+                    $json[$m[1]] = true;
+                }
+            }
+        } catch (\Throwable) {
+            // An engine without that view; its JSON columns say "json".
+        }
+        $out = [];
+        foreach ($rows as $row) {
+            $name = (string) $row['name'];
+            $out[$name] = isset($json[$name]) ? 'json' : strtolower((string) $row['type']);
+        }
+        return $this->required[$table] = $out;
     }
 
     /** The database's complaint, without the file and line nobody can act on. */
