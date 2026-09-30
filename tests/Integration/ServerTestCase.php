@@ -131,6 +131,11 @@ abstract class ServerTestCase extends DatabaseTestCase
         }
         curl_setopt_array($ch, [
             CURLOPT_CUSTOMREQUEST => $method,
+            // Without this, curl waits for a body that a HEAD never sends,
+            // gives up with "transfer closed", and hands back nothing at all
+            // — headers included — so a test reads an empty response and
+            // cannot tell that from a server that answered nothing.
+            CURLOPT_NOBODY => $method === 'HEAD',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_COOKIEJAR => self::jar($who),
             CURLOPT_COOKIEFILE => self::jar($who),
