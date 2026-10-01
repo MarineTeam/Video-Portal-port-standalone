@@ -22,6 +22,12 @@
 #   MT_MYSQL_DSN="host=127.0.0.1;port=3307;name=marine_test;user=mt;pass=mt"
 #   MT_MARIADB_DSN="socket=/var/run/mysqld/mysqld.sock;name=mt_test;user=mt;pass=mt"
 #
+# tools/dev/databases.sh puts both on one machine and prints those two lines:
+#
+#   sudo tools/dev/databases.sh setup     once
+#   sudo tools/dev/databases.sh start     after a restart
+#   eval "$(tools/dev/databases.sh dsns)"
+#
 # Set MT_ONE_ENGINE=1 to accept a single engine — for a quick loop, never
 # before a push.
 
