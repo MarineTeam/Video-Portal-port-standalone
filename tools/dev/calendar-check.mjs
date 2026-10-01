@@ -60,7 +60,19 @@ try {
       const cache = await caches.open('marine-team-calendar-v1');
       await cache.put('/offline-calendar/snapshot.json', new Response(JSON.stringify(taken), { headers: { 'Content-Type': 'application/json' } }));
       localStorage.setItem('marine-offline-calendar', JSON.stringify({ cacheUrl: '/offline-calendar/snapshot.json', savedAt: new Date().toISOString() }));
-      return { withheld: taken.namesWithheld === true, people: (taken.people || []).length, events: (taken.events || []).length };
+      // What the shell is meant to list: the ones still to come, which is
+      // what it filters to. Counting every saved event instead would be a
+      // check that quietly rots as the calendar moves past them, and did.
+      const today = new Date().toISOString().slice(0, 10);
+      const upcoming = (taken.events || []).filter(
+        (e) => e.status !== 'CANCELLED' && (e.endDate || e.date) >= today,
+      ).length;
+      return {
+        withheld: taken.namesWithheld === true,
+        people: (taken.people || []).length,
+        events: (taken.events || []).length,
+        upcoming,
+      };
     });
     say(snapshot.withheld !== signedIn, `${who}: the snapshot ${snapshot.withheld ? 'withholds' : 'carries'} names (${snapshot.people} people, ${snapshot.events} events)`);
 
@@ -77,7 +89,13 @@ try {
     say(explained === !signedIn, `${who}: the missing names are ${explained ? 'explained' : 'not mentioned'}`);
     // A chooser of one option cannot narrow anything.
     say(chooser === signedIn, `${who}: the "You are" chooser is ${chooser ? 'offered' : 'left out'}`);
-    say(rows === snapshot.events, `${who}: every saved date is listed (${rows} of ${snapshot.events})`);
+    say(
+      rows === snapshot.upcoming,
+      `${who}: every date still to come is listed (${rows} of ${snapshot.upcoming} upcoming, ${snapshot.events} saved)`,
+    );
+    if (snapshot.upcoming === 0) {
+      say(false, `${who}: the dev calendar has nothing upcoming, so this proves nothing — move its dates forward`);
+    }
     say(errors.length === 0, `${who}: the shell threw nothing${errors.length ? `: ${errors[0]}` : ''}`);
     await context.close();
   }
