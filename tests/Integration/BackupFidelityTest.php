@@ -125,6 +125,31 @@ final class BackupFidelityTest extends ServerTestCase
     }
 
     /**
+     * A table's shape, with what is not part of it taken out.
+     *
+     * AUTO_INCREMENT drifts with use. The charset beside a collation is
+     * redundant, because a collation names its own charset — and MySQL 8
+     * writes it or leaves it out depending on how the table came to exist.
+     * Measured here with no dump involved at all: take what SHOW CREATE
+     * TABLE prints, feed that exact text back to the same server, and the
+     * copy says "text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+     * where the original said "text COLLATE utf8mb4_unicode_ci". MySQL does
+     * not round-trip its own output. Both columns read utf8mb4 and
+     * utf8mb4_unicode_ci in information_schema, so this takes the charset
+     * off both sides rather than asserting something untrue of the engine.
+     * A collation that really changed still shows, because the collation is
+     * what is kept.
+     */
+    private static function shape(string $create): string
+    {
+        return (string) preg_replace(
+            ['/ AUTO_INCREMENT=\d+/', '/ CHARACTER SET (\w+) COLLATE \1_/'],
+            ['', ' COLLATE ${1}_'],
+            $create,
+        );
+    }
+
+    /**
      * Every table: how it is built, and everything in it.
      *
      * @return array{schema: array<string, string>, rows: array<string, list<array<string, mixed>>>}
@@ -136,8 +161,7 @@ final class BackupFidelityTest extends ServerTestCase
         foreach ($backup->tables() as $table) {
             $q = '`' . str_replace('`', '``', $table) . '`';
             $create = $db->one("SHOW CREATE TABLE $q");
-            // AUTO_INCREMENT drifts with use and is not part of the shape.
-            $schema[$table] = (string) preg_replace('/ AUTO_INCREMENT=\d+/', '', (string) ($create['Create Table'] ?? ''));
+            $schema[$table] = self::shape((string) ($create['Create Table'] ?? ''));
             $columns = $db->column("SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? ORDER BY ordinal_position", [$table]);
             $order = implode(', ', array_map(fn ($c) => '`' . str_replace('`', '``', (string) $c) . '`', $columns));
             $rows[$table] = $db->all("SELECT * FROM $q ORDER BY $order");
