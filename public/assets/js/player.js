@@ -241,10 +241,5 @@ for (const form of document.querySelectorAll('form[data-share-at]')) {
   });
 }
 
-// Times shown in the reader's own zone.
-for (const el of document.querySelectorAll('time[data-local-time], time[data-local-date]')) {
-  const d = new Date(el.getAttribute('datetime'));
-  if (Number.isNaN(d.getTime())) continue;
-  el.textContent = 'localTime' in el.dataset ? d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : d.toLocaleDateString([], { dateStyle: 'medium' });
-}
+// Times in the reader's zone are app.js's job now, on every page.
 

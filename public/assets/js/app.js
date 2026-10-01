@@ -4,6 +4,7 @@ import MT from './mt.js';
 import { readDeviceSettings, applyTheme, DEVICE_SETTINGS_EVENT, DEVICE_SETTINGS_KEY } from './device-settings.js';
 import { toSnapshot, resolveTabs, NAV_TABS_SNAPSHOT_KEY, TABS_ACROSS } from './nav-tabs.js';
 import './forms.js';
+import { watch as watchLocalTimes } from './local-time.js';
 
 // Keep "System" following the OS while the page is open, and pick up a
 // change made in another tab.
@@ -97,3 +98,7 @@ document.addEventListener('click', async (event) => {
     window.prompt('', button.dataset.copy);
   }
 });
+
+// Every page: the times the server wrote as UTC, in the reader's own zone,
+// including the ones drawn in after this runs.
+watchLocalTimes();
